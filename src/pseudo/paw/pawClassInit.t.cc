@@ -104,6 +104,16 @@ namespace dftfe
       basisOperationsDevicePtr,
 #endif
     std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+      basisOperationsElectroHostPtr,
+#if defined(DFTFE_WITH_DEVICE)
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<double, double, dftfe::utils::MemorySpace::DEVICE>>
+      basisOperationsElectroDevicePtr,
+#endif
+    std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
       BLASWrapperPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
@@ -118,17 +128,21 @@ namespace dftfe
     unsigned int                            densityQuadratureIdElectro,
     std::shared_ptr<excManager>             excFunctionalPtr,
     const std::vector<std::vector<double>> &atomLocations,
-    unsigned int                            numEigenValues)
+    unsigned int                            numEigenValues,
+    unsigned int compensationChargeQuadratureIdElectro,
+    std::map<dealii::CellId, std::vector<double>> &bQuadValuesAllAtoms)
   {
     MPI_Barrier(d_mpiCommParent);
-    d_BasisOperatorHostPtr = basisOperationsHostPtr;
-    d_BLASWrapperHostPtr   = BLASWrapperPtrHost;
+    d_BasisOperatorHostPtr        = basisOperationsHostPtr;
+    d_BLASWrapperHostPtr          = BLASWrapperPtrHost;
+    d_BasisOperatorElectroHostPtr = basisOperationsElectroHostPtr;
 #if defined(DFTFE_WITH_DEVICE)
-    d_BLASWrapperDevicePtr   = BLASWrapperPtrDevice;
-    d_BasisOperatorDevicePtr = basisOperationsDevicePtr;
+    d_BLASWrapperDevicePtr          = BLASWrapperPtrDevice;
+    d_BasisOperatorDevicePtr        = basisOperationsDevicePtr;
+    d_BasisOperatorElectroDevicePtr = basisOperationsElectroDevicePtr;
 #endif
 
-
+    d_bQuadValuesAllAtoms = &bQuadValuesAllAtoms;
     std::vector<unsigned int> atomicNumbers;
     for (int iAtom = 0; iAtom < atomLocations.size(); iAtom++)
       {
@@ -142,7 +156,8 @@ namespace dftfe
     d_nlpspQuadratureId             = nlpspQuadratureId;
     d_excManagerPtr                 = excFunctionalPtr;
     d_numEigenValues                = numEigenValues;
-
+    d_compensationChargeQuadratureIdElectro =
+      compensationChargeQuadratureIdElectro;
     createAtomCenteredSphericalFunctionsForDensities();
     createAtomCenteredSphericalFunctionsForProjectors();
     createAtomCenteredSphericalFunctionsForZeroPotential();
@@ -151,6 +166,11 @@ namespace dftfe
       std::make_shared<AtomCenteredSphericalFunctionContainer>();
 
     d_atomicProjectorFnsContainer->init(atomicNumbers, d_atomicProjectorFnsMap);
+
+    d_atomicShapeFnsContainer =
+      std::make_shared<AtomCenteredSphericalFunctionContainer>();
+
+    d_atomicShapeFnsContainer->init(atomicNumbers, d_atomicShapeFnsMap);
 
     if (!d_useDevice)
       {
@@ -202,7 +222,9 @@ namespace dftfe
     d_atomicProjectorFnsContainer->initaliseCoordinates(atomCoords,
                                                         periodicCoords,
                                                         imageIds);
-
+    d_atomicShapeFnsContainer->initaliseCoordinates(atomCoords,
+                                                    periodicCoords,
+                                                    imageIds);
 
     if (updateNonlocalSparsity)
       {
@@ -210,6 +232,8 @@ namespace dftfe
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
+          d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
+        d_atomicShapeFnsContainer->computeSparseStructure(
           d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
@@ -266,6 +290,7 @@ namespace dftfe
     d_atomicProjectorFnsContainer->initaliseCoordinates(atomCoords,
                                                         periodicCoords,
                                                         imageIds);
+
 
 
     if (updateNonlocalSparsity)

@@ -1220,6 +1220,10 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
                                   d_basisOperationsPtrDevice,
 #endif
+                                  d_basisOperationsPtrElectroHost,
+#if defined(DFTFE_WITH_DEVICE)
+                                  d_basisOperationsPtrElectroDevice,
+#endif
                                   d_BLASWrapperPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
                                   d_BLASWrapperPtr,
@@ -1231,7 +1235,9 @@ namespace dftfe
                                   d_densityQuadratureIdElectro,
                                   d_excManagerPtr,
                                   atomLocations,
-                                  d_numEigenValues);
+                                  d_numEigenValues,
+                                  d_smearedChargeQuadratureIdElectro,
+                                  d_bQuadValuesAllAtoms);
       }
 
 

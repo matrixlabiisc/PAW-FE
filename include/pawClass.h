@@ -29,6 +29,9 @@
 #include "AtomCenteredSphericalFunctionZeroPotentialSpline.h"
 #include "AtomCenteredSphericalFunctionContainer.h"
 #include "AtomicCenteredNonLocalOperator.h"
+#include "AtomCenteredSphericalFunctionGaussian.h"
+#include "AtomCenteredSphericalFunctionSinc.h"
+#include "AtomCenteredSphericalFunctionBessel.h"
 #include <memory>
 #include <MemorySpaceType.h>
 #include <headers.h>
@@ -88,6 +91,16 @@ namespace dftfe
         basisOperationsDevicePtr,
 #endif
       std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+        basisOperationsElectroHostPtr,
+#if defined(DFTFE_WITH_DEVICE)
+      std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<double, double, dftfe::utils::MemorySpace::DEVICE>>
+        basisOperationsElectroDevicePtr,
+#endif
+      std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
         BLASWrapperPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
@@ -102,7 +115,9 @@ namespace dftfe
       unsigned int                            densityQuadratureIdElectro,
       std::shared_ptr<excManager>             excFunctionalPtr,
       const std::vector<std::vector<double>> &atomLocations,
-      unsigned int                            numEigenValues);
+      unsigned int                            numEigenValues,
+      unsigned int compensationChargeQuadratureIdElectro,
+      std::map<dealii::CellId, std::vector<double>> &bQuadValuesAllAtoms);
 
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
@@ -145,6 +160,18 @@ namespace dftfe
         &                              elementIndexesInAtomCompactSupport,
       const std::vector<unsigned int> &atomIdsInCurrentProcess,
       unsigned int                     numberElements);
+
+
+
+    void
+    computeCompensationchargel0();
+
+    // void
+    // computeCompensationChargeCoeff();
+
+    // void
+    // computeCompensationCharge();
+
 
 
     /**
@@ -248,10 +275,17 @@ namespace dftfe
       d_atomicWaveFnsVector;
     std::shared_ptr<AtomCenteredSphericalFunctionContainer>
       d_atomicProjectorFnsContainer;
+
+    std::shared_ptr<AtomCenteredSphericalFunctionContainer>
+      d_atomicShapeFnsContainer;
+
     std::map<std::pair<unsigned int, unsigned int>,
              std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicProjectorFnsMap;
 
+    std::map<std::pair<unsigned int, unsigned int>,
+             std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+      d_atomicShapeFnsMap;
     // parallel communication objects
     const MPI_Comm     d_mpiCommParent;
     const unsigned int d_this_mpi_process;
@@ -260,6 +294,7 @@ namespace dftfe
     dealii::ConditionalOStream  pcout;
     bool                        d_useDevice;
     unsigned int                d_densityQuadratureId;
+    unsigned int                d_compensationChargeQuadratureIdElectro;
     unsigned int                d_localContributionQuadratureId;
     unsigned int                d_nuclearChargeQuadratureIdElectro;
     unsigned int                d_densityQuadratureIdElectro;
@@ -276,6 +311,24 @@ namespace dftfe
         FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::DEVICE>>
       d_BasisOperatorDevicePtr;
 #endif
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+      d_BasisOperatorElectroHostPtr;
+#if defined(DFTFE_WITH_DEVICE)
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<double, double, dftfe::utils::MemorySpace::DEVICE>>
+      d_BasisOperatorElectroDevicePtr;
+#endif
+
+    std::map<unsigned int, double>       d_DeltaL0coeff, d_NtildeCore;
+    std::map<unsigned int, double>       d_RmaxAug, d_RminAug, d_RmaxComp;
+    std::map<unsigned int, unsigned int> d_RmaxAugIndex;
+    // Total Comepsantion charge field
+    std::map<dealii::CellId, std::vector<double>> *d_bQuadValuesAllAtoms;
+    // Total Compensation charge field only due to the g_0(r)Delta_0 component
+    std::map<dealii::CellId, std::vector<double>> d_bl0QuadValuesAllAtoms;
 
     std::map<unsigned int, bool>                      d_atomTypeCoreFlagMap;
     bool                                              d_floatingNuclearCharges;
