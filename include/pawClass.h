@@ -32,6 +32,7 @@
 #include "AtomCenteredSphericalFunctionGaussian.h"
 #include "AtomCenteredSphericalFunctionSinc.h"
 #include "AtomCenteredSphericalFunctionBessel.h"
+#include "wigner/gaunt.hpp"
 #include <memory>
 #include <MemorySpaceType.h>
 #include <headers.h>
@@ -164,14 +165,16 @@ namespace dftfe
 
 
     void
-    computeCompensationchargel0();
+    computeCompensationChargeL0();
 
-    // void
-    // computeCompensationChargeCoeff();
+    void
+    computeCompensationChargeCoeff();
 
-    // void
-    // computeCompensationCharge();
+    void
+    computeCompensationCharge();
 
+    double
+    gaunt(int l_i, int l_j, int l, int m_i, int m_j, int m);
 
 
     /**
@@ -257,6 +260,27 @@ namespace dftfe
     void
     createAtomCenteredSphericalFunctionsForZeroPotential();
 
+    std::complex<double>
+    computeTransformationExtries(int l, int mu, int m);
+    /**
+     * @brief factorial: Recursive method to find factorial
+     *
+     *
+     *  @param[in] n
+     *
+     */
+
+    double
+    factorial(double n)
+    {
+      if (n < 0)
+        {
+          // pcout<<"-ve Factorial"<<std::endl;
+          return -100.;
+        }
+      return (n == 1. || n == 0.) ? 1. : factorial(n - 1) * n;
+    }
+
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
       d_BLASWrapperHostPtr;
@@ -321,8 +345,12 @@ namespace dftfe
         FEBasisOperations<double, double, dftfe::utils::MemorySpace::DEVICE>>
       d_BasisOperatorElectroDevicePtr;
 #endif
-
-    std::map<unsigned int, double>       d_DeltaL0coeff, d_NtildeCore;
+    std::map<unsigned int, std::vector<double>>
+                                                d_ProductOfQijShapeFnAtQuadPoints;
+    std::map<unsigned int, std::vector<double>> D_ij;
+    std::map<unsigned int, std::vector<double>> d_multipole;
+    std::map<unsigned int, std::vector<double>> d_gLValuesQuadPoints;
+    std::map<unsigned int, double>              d_DeltaL0coeff, d_NtildeCore;
     std::map<unsigned int, double>       d_RmaxAug, d_RminAug, d_RmaxComp;
     std::map<unsigned int, unsigned int> d_RmaxAugIndex;
     // Total Comepsantion charge field
