@@ -129,7 +129,7 @@ namespace dftfe
     ~kohnShamDFTOperatorDeviceClass()
   {
     if (d_isMallocCalled == true)
-      d_ONCVnonLocalOperator->freeDeviceVectors();    
+      d_ONCVnonLocalOperator->freeDeviceVectors();
   }
 
   template <unsigned int              FEOrder,

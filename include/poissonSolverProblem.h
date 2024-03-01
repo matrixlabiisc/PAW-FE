@@ -83,6 +83,34 @@ namespace dftfe
       const bool         reuseSmearedChargeRhs            = false,
       const bool         reinitializeFastConstraints      = false);
 
+    void
+    reinit(
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+        &                                      basisOperationsPtr,
+      distributedCPUVec<double> &              x,
+      const dealii::AffineConstraints<double> &constraintMatrix,
+      const unsigned int                       matrixFreeVectorComponent,
+      const unsigned int matrixFreeQuadratureComponentRhsDensity,
+      const unsigned int matrixFreeQuadratureComponentAX,
+      const std::map<dealii::types::global_dof_index, double> &atoms,
+      const std::map<dealii::CellId, std::vector<double>> &smearedChargeValues,
+      const unsigned int smearedChargeQuadratureId,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                                                  rhoValues,
+      const bool                                           isCoreRhoValues,
+      const std::map<dealii::CellId, std::vector<double>> &CoreRhoValues,
+      const bool         isComputeDiagonalA               = true,
+      const bool         isComputeMeanValueConstraints    = false,
+      const bool         smearedNuclearCharges            = false,
+      const bool         isRhoValues                      = true,
+      const bool         isGradSmearedChargeRhs           = false,
+      const unsigned int smearedChargeGradientComponentId = 0,
+      const bool         storeSmearedChargeRhs            = false,
+      const bool         reuseSmearedChargeRhs            = false,
+      const bool         reinitializeFastConstraints      = false);
+
 
     /**
      * @brief get the reference to x field
@@ -222,7 +250,8 @@ namespace dftfe
 
     /// pointer to electron density cell quadrature data
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      *d_rhoValuesPtr;
+      *                                                  d_rhoValuesPtr;
+    const std::map<dealii::CellId, std::vector<double>> *d_coreRhoValuesPtr;
     /// pointer to smeared charge cell quadrature data
     const std::map<dealii::CellId, std::vector<double>>
       *d_smearedChargeValuesPtr;
@@ -271,6 +300,7 @@ namespace dftfe
       d_basisOperationsPtr;
     ///
     bool d_isFastConstraintsInitialized;
+    bool d_isCoreRhoVals;
 
     const MPI_Comm             mpi_communicator;
     const unsigned int         n_mpi_processes;

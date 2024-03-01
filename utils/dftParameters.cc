@@ -232,7 +232,42 @@ namespace dftfe
           "0",
           dealii::Patterns::Integer(0),
           "[Standard] Total number of atom types. This parameter requires a mandatory non-zero input which is equal to the number of unique atom types in the file passed to ATOMIC COORDINATES FILE.");
-
+        prm.declare_entry("SPHERICAL QUADRATURE",
+                          "0",
+                          dealii::Patterns::Integer(0),
+                          "[Standard] ");
+        prm.declare_entry("QUADRATURE ORDER",
+                          "10",
+                          dealii::Patterns::Integer(0),
+                          "[Standard] ");
+        prm.declare_entry("QUADRATURE COPY",
+                          "2",
+                          dealii::Patterns::Integer(0),
+                          "[Standard] ");
+        prm.declare_entry("CORE DENSITY QUADRATURE ORDER",
+                          "14",
+                          dealii::Patterns::Integer(0),
+                          "[Standard] ");
+        prm.declare_entry("CORE DENSITY QUADRATURE COPY",
+                          "1",
+                          dealii::Patterns::Integer(0),
+                          "[Standard] ");
+        prm.declare_entry("COMPENSATION CHARGE QUADRATURE ORDER",
+                          "10",
+                          dealii::Patterns::Integer(0),
+                          "[Standard] ");
+        prm.declare_entry("COMPENSATION CHARGE QUADRATURE COPY",
+                          "2",
+                          dealii::Patterns::Integer(0),
+                          "[Standard] ");
+        prm.declare_entry("USE DIAGONAL MASS MATRIX",
+                          "false",
+                          dealii::Patterns::Bool(),
+                          "[Standard] ");
+        prm.declare_entry("USE APPROX DELTA MATRIX",
+                          "false",
+                          dealii::Patterns::Bool(),
+                          "[Standard] ");
         prm.declare_entry(
           "DOMAIN VECTORS FILE",
           "",
@@ -1392,6 +1427,19 @@ namespace dftfe
       coordinatesFile             = prm.get("ATOMIC COORDINATES FILE");
       coordinatesGaussianDispFile = prm.get("ATOMIC DISP COORDINATES FILE");
       domainBoundingVectorsFile   = prm.get("DOMAIN VECTORS FILE");
+      QuadratureOrder             = prm.get_integer("QUADRATURE ORDER");
+      QuadratureCopy              = prm.get_integer("QUADRATURE COPY");
+      sphericalQuadrature         = prm.get_integer("SPHERICAL QUADRATURE");
+      QuadratureOrderCoreDensity =
+        prm.get_integer("CORE DENSITY QUADRATURE ORDER");
+      QuadratureCopyCoreDensity =
+        prm.get_integer("CORE DENSITY QUADRATURE COPY");
+      QuadratureOrderComp =
+        prm.get_integer("COMPENSATION CHARGE QUADRATURE ORDER");
+      QuadratureCopyComp =
+        prm.get_integer("COMPENSATION CHARGE QUADRATURE COPY");
+      DiagonalMassMatrix = prm.get_bool("USE DIAGONAL MASS MATRIX");
+      ApproxDelta        = prm.get_bool("USE APPROX DELTA MATRIX");
       prm.enter_subsection("Optimization");
       {
         optimizationMode       = prm.get("OPTIMIZATION MODE");

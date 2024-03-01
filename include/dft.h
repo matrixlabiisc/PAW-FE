@@ -68,6 +68,7 @@
 
 #include <mixingClass.h>
 #include <oncvClass.h>
+#include <pawClass.h>
 
 namespace dftfe
 {
@@ -699,6 +700,8 @@ namespace dftfe
     void
     initCoreRho();
     void
+    initZeroPotential();
+    void
     computeRhoInitialGuessFromPSI(
       std::vector<std::vector<distributedCPUVec<double>>> eigenVectors);
     void
@@ -1243,7 +1246,8 @@ namespace dftfe
 
     std::shared_ptr<dftfe::oncvClass<dataTypes::number, memorySpace>>
       d_oncvClassPtr;
-
+    std::shared_ptr<dftfe::pawClass<dataTypes::number, memorySpace>>
+      d_pawClassPtr;
 
     std::shared_ptr<
 #if defined(DFTFE_WITH_DEVICE)
@@ -1473,11 +1477,14 @@ namespace dftfe
     std::deque<distributedCPUVec<double>> d_groundStateDensityHistory;
 
     std::map<dealii::CellId, std::vector<double>> d_pseudoVLoc;
+    std::map<dealii::CellId, std::vector<double>> d_zeroPotential;
 
     /// Internal data:: map for cell id to Vpseudo local of individual atoms.
     /// Only for atoms whose psp tail intersects the local domain.
     std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
       d_pseudoVLocAtoms;
+    std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
+      d_zeroPotentialAtoms;
 
 
     std::vector<std::vector<double>> d_localVselfs;

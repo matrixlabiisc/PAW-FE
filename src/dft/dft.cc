@@ -843,10 +843,17 @@ namespace dftfe
     else if (d_dftParamsPtr->isPseudopotential == true &&
              d_dftParamsPtr->pawPseudoPotential == true)
       {
-        AssertThrow(
-          false,
-          dealii::ExcMessage(std::string(
-            "DFT-FE Error: PAW is not yet implemented in thie release.")));
+        d_pawClassPtr =
+          std::make_shared<dftfe::pawClass<dataTypes::number, memorySpace>>(
+            mpi_communicator, // domain decomposition communicator
+            d_dftfeScratchFolderName,
+            atomTypes,
+            d_dftParamsPtr->floatingNuclearCharges,
+            d_nOMPThreads,
+            d_atomTypeAtributes,
+            d_dftParamsPtr->reproducible_output,
+            d_dftParamsPtr->verbosity,
+            d_dftParamsPtr->useDevice);
       }
 
     if (d_dftParamsPtr->verbosity >= 1)
@@ -895,6 +902,17 @@ namespace dftfe
             d_dftParamsPtr->pawPseudoPotential == false)
           {
             d_oncvClassPtr->initialiseNonLocalContribution(
+              d_atomLocationsInterestPseudopotential,
+              d_imageIdsTrunc,
+              d_imagePositionsTrunc,
+              d_kPointWeights,     // accounts for interpool
+              d_kPointCoordinates, // accounts for interpool
+              updateNonlocalSparsity);
+          }
+        else if (d_dftParamsPtr->isPseudopotential == true &&
+                 d_dftParamsPtr->pawPseudoPotential == true)
+          {
+            d_pawClassPtr->initialiseNonLocalContribution(
               d_atomLocationsInterestPseudopotential,
               d_imageIdsTrunc,
               d_imagePositionsTrunc,
@@ -1177,22 +1195,44 @@ namespace dftfe
     //
     if (d_dftParamsPtr->isPseudopotential == true &&
         d_dftParamsPtr->pawPseudoPotential == false)
-      d_oncvClassPtr->initialise(d_basisOperationsPtrHost,
+      {
+        d_oncvClassPtr->initialise(d_basisOperationsPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
-                                 d_basisOperationsPtrDevice,
+                                   d_basisOperationsPtrDevice,
 #endif
-                                 d_BLASWrapperPtrHost,
+                                   d_BLASWrapperPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
-                                 d_BLASWrapperPtr,
+                                   d_BLASWrapperPtr,
 #endif
-                                 d_densityQuadratureId,
-                                 d_lpspQuadratureId,
-                                 d_sparsityPatternQuadratureId,
-                                 d_nlpspQuadratureId,
-                                 d_densityQuadratureIdElectro,
-                                 d_excManagerPtr,
-                                 atomLocations,
-                                 d_numEigenValues);
+                                   d_densityQuadratureId,
+                                   d_lpspQuadratureId,
+                                   d_sparsityPatternQuadratureId,
+                                   d_nlpspQuadratureId,
+                                   d_densityQuadratureIdElectro,
+                                   d_excManagerPtr,
+                                   atomLocations,
+                                   d_numEigenValues);
+      }
+    else if (d_dftParamsPtr->isPseudopotential == true &&
+             d_dftParamsPtr->pawPseudoPotential == true)
+      {
+        d_pawClassPtr->initialise(d_basisOperationsPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
+                                  d_basisOperationsPtrDevice,
+#endif
+                                  d_BLASWrapperPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
+                                  d_BLASWrapperPtr,
+#endif
+                                  d_densityQuadratureId,
+                                  d_lpspQuadratureId,
+                                  d_sparsityPatternQuadratureId,
+                                  d_nlpspQuadratureId,
+                                  d_densityQuadratureIdElectro,
+                                  d_excManagerPtr,
+                                  atomLocations,
+                                  d_numEigenValues);
+      }
 
 
     //
@@ -2136,98 +2176,109 @@ namespace dftfe
     //
     // solve vself in bins
     //
-    computing_timer.enter_subsection("Nuclear self-potential solve");
-    computingTimerStandard.enter_subsection("Nuclear self-potential solve");
-#ifdef DFTFE_WITH_DEVICE
-    if (d_dftParamsPtr->useDevice)
-      d_vselfBinsManager.solveVselfInBinsDevice(
-        d_basisOperationsPtrElectroHost,
-        d_baseDofHandlerIndexElectro,
-        d_phiTotAXQuadratureIdElectro,
-        d_binsStartDofHandlerIndexElectro,
-        FEOrder == FEOrderElectro ?
-          d_basisOperationsPtrDevice->cellStiffnessMatrixBasisData() :
-          d_basisOperationsPtrElectroDevice->cellStiffnessMatrixBasisData(),
-        d_BLASWrapperPtr,
-        d_constraintsPRefined,
-        d_imagePositionsTrunc,
-        d_imageIdsTrunc,
-        d_imageChargesTrunc,
-        d_localVselfs,
-        d_bQuadValuesAllAtoms,
-        d_bQuadAtomIdsAllAtoms,
-        d_bQuadAtomIdsAllAtomsImages,
-        d_bCellNonTrivialAtomIds,
-        d_bCellNonTrivialAtomIdsBins,
-        d_bCellNonTrivialAtomImageIds,
-        d_bCellNonTrivialAtomImageIdsBins,
-        d_smearedChargeWidths,
-        d_smearedChargeScaling,
-        d_smearedChargeQuadratureIdElectro,
-        d_dftParamsPtr->smearedNuclearCharges);
-    else
-      d_vselfBinsManager.solveVselfInBins(
-        d_basisOperationsPtrElectroHost,
-        d_binsStartDofHandlerIndexElectro,
-        d_phiTotAXQuadratureIdElectro,
-        d_constraintsPRefined,
-        d_imagePositionsTrunc,
-        d_imageIdsTrunc,
-        d_imageChargesTrunc,
-        d_localVselfs,
-        d_bQuadValuesAllAtoms,
-        d_bQuadAtomIdsAllAtoms,
-        d_bQuadAtomIdsAllAtomsImages,
-        d_bCellNonTrivialAtomIds,
-        d_bCellNonTrivialAtomIdsBins,
-        d_bCellNonTrivialAtomImageIds,
-        d_bCellNonTrivialAtomImageIdsBins,
-        d_smearedChargeWidths,
-        d_smearedChargeScaling,
-        d_smearedChargeQuadratureIdElectro,
-        d_dftParamsPtr->smearedNuclearCharges);
-#else
-    d_vselfBinsManager.solveVselfInBins(d_basisOperationsPtrElectroHost,
-                                        d_binsStartDofHandlerIndexElectro,
-                                        d_phiTotAXQuadratureIdElectro,
-                                        d_constraintsPRefined,
-                                        d_imagePositionsTrunc,
-                                        d_imageIdsTrunc,
-                                        d_imageChargesTrunc,
-                                        d_localVselfs,
-                                        d_bQuadValuesAllAtoms,
-                                        d_bQuadAtomIdsAllAtoms,
-                                        d_bQuadAtomIdsAllAtomsImages,
-                                        d_bCellNonTrivialAtomIds,
-                                        d_bCellNonTrivialAtomIdsBins,
-                                        d_bCellNonTrivialAtomImageIds,
-                                        d_bCellNonTrivialAtomImageIdsBins,
-                                        d_smearedChargeWidths,
-                                        d_smearedChargeScaling,
-                                        d_smearedChargeQuadratureIdElectro,
-                                        d_dftParamsPtr->smearedNuclearCharges);
-#endif
-    computingTimerStandard.leave_subsection("Nuclear self-potential solve");
-    computing_timer.leave_subsection("Nuclear self-potential solve");
-
-    if ((d_dftParamsPtr->isPseudopotential ||
-         d_dftParamsPtr->smearedNuclearCharges))
+    if (d_dftParamsPtr->isPseudopotential &&
+        !d_dftParamsPtr->pawPseudoPotential)
       {
-        computingTimerStandard.enter_subsection("Init local PSP");
-        initLocalPseudoPotential(d_dofHandlerPRefined,
-                                 d_lpspQuadratureIdElectro,
-                                 d_matrixFreeDataPRefined,
-                                 d_phiExtDofHandlerIndexElectro,
-                                 d_constraintsPRefinedOnlyHanging,
-                                 d_supportPointsPRefined,
-                                 d_vselfBinsManager,
-                                 d_phiExt,
-                                 d_pseudoVLoc,
-                                 d_pseudoVLocAtoms);
+        computing_timer.enter_subsection("Nuclear self-potential solve");
+        computingTimerStandard.enter_subsection("Nuclear self-potential solve");
+#ifdef DFTFE_WITH_DEVICE
+        if (d_dftParamsPtr->useDevice)
+          d_vselfBinsManager.solveVselfInBinsDevice(
+            d_basisOperationsPtrElectroHost,
+            d_baseDofHandlerIndexElectro,
+            d_phiTotAXQuadratureIdElectro,
+            d_binsStartDofHandlerIndexElectro,
+            FEOrder == FEOrderElectro ?
+              d_basisOperationsPtrDevice->cellStiffnessMatrixBasisData() :
+              d_basisOperationsPtrElectroDevice->cellStiffnessMatrixBasisData(),
+            d_BLASWrapperPtr,
+            d_constraintsPRefined,
+            d_imagePositionsTrunc,
+            d_imageIdsTrunc,
+            d_imageChargesTrunc,
+            d_localVselfs,
+            d_bQuadValuesAllAtoms,
+            d_bQuadAtomIdsAllAtoms,
+            d_bQuadAtomIdsAllAtomsImages,
+            d_bCellNonTrivialAtomIds,
+            d_bCellNonTrivialAtomIdsBins,
+            d_bCellNonTrivialAtomImageIds,
+            d_bCellNonTrivialAtomImageIdsBins,
+            d_smearedChargeWidths,
+            d_smearedChargeScaling,
+            d_smearedChargeQuadratureIdElectro,
+            d_dftParamsPtr->smearedNuclearCharges);
+        else
+          d_vselfBinsManager.solveVselfInBins(
+            d_basisOperationsPtrElectroHost,
+            d_binsStartDofHandlerIndexElectro,
+            d_phiTotAXQuadratureIdElectro,
+            d_constraintsPRefined,
+            d_imagePositionsTrunc,
+            d_imageIdsTrunc,
+            d_imageChargesTrunc,
+            d_localVselfs,
+            d_bQuadValuesAllAtoms,
+            d_bQuadAtomIdsAllAtoms,
+            d_bQuadAtomIdsAllAtomsImages,
+            d_bCellNonTrivialAtomIds,
+            d_bCellNonTrivialAtomIdsBins,
+            d_bCellNonTrivialAtomImageIds,
+            d_bCellNonTrivialAtomImageIdsBins,
+            d_smearedChargeWidths,
+            d_smearedChargeScaling,
+            d_smearedChargeQuadratureIdElectro,
+            d_dftParamsPtr->smearedNuclearCharges);
+#else
+        d_vselfBinsManager.solveVselfInBins(
+          d_basisOperationsPtrElectroHost,
+          d_binsStartDofHandlerIndexElectro,
+          d_phiTotAXQuadratureIdElectro,
+          d_constraintsPRefined,
+          d_imagePositionsTrunc,
+          d_imageIdsTrunc,
+          d_imageChargesTrunc,
+          d_localVselfs,
+          d_bQuadValuesAllAtoms,
+          d_bQuadAtomIdsAllAtoms,
+          d_bQuadAtomIdsAllAtomsImages,
+          d_bCellNonTrivialAtomIds,
+          d_bCellNonTrivialAtomIdsBins,
+          d_bCellNonTrivialAtomImageIds,
+          d_bCellNonTrivialAtomImageIdsBins,
+          d_smearedChargeWidths,
+          d_smearedChargeScaling,
+          d_smearedChargeQuadratureIdElectro,
+          d_dftParamsPtr->smearedNuclearCharges);
+#endif
+        computingTimerStandard.leave_subsection("Nuclear self-potential solve");
+        computing_timer.leave_subsection("Nuclear self-potential solve");
 
-        computingTimerStandard.leave_subsection("Init local PSP");
+        if ((d_dftParamsPtr->isPseudopotential ||
+             d_dftParamsPtr->smearedNuclearCharges))
+          {
+            computingTimerStandard.enter_subsection("Init local PSP");
+            initLocalPseudoPotential(d_dofHandlerPRefined,
+                                     d_lpspQuadratureIdElectro,
+                                     d_matrixFreeDataPRefined,
+                                     d_phiExtDofHandlerIndexElectro,
+                                     d_constraintsPRefinedOnlyHanging,
+                                     d_supportPointsPRefined,
+                                     d_vselfBinsManager,
+                                     d_phiExt,
+                                     d_pseudoVLoc,
+                                     d_pseudoVLocAtoms);
+
+            computingTimerStandard.leave_subsection("Init local PSP");
+          }
       }
-
+    else if (d_dftParamsPtr->isPseudopotential &&
+             d_dftParamsPtr->pawPseudoPotential)
+      {
+        computingTimerStandard.enter_subsection("Init Zero Potential PAW");
+        initZeroPotential();
+        computingTimerStandard.leave_subsection("Init Zero Potential PAW");
+      }
 
     computingTimerStandard.enter_subsection("Total scf solve");
 

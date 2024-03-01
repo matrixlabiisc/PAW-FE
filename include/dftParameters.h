@@ -195,6 +195,20 @@ namespace dftfe
 
     bool writeStructreEnergyForcesFileForPostProcess;
 
+    // PAW temp parameters
+    unsigned int QuadratureOrder;
+    unsigned int QuadratureCopy;
+    unsigned int sphericalQuadrature;
+    unsigned int QuadratureOrderCoreDensity;
+    unsigned int QuadratureCopyCoreDensity;
+    unsigned int QuadratureOrderComp;
+    unsigned int QuadratureCopyComp;
+    unsigned int QuadratureOrderZeroPotential;
+    unsigned int QuadratureCopyZeroPotential;
+    bool         KineticEnergyCorrection;
+    bool         DiagonalMassMatrix;
+    bool         ApproxDelta;
+
     dftParameters();
 
     /**

@@ -57,7 +57,9 @@ namespace dftfe
          it != atomTypes.end();
          it++)
       {
-        outerMostPointCoreDen[*it] = d_oncvClassPtr->getRmaxCoreDensity(*it);
+        outerMostPointCoreDen[*it] = d_dftParamsPtr->pawPseudoPotential ?
+                                       d_pawClassPtr->getRmaxCoreDensity(*it) :
+                                       d_oncvClassPtr->getRmaxCoreDensity(*it);
         if (outerMostPointCoreDen[*it] > maxCoreRhoTail)
           maxCoreRhoTail = outerMostPointCoreDen[*it];
         if (d_dftParamsPtr->verbosity >= 4)
@@ -139,8 +141,11 @@ namespace dftfe
                                       atomLocations[iAtom][4]);
                 bool             isCoreRhoDataInCell = false;
 
-                if (!d_oncvClassPtr->coreNuclearDensityPresent(
-                      atomLocations[iAtom][0]))
+                if (!(d_dftParamsPtr->pawPseudoPotential ?
+                        d_pawClassPtr->coreNuclearDensityPresent(
+                          atomLocations[iAtom][0]) :
+                        d_oncvClassPtr->coreNuclearDensityPresent(
+                          atomLocations[iAtom][0])))
                   continue;
 
                 if (atom.distance(cell->center()) > cellCenterCutOff)
@@ -173,8 +178,11 @@ namespace dftfe
                         outerMostPointCoreDen[atomLocations[iAtom][0]])
                       {
                         std::vector<double> Vec;
-                        d_oncvClassPtr->getRadialCoreDensity(
-                          atomLocations[iAtom][0], distanceToAtom, Vec);
+                        d_dftParamsPtr->pawPseudoPotential ?
+                          d_pawClassPtr->getRadialCoreDensity(
+                            atomLocations[iAtom][0], distanceToAtom, Vec) :
+                          d_oncvClassPtr->getRadialCoreDensity(
+                            atomLocations[iAtom][0], distanceToAtom, Vec);
 
                         value                         = Vec[0];
                         radialDensityFirstDerivative  = Vec[1];
@@ -262,8 +270,11 @@ namespace dftfe
                  ++iImageCharge)
               {
                 const int masterAtomId = d_imageIdsTrunc[iImageCharge];
-                if (!d_oncvClassPtr->coreNuclearDensityPresent(
-                      atomLocations[masterAtomId][0]))
+                if (!(d_dftParamsPtr->pawPseudoPotential ?
+                        d_pawClassPtr->coreNuclearDensityPresent(
+                          atomLocations[masterAtomId][0]) :
+                        d_oncvClassPtr->coreNuclearDensityPresent(
+                          atomLocations[masterAtomId][0])))
                   continue;
 
                 dealii::Point<3> imageAtom(
@@ -298,8 +309,15 @@ namespace dftfe
                         outerMostPointCoreDen[atomLocations[masterAtomId][0]])
                       {
                         std::vector<double> Vec;
-                        d_oncvClassPtr->getRadialCoreDensity(
-                          atomLocations[masterAtomId][0], distanceToAtom, Vec);
+                        d_dftParamsPtr->pawPseudoPotential ?
+                          d_pawClassPtr->getRadialCoreDensity(
+                            atomLocations[masterAtomId][0],
+                            distanceToAtom,
+                            Vec) :
+                          d_oncvClassPtr->getRadialCoreDensity(
+                            atomLocations[masterAtomId][0],
+                            distanceToAtom,
+                            Vec);
                         value                         = Vec[0];
                         radialDensityFirstDerivative  = Vec[1];
                         radialDensitySecondDerivative = Vec[2];

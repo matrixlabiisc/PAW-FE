@@ -215,16 +215,45 @@ namespace dftfe
     d_constraintsVector.push_back(&constraintsNoneEigen); // For Eigen;
 
     std::vector<dealii::Quadrature<1>> quadratureVector;
-    quadratureVector.push_back(dealii::QGauss<1>(
-      C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>()));
-    quadratureVector.push_back(
-      dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadNLPSP<FEOrder>()),
-                           C_numCopies1DQuadNLPSP()));
+    // densityQuadratureId
+    if (!d_dftParamsPtr->pawPseudoPotential)
+      quadratureVector.push_back(dealii::QGauss<1>(
+        C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>()));
+    else
+      {
+        quadratureVector.push_back(dealii::QIterated<1>(
+          dealii::QGauss<1>(d_dftParamsPtr->QuadratureOrderCoreDensity),
+          d_dftParamsPtr->QuadratureCopyCoreDensity));
+      }
+    // nlpspQuadratureId
+    if (!d_dftParamsPtr->pawPseudoPotential)
+      quadratureVector.push_back(
+        dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadNLPSP<FEOrder>()),
+                             C_numCopies1DQuadNLPSP()));
+    else
+      {
+        quadratureVector.push_back(dealii::QIterated<1>(
+          dealii::QGauss<1>(d_dftParamsPtr->QuadratureOrder),
+          d_dftParamsPtr->QuadratureCopy));
+      }
+    // GLL quadrature Id
     quadratureVector.push_back(dealii::QGaussLobatto<1>(
       C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>() + 1));
-    quadratureVector.push_back(
-      dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadLPSP<FEOrder>()),
-                           C_numCopies1DQuadLPSP()));
+
+    // LocalPSPQuadratureId
+    if (!d_dftParamsPtr->pawPseudoPotential)
+      {
+        quadratureVector.push_back(
+          dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadLPSP<FEOrder>()),
+                               C_numCopies1DQuadLPSP()));
+      }
+    else
+      {
+        quadratureVector.push_back(dealii::QIterated<1>(
+          dealii::QGauss<1>(d_dftParamsPtr->QuadratureOrderZeroPotential),
+          d_dftParamsPtr->QuadratureCopyZeroPotential));
+      }
+    // FeOrder+1 QuadratureId
     quadratureVector.push_back(dealii::QGauss<1>(C_num1DQuad<FEOrder>()));
     // SparsityPattern VEctor
     quadratureVector.push_back(dealii::QGauss<1>(8));

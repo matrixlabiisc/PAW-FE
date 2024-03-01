@@ -60,15 +60,18 @@ namespace dftfe
       }
 
 
-    dealii::FEEvaluation<
-      3,
-      C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>(),
-      C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>(),
-      1,
-      double>
-      feEvalObj(basisOperationsPtr->matrixFreeData(),
-                dofHandlerId,
-                quadratureId);
+    // dealii::FEEvaluation<
+    //   3,
+    //   C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>(),
+    //   C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>(),
+    //   1,
+    //   double>
+    //   feEvalObj(basisOperationsPtr->matrixFreeData(),
+    //             dofHandlerId,
+    //             quadratureId);
+    dealii::FEEvaluation<3, -1> feEvalObj(basisOperationsPtr->matrixFreeData(),
+                                          dofHandlerId,
+                                          quadratureId);
 
     // AssertThrow(nodalField.partitioners_are_globally_compatible(*matrixFreeData.get_vector_partitioner(dofHandlerId)),
     //        dealii::ExcMessage("DFT-FE Error: mismatch in
@@ -181,15 +184,19 @@ namespace dftfe
         quadratureGradValueData.resize(3 * nQuadsPerCell * nCells);
       }
 
-    dealii::FEEvaluation<
-      3,
-      FEOrderElectro,
-      C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>(),
-      1,
-      double>
-      feEvalObj(basisOperationsPtr->matrixFreeData(),
-                dofHandlerId,
-                quadratureId);
+    // dealii::FEEvaluation<
+    //   3,
+    //   FEOrderElectro,
+    //   C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>(),
+    //   1,
+    //   double>
+    //   feEvalObj(basisOperationsPtr->matrixFreeData(),
+    //             dofHandlerId,
+    //             quadratureId);
+
+    dealii::FEEvaluation<3, -1> feEvalObj(basisOperationsPtr->matrixFreeData(),
+                                          dofHandlerId,
+                                          quadratureId);
 
     // AssertThrow(nodalField.partitioners_are_globally_compatible(*matrixFreeData.get_vector_partitioner(dofHandlerId)),
     //        dealii::ExcMessage("DFT-FE Error: mismatch in
@@ -281,14 +288,17 @@ namespace dftfe
 
 
 
-    dealii::FEEvaluation<3,
-                         C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>(),
-                         C_num1DQuadLPSP<FEOrder>() * C_numCopies1DQuadLPSP(),
-                         1,
-                         double>
-      feEvalObj(basisOperationsPtr->matrixFreeData(),
-                dofHandlerId,
-                quadratureId);
+    // dealii::FEEvaluation<3,
+    //                      C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>(),
+    //                      C_num1DQuadLPSP<FEOrder>() *
+    //                      C_numCopies1DQuadLPSP(), 1, double>
+    //   feEvalObj(basisOperationsPtr->matrixFreeData(),
+    //             dofHandlerId,
+    //             quadratureId);
+
+    dealii::FEEvaluation<3, -1> feEvalObj(basisOperationsPtr->matrixFreeData(),
+                                          dofHandlerId,
+                                          quadratureId);
 
     // AssertThrow(nodalField.partitioners_are_globally_compatible(*matrixFreeData.get_vector_partitioner(dofHandlerId)),
     //        dealii::ExcMessage("DFT-FE Error: mismatch in
@@ -360,14 +370,15 @@ namespace dftfe
     const distributedCPUVec<double> &    nodalField)
 
   {
-    dealii::FEEvaluation<
-      3,
-      C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>(),
-      C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>(),
-      1,
-      double>
-                       fe_evalField(matrixFreeDataObject, 0, 0);
-    const unsigned int numQuadPoints = fe_evalField.n_q_points;
+    // dealii::FEEvaluation<
+    //   3,
+    //   C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>(),
+    //   C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>(),
+    //   1,
+    //   double>
+    //                    fe_evalField(matrixFreeDataObject, 0, 0);
+    dealii::FEEvaluation<3, -1> fe_evalField(matrixFreeDataObject, 0, 0);
+    const unsigned int          numQuadPoints = fe_evalField.n_q_points;
     nodalField.update_ghost_values();
 
     // AssertThrow(nodalField.partitioners_are_globally_compatible(*matrixFreeDataObject.get_vector_partitioner(0)),

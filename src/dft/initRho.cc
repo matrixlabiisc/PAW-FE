@@ -119,7 +119,10 @@ namespace dftfe
           }
         else
           {
-            outerMostPointDen[*it] = d_oncvClassPtr->getRmaxValenceDensity(*it);
+            outerMostPointDen[*it] =
+              d_dftParamsPtr->pawPseudoPotential ?
+                d_pawClassPtr->getRmaxValenceDensity(*it) :
+                d_oncvClassPtr->getRmaxValenceDensity(*it);
             if (outerMostPointDen[*it] > maxRhoTail)
               maxRhoTail = outerMostPointDen[*it];
           }
@@ -298,8 +301,13 @@ namespace dftfe
                             else
                               {
                                 rhoNodalValue +=
-                                  d_oncvClassPtr->getRadialValenceDensity(
-                                    atomLocations[chargeId][0], distanceToAtom);
+                                  d_dftParamsPtr->pawPseudoPotential ?
+                                    d_pawClassPtr->getRadialValenceDensity(
+                                      atomLocations[chargeId][0],
+                                      distanceToAtom) :
+                                    d_oncvClassPtr->getRadialValenceDensity(
+                                      atomLocations[chargeId][0],
+                                      distanceToAtom);
                               }
                           }
                       }
@@ -424,8 +432,11 @@ namespace dftfe
                         else
                           {
                             rhoValueAtQuadPt +=
-                              d_oncvClassPtr->getRadialValenceDensity(
-                                atomLocations[n][0], distanceToAtom);
+                              d_dftParamsPtr->pawPseudoPotential ?
+                                d_pawClassPtr->getRadialValenceDensity(
+                                  atomLocations[n][0], distanceToAtom) :
+                                d_oncvClassPtr->getRadialValenceDensity(
+                                  atomLocations[n][0], distanceToAtom);
                             //                       pcout<<distanceToAtom<<"
                             //                       "<<
                             //                       d_oncvClassPtr->getRadialValenceDensity(
@@ -461,8 +472,12 @@ namespace dftfe
                             distanceToAtom);
                         else
                           rhoValueAtQuadPt +=
-                            d_oncvClassPtr->getRadialValenceDensity(
-                              atomLocations[masterAtomId][0], distanceToAtom);
+                            d_dftParamsPtr->pawPseudoPotential ?
+                              d_pawClassPtr->getRadialValenceDensity(
+                                atomLocations[masterAtomId][0],
+                                distanceToAtom) :
+                              d_oncvClassPtr->getRadialValenceDensity(
+                                atomLocations[masterAtomId][0], distanceToAtom);
                       }
                   }
 
@@ -538,8 +553,11 @@ namespace dftfe
                             else
                               {
                                 std::vector<double> Vec;
-                                d_oncvClassPtr->getRadialValenceDensity(
-                                  atomLocations[n][0], distanceToAtom, Vec);
+                                d_dftParamsPtr->pawPseudoPotential ?
+                                  d_pawClassPtr->getRadialValenceDensity(
+                                    atomLocations[n][0], distanceToAtom, Vec) :
+                                  d_oncvClassPtr->getRadialValenceDensity(
+                                    atomLocations[n][0], distanceToAtom, Vec);
                                 value                         = Vec[0];
                                 radialDensityFirstDerivative  = Vec[1];
                                 radialDensitySecondDerivative = Vec[2];
@@ -596,10 +614,15 @@ namespace dftfe
                             else
                               {
                                 std::vector<double> Vec;
-                                d_oncvClassPtr->getRadialValenceDensity(
-                                  atomLocations[masterAtomId][0],
-                                  distanceToAtom,
-                                  Vec);
+                                d_dftParamsPtr->pawPseudoPotential ?
+                                  d_pawClassPtr->getRadialValenceDensity(
+                                    atomLocations[masterAtomId][0],
+                                    distanceToAtom,
+                                    Vec) :
+                                  d_oncvClassPtr->getRadialValenceDensity(
+                                    atomLocations[masterAtomId][0],
+                                    distanceToAtom,
+                                    Vec);
                                 value                         = Vec[0];
                                 radialDensityFirstDerivative  = Vec[1];
                                 radialDensitySecondDerivative = Vec[2];

@@ -92,7 +92,8 @@ namespace dftfe
     int this_process;
     MPI_Comm_rank(mpi_communicator, &this_process);
     MPI_Barrier(mpi_communicator);
-    double time = MPI_Wtime();
+    double time     = MPI_Wtime();
+    d_isCoreRhoVals = false;
 
     d_basisOperationsPtr        = basisOperationsPtr;
     d_matrixFreeDataPtr         = &(basisOperationsPtr->matrixFreeData());
@@ -103,6 +104,85 @@ namespace dftfe
       matrixFreeQuadratureComponentRhsDensity;
     d_matrixFreeQuadratureComponentAX = matrixFreeQuadratureComponentAX;
     d_rhoValuesPtr                    = isRhoValues ? &rhoValues : NULL;
+    d_atomsPtr                        = smearedNuclearCharges ? NULL : &atoms;
+    d_smearedChargeValuesPtr =
+      smearedNuclearCharges ? &smearedChargeValues : NULL;
+    d_smearedChargeQuadratureId        = smearedChargeQuadratureId;
+    d_isGradSmearedChargeRhs           = isGradSmearedChargeRhs;
+    d_smearedChargeGradientComponentId = smearedChargeGradientComponentId;
+    d_isStoreSmearedChargeRhs          = storeSmearedChargeRhs;
+    d_isReuseSmearedChargeRhs          = reuseSmearedChargeRhs;
+
+    AssertThrow(
+      storeSmearedChargeRhs == false || reuseSmearedChargeRhs == false,
+      dealii::ExcMessage(
+        "DFT-FE Error: both store and reuse smeared charge rhs cannot be true at the same time."));
+
+    if (isComputeMeanValueConstraint)
+      {
+        computeMeanValueConstraint();
+        d_isMeanValueConstraintComputed = true;
+      }
+
+    if (isComputeDiagonalA)
+      computeDiagonalA();
+
+    if (!d_isFastConstraintsInitialized || reinitializeFastConstraints)
+      {
+        d_constraintsInfo.initialize(
+          d_matrixFreeDataPtr->get_vector_partitioner(
+            matrixFreeVectorComponent),
+          constraintMatrix);
+
+        d_isFastConstraintsInitialized = true;
+      }
+  }
+
+  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  void
+  poissonSolverProblem<FEOrder, FEOrderElectro>::reinit(
+    const std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+      &                                      basisOperationsPtr,
+    distributedCPUVec<double> &              x,
+    const dealii::AffineConstraints<double> &constraintMatrix,
+    const unsigned int                       matrixFreeVectorComponent,
+    const unsigned int matrixFreeQuadratureComponentRhsDensity,
+    const unsigned int matrixFreeQuadratureComponentAX,
+    const std::map<dealii::types::global_dof_index, double> &atoms,
+    const std::map<dealii::CellId, std::vector<double>> &smearedChargeValues,
+    const unsigned int smearedChargeQuadratureId,
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      &                                                  rhoValues,
+    const bool                                           isCoreRhoValues,
+    const std::map<dealii::CellId, std::vector<double>> &CoreRhoValues,
+    const bool                                           isComputeDiagonalA,
+    const bool         isComputeMeanValueConstraint,
+    const bool         smearedNuclearCharges,
+    const bool         isRhoValues,
+    const bool         isGradSmearedChargeRhs,
+    const unsigned int smearedChargeGradientComponentId,
+    const bool         storeSmearedChargeRhs,
+    const bool         reuseSmearedChargeRhs,
+    const bool         reinitializeFastConstraints)
+  {
+    int this_process;
+    MPI_Comm_rank(mpi_communicator, &this_process);
+    MPI_Barrier(mpi_communicator);
+    double time     = MPI_Wtime();
+    d_isCoreRhoVals = isCoreRhoValues;
+
+    d_basisOperationsPtr        = basisOperationsPtr;
+    d_matrixFreeDataPtr         = &(basisOperationsPtr->matrixFreeData());
+    d_xPtr                      = &x;
+    d_constraintMatrixPtr       = &constraintMatrix;
+    d_matrixFreeVectorComponent = matrixFreeVectorComponent;
+    d_matrixFreeQuadratureComponentRhsDensity =
+      matrixFreeQuadratureComponentRhsDensity;
+    d_matrixFreeQuadratureComponentAX = matrixFreeQuadratureComponentAX;
+    d_rhoValuesPtr                    = isRhoValues ? &rhoValues : NULL;
+    d_coreRhoValuesPtr                = isCoreRhoValues ? &CoreRhoValues : NULL;
     d_atomsPtr                        = smearedNuclearCharges ? NULL : &atoms;
     d_smearedChargeValuesPtr =
       smearedNuclearCharges ? &smearedChargeValues : NULL;
@@ -194,6 +274,8 @@ namespace dftfe
       d_matrixFreeVectorComponent,
       d_matrixFreeQuadratureComponentAX);
 
+
+
     int isPerformStaticCondensation = (tempvec.linfty_norm() > 1e-10) ? 1 : 0;
 
     MPI_Bcast(&isPerformStaticCondensation, 1, MPI_INT, 0, mpi_communicator);
@@ -221,13 +303,18 @@ namespace dftfe
     // rhs contribution from electronic charge
     if (d_rhoValuesPtr)
       {
-        dealii::FEEvaluation<
-          3,
-          FEOrderElectro,
-          C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>()>
-          fe_eval_density(*d_matrixFreeDataPtr,
-                          d_matrixFreeVectorComponent,
-                          d_matrixFreeQuadratureComponentRhsDensity);
+        // dealii::FEEvaluation<
+        //   3,
+        //   FEOrderElectro,
+        //   C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>()>
+        //   fe_eval_density(*d_matrixFreeDataPtr,
+        //                   d_matrixFreeVectorComponent,
+        //                   d_matrixFreeQuadratureComponentRhsDensity);
+
+        dealii::FEEvaluation<3, -1> fe_eval_density(
+          *d_matrixFreeDataPtr,
+          d_matrixFreeVectorComponent,
+          d_matrixFreeQuadratureComponentRhsDensity);
 
         dealii::AlignedVector<dealii::VectorizedArray<double>> rhoQuads(
           fe_eval_density.n_q_points, dealii::make_vectorized_array(0.0));
@@ -251,9 +338,17 @@ namespace dftfe
                   d_basisOperationsPtr->cellIndex(subCellId);
                 const double *tempVec = d_rhoValuesPtr->data() +
                                         cellIndex * fe_eval_density.n_q_points;
+                const std::vector<double> &tempCoreVec =
+                  d_isCoreRhoVals ?
+                    d_coreRhoValuesPtr->find(subCellId)->second :
+                    std::vector<double>();
+
 
                 for (unsigned int q = 0; q < fe_eval_density.n_q_points; ++q)
-                  rhoQuads[q][iSubCell] = tempVec[q];
+                  rhoQuads[q][iSubCell] = tempVec[q] + tempCoreVec.size() ==
+                                              fe_eval_density.n_q_points ?
+                                            tempCoreVec[q] :
+                                            0.0;
               }
 
 

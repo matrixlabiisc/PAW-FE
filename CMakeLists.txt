@@ -123,6 +123,7 @@ SET(TARGET_SRC
   ./src/dft/generateImageCharges.cc
   ./src/dft/initBoundaryConditions.cc
   ./src/dft/initCoreRho.cc
+  ./src/dft/initZeroPotential.cc
   ./src/dft/initElectronicFields.cc
   ./src/dft/initPseudoLocal.cc
   ./src/dft/initRho.cc
@@ -172,7 +173,8 @@ SET(TARGET_SRC
   ./src/atom/AtomCenteredSphericalFunctionValenceDensitySpline.cc
   ./src/atom/AtomCenteredSphericalFunctionCoreDensitySpline.cc
   ./src/atom/AtomCenteredSphericalFunctionLocalPotentialSpline.cc
-  ./src/atom/AtomCenteredSphericalFunctionProjectorSpline.cc)
+  ./src/atom/AtomCenteredSphericalFunctionProjectorSpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionZeroPotentialSpline.cc)
 
 IF ("${GPU_LANG}" STREQUAL "cuda")
 

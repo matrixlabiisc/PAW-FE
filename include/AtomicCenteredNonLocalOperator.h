@@ -127,7 +127,7 @@ namespace dftfe
 
     void
     freeDeviceVectors();
-#endif      
+#endif
 
     // Getter functions
     // Returns the vector that takes in nonlocalElementIndex and returns the
@@ -439,12 +439,12 @@ namespace dftfe
     std::vector<unsigned int> d_nonlocalElemIdToCellIdVector;
 #if defined(DFTFE_WITH_DEVICE)
     dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-                              d_sphericalFnTimesWavefunctionMatrix;
+                d_sphericalFnTimesWavefunctionMatrix;
     ValueType **hostPointerCDagger, **hostPointerCDaggeOutTemp,
       **hostWfcPointers;
-    ValueType *d_wfcStartPointer;  
+    ValueType * d_wfcStartPointer;
     ValueType **devicePointerCDagger, **devicePointerCDaggerOutTemp,
-      **deviceWfcPointers;                              
+      **deviceWfcPointers;
     std::vector<unsigned int> d_nonlocalElemIdToLocalElemIdMap;
 
     // Data structures moved from KSOperatorDevice

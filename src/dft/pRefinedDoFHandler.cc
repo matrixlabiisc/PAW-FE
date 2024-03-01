@@ -352,23 +352,39 @@ namespace dftfe
 
 
     std::vector<dealii::Quadrature<1>> quadratureVector;
-    quadratureVector.push_back(dealii::QGauss<1>(
-      C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>()));
+    if (!d_dftParamsPtr->pawPseudoPotential)
+      quadratureVector.push_back(dealii::QGauss<1>(
+        C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>()));
+    else
+      {
+        quadratureVector.push_back(dealii::QIterated<1>(
+          dealii::QGauss<1>(d_dftParamsPtr->QuadratureOrderCoreDensity),
+          d_dftParamsPtr->QuadratureCopyCoreDensity));
+      }
     quadratureVector.push_back(
       dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadLPSP<FEOrder>()),
                            C_numCopies1DQuadLPSP()));
-    if (d_dftParamsPtr->isCellStress)
-      quadratureVector.push_back(dealii::QIterated<1>(
-        dealii::QGauss<1>(C_num1DQuadSmearedChargeStress()),
-        C_numCopies1DQuadSmearedChargeStress()));
-    else if (d_dftParamsPtr->meshSizeOuterBall > 2.2)
-      quadratureVector.push_back(
-        dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadSmearedChargeHigh()),
-                             C_numCopies1DQuadSmearedChargeHigh()));
+    if (!d_dftParamsPtr->pawPseudoPotential)
+      {
+        if (d_dftParamsPtr->isCellStress)
+          quadratureVector.push_back(dealii::QIterated<1>(
+            dealii::QGauss<1>(C_num1DQuadSmearedChargeStress()),
+            C_numCopies1DQuadSmearedChargeStress()));
+        else if (d_dftParamsPtr->meshSizeOuterBall > 2.2)
+          quadratureVector.push_back(dealii::QIterated<1>(
+            dealii::QGauss<1>(C_num1DQuadSmearedChargeHigh()),
+            C_numCopies1DQuadSmearedChargeHigh()));
+        else
+          quadratureVector.push_back(
+            dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadSmearedCharge()),
+                                 C_numCopies1DQuadSmearedCharge()));
+      }
     else
-      quadratureVector.push_back(
-        dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadSmearedCharge()),
-                             C_numCopies1DQuadSmearedCharge()));
+      {
+        quadratureVector.push_back(dealii::QIterated<1>(
+          dealii::QGauss<1>(d_dftParamsPtr->QuadratureOrderComp),
+          d_dftParamsPtr->QuadratureCopyComp));
+      }
     quadratureVector.push_back(dealii::QGauss<1>(FEOrderElectro + 1));
 
 
