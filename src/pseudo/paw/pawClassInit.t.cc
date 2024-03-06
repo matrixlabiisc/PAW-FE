@@ -229,6 +229,8 @@ namespace dftfe
     if (updateNonlocalSparsity)
       {
         d_HamiltonianCouplingMatrixEntriesUpdated = false;
+        d_overlapCouplingMatrixEntriesUpdated     = false;
+        d_inverseCouplingMatrixEntriesUpdated     = false;
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
@@ -296,6 +298,8 @@ namespace dftfe
     if (updateNonlocalSparsity)
       {
         d_HamiltonianCouplingMatrixEntriesUpdated = false;
+        d_overlapCouplingMatrixEntriesUpdated     = false;
+        d_inverseCouplingMatrixEntriesUpdated     = false;
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->getDataForSparseStructure(
@@ -342,7 +346,7 @@ namespace dftfe
                        std::shared_ptr<AtomCenteredSphericalFunctionBase>>
           sphericalFunction =
             d_atomicProjectorFnsContainer->getSphericalFunctions();
-        unsigned int numRadProjectors =
+        unsigned int numberOfRadialProjectors =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
         unsigned int numTotalProjectors =
@@ -354,12 +358,12 @@ namespace dftfe
                 "denom.dat")
                  .c_str());
         std::vector<std::vector<double>> denominator(0);
-        dftUtils::readFile(numRadProjectors,
+        dftUtils::readFile(numberOfRadialProjectors,
                            denominator,
                            denominatorDataFileName);
         std::vector<double> pseudoPotentialConstants(numTotalProjectors, 0.0);
         unsigned int        ProjId = 0;
-        for (unsigned int iProj = 0; iProj < numRadProjectors; iProj++)
+        for (unsigned int iProj = 0; iProj < numberOfRadialProjectors; iProj++)
           {
             std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
               sphericalFunction.find(std::make_pair(Znum, iProj))->second;
@@ -624,83 +628,6 @@ namespace dftfe
         imageLoc[atomId] += 1;
       }
   }
-  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
-  const dftfe::utils::MemoryStorage<ValueType, memorySpace> &
-  pawClass<ValueType, memorySpace>::getCouplingMatrix()
-  {
-    if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
-      {
-        if (!d_HamiltonianCouplingMatrixEntriesUpdated)
-          {
-            const std::vector<unsigned int> atomIdsInProcessor =
-              d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
-            std::vector<unsigned int> atomicNumber =
-              d_atomicProjectorFnsContainer->getAtomicNumbers();
-            d_couplingMatrixEntries.clear();
-            std::vector<ValueType> Entries;
-            for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
-              {
-                unsigned int atomId = atomIdsInProcessor[iAtom];
-                unsigned int Znum   = atomicNumber[atomId];
-                unsigned int numberSphericalFunctions =
-                  d_atomicProjectorFnsContainer
-                    ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
-                for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
-                     alpha++)
-                  {
-                    double V =
-                      d_atomicNonLocalPseudoPotentialConstants[Znum][alpha];
-                    Entries.push_back(ValueType(V));
-                  }
-              }
-            d_couplingMatrixEntries.resize(Entries.size());
-            d_couplingMatrixEntries.copyFrom(Entries);
-            d_HamiltonianCouplingMatrixEntriesUpdated = true;
-          }
-
-        return (d_couplingMatrixEntries);
-      }
-#if defined(DFTFE_WITH_DEVICE)
-    else
-      {
-        if (!d_HamiltonianCouplingMatrixEntriesUpdated)
-          {
-            const std::vector<unsigned int> atomIdsInProcessor =
-              d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
-            std::vector<unsigned int> atomicNumber =
-              d_atomicProjectorFnsContainer->getAtomicNumbers();
-            d_couplingMatrixEntries.clear();
-            std::vector<ValueType> Entries;
-            Entries.resize(
-              d_nonLocalOperator->getTotalNonLocalEntriesCurrentProcessor(),
-              0.0);
-            for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
-              {
-                unsigned int atomId = atomIdsInProcessor[iAtom];
-                unsigned int Znum   = atomicNumber[atomId];
-                unsigned int numberSphericalFunctions =
-                  d_atomicProjectorFnsContainer
-                    ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
-                for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
-                     alpha++)
-                  {
-                    unsigned int globalId =
-                      d_nonLocalOperator->getGlobalDofAtomIdSphericalFnPair(
-                        atomId, alpha);
-                    const unsigned int id =
-                      d_nonLocalOperator->getLocalIdOfDistributedVec(globalId);
-                    Entries[id] = ValueType(
-                      d_atomicNonLocalPseudoPotentialConstants[Znum][alpha]);
-                  }
-              }
-            d_couplingMatrixEntries.resize(Entries.size());
-            d_couplingMatrixEntries.copyFrom(Entries);
-            d_HamiltonianCouplingMatrixEntriesUpdated = true;
-          }
-        return (d_couplingMatrixEntries);
-      }
-#endif
-  }
 
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -740,4 +667,845 @@ namespace dftfe
       d_atomicProjectorFnsContainer->getTotalNumberOfSphericalFunctionsPerAtom(
         atomicNumbers[atomId]));
   }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::initialiseDataonRadialMesh()
+  {}
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::initialiseColoumbicEnergyCorrection()
+  {
+    pcout << "Initlising Delta C Correction Term" << std::endl;
+    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+         it != d_atomTypes.end();
+         ++it)
+      {
+        unsigned int atomicNumber = *it;
+
+        const unsigned int numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(atomicNumber);
+        const unsigned int numberOfRadialProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(atomicNumber);
+        const std::map<std::pair<unsigned int, unsigned int>,
+                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+          sphericalFunction =
+            d_atomicProjectorFnsContainer->getSphericalFunctions();
+
+        const unsigned int numRadialShapeFunctions =
+          d_atomicShapeFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(atomicNumber);
+        const unsigned int numShapeFunctions =
+          d_atomicShapeFnsContainer->getTotalNumberOfSphericalFunctionsPerAtom(
+            atomicNumber);
+
+        unsigned int        RmaxIndex  = d_RmaxAugIndex[atomicNumber];
+        std::vector<double> radialMesh = d_radialMesh[atomicNumber];
+        const unsigned int  meshSize   = radialMesh.size();
+        std::vector<double> rab        = d_radialJacobianData[atomicNumber];
+
+        std::vector<double> multipoleTable = d_multipole[atomicNumber];
+        std::vector<double> Delta_Cij(numberOfProjectors * numberOfProjectors,
+                                      0.0);
+        std::vector<double> Delta_Cijkl(pow(numberOfProjectors, 4), 0.0);
+        double              DeltaC        = 0.0;
+        double              DeltaCValence = 0.0;
+        std::map<int, int>  mapOfRadProjLval;
+        std::vector<std::vector<int>> projectorDetailsOfAtom;
+        for (int iProj = 0; iProj < numberOfRadialProjectors; iProj++)
+          {
+            const std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
+              sphericalFunction.find(std::make_pair(atomicNumber, iProj))
+                ->second;
+            const int lQuantumNo    = sphFn->getQuantumNumberl();
+            mapOfRadProjLval[iProj] = lQuantumNo;
+            std::vector<int> temp(3, 0);
+            for (int mQuantumNumber = -lQuantumNo; mQuantumNumber <= lQuantumNo;
+                 mQuantumNumber++)
+              {
+                temp[0] = iProj;
+                temp[1] = lQuantumNo;
+                temp[2] = mQuantumNumber;
+                projectorDetailsOfAtom.push_back(temp);
+              }
+          }
+
+        pcout << "DEBUG check number of entries are matching? "
+              << numberOfProjectors << " " << projectorDetailsOfAtom.size()
+              << std::endl;
+
+        std::vector<double> psCoreDensity = d_atomCoreDensityPS[*it];
+        std::vector<double> aeCoreDensity = d_atomCoreDensityAE[*it];
+        std::vector<double> shapeFnRadial = d_atomicShapeFn[*it];
+        std::vector<double> NcorePotential, tildeNCorePotential;
+        if (d_atomTypeCoreFlagMap[*it])
+          {
+            oneTermPoissonPotential(aeCoreDensity[0],
+                                    0,
+                                    0,
+                                    RmaxIndex,
+                                    radialMesh,
+                                    rab,
+                                    NcorePotential);
+            oneTermPoissonPotential(psCoreDensity[0],
+                                    0,
+                                    0,
+                                    RmaxIndex,
+                                    radialMesh,
+                                    rab,
+                                    tildeNCorePotential);
+          }
+        std::vector<std::vector<double>> gLPotential;
+        for (int lShapeFn = 0; lShapeFn < numRadialShapeFunctions; lShapeFn++)
+          {
+            std::vector<double> tempPotential;
+            oneTermPoissonPotential(shapeFnRadial[lShapeFn * meshSize],
+                                    0,
+                                    0,
+                                    RmaxIndex,
+                                    radialMesh,
+                                    rab,
+                                    tempPotential);
+            gLPotential.push_back(tempPotential);
+          }
+        double ShapeFn0PseudoElectronDensityContribution = 0.0,
+               AllElectronDensityContribution            = 0.0,
+               PseudoElectronDensityContribution         = 0.0,
+               ShapeFnContribution[numShapeFunctions];
+        if (d_atomTypeCoreFlagMap[*it])
+          {
+            std::function<double(const unsigned int &)> Integral1 =
+              [&](const unsigned int &i) {
+                double Value =
+                  rab[i] * gLPotential[0][i] * psCoreDensity[i] * radialMesh[i];
+
+                return (Value);
+              };
+            ShapeFn0PseudoElectronDensityContribution =
+              simpsonIntegral(0, RmaxIndex + 1, Integral1);
+
+
+            std::function<double(const unsigned int &)> Integral2 =
+              [&](const unsigned int &i) {
+                double Value = rab[i] * tildeNCorePotential[i] *
+                               psCoreDensity[i] * radialMesh[i];
+                return (Value);
+              };
+            PseudoElectronDensityContribution =
+              simpsonIntegral(0, RmaxIndex + 1, Integral2);
+
+            std::function<double(const unsigned int &)> Integral3 =
+              [&](const unsigned int &i) {
+                double Value =
+                  rab[i] * NcorePotential[i] * aeCoreDensity[i] * radialMesh[i];
+                return (Value);
+              };
+            AllElectronDensityContribution =
+              simpsonIntegral(0, RmaxIndex + 1, Integral3);
+          }
+        int lshapeFn = 0;
+        for (int L = 0; L < numRadialShapeFunctions; L++)
+          {
+            std::function<double(const unsigned int &)> IntegralLoop =
+              [&](const unsigned int &i) {
+                double Value = rab[i] * gLPotential[L][i] *
+                               shapeFnRadial[L * meshSize + i] * radialMesh[i];
+                return (Value);
+              };
+            double ValTempShapeFnContribution =
+              simpsonIntegral(0, RmaxIndex + 1, IntegralLoop);
+
+            for (int m = -L; m <= L; m++)
+              {
+                ShapeFnContribution[lshapeFn] = ValTempShapeFnContribution;
+                lshapeFn++;
+              }
+          }
+        std::map<std::pair<int, int>, std::vector<double>> phiIphiJPotentialAE,
+          phiIphiJPotentialPS;
+        std::vector<double> allElectronPhiIphiJCoreDensityContribution(
+          numberOfRadialProjectors * numberOfRadialProjectors, 0.0);
+        std::vector<double> pseudoSmoothPhiIphiJCoreDensityContribution(
+          numberOfRadialProjectors * numberOfRadialProjectors, 0.0);
+
+        std::vector<double> pseudoSmoothPhiIphiJgLContribution(
+          numberOfRadialProjectors * numberOfRadialProjectors *
+            numShapeFunctions,
+          0.0);
+        std::vector<double> integralAllElectronPhiIphiJContribution(
+          numberOfRadialProjectors * numberOfRadialProjectors, 0.0);
+
+        std::vector<double> psPhi = d_radialWfcValPS[*it];
+        std::vector<double> aePhi = d_radialWfcValAE[*it];
+
+        for (int iProj = 0; iProj < numberOfRadialProjectors; iProj++)
+          {
+            int l_i = mapOfRadProjLval[iProj];
+
+            for (int jProj = 0; jProj <= iProj; jProj++)
+              {
+                int       l_j    = mapOfRadProjLval[jProj];
+                const int index2 = jProj * numberOfRadialProjectors + iProj;
+                const int index1 = iProj * numberOfRadialProjectors + jProj;
+                int lmin = std::min(std::abs(l_i - l_j), std::abs(l_i + l_j));
+                int lmax = std::max(std::abs(l_i - l_j), std::abs(l_i + l_j));
+                for (int lShapeFn = lmin; lShapeFn <= lmax; lShapeFn++)
+                  {
+                    std::vector<double> tempPotentialAE, tempPotentialPS;
+                    twoTermPoissonPotential(aePhi[iProj * meshSize],
+                                            aePhi[jProj * meshSize],
+                                            lShapeFn,
+                                            0,
+                                            RmaxIndex,
+                                            rab,
+                                            radialMesh,
+                                            tempPotentialAE);
+                    twoTermPoissonPotential(psPhi[iProj * meshSize],
+                                            psPhi[jProj * meshSize],
+                                            lShapeFn,
+                                            0,
+                                            RmaxIndex,
+                                            rab,
+                                            radialMesh,
+                                            tempPotentialPS);
+                    phiIphiJPotentialAE[std::make_pair(index1, lShapeFn)] =
+                      tempPotentialAE;
+                    phiIphiJPotentialAE[std::make_pair(index2, lShapeFn)] =
+                      tempPotentialAE;
+                    phiIphiJPotentialPS[std::make_pair(index1, lShapeFn)] =
+                      tempPotentialPS;
+                    phiIphiJPotentialPS[std::make_pair(index2, lShapeFn)] =
+                      tempPotentialPS;
+                  }
+                double              tempAE, tempPS;
+                std::vector<double> tempPotentialPS =
+                  phiIphiJPotentialPS[std::make_pair(index1, 0)];
+                std::vector<double> tempPotentialAE =
+                  phiIphiJPotentialAE[std::make_pair(index1, 0)];
+                if (d_atomTypeCoreFlagMap[*it])
+                  {
+                    std::function<double(const unsigned int &)> IntegralLoop1 =
+                      [&](const unsigned int &i) {
+                        double Value = rab[i] * aeCoreDensity[i] *
+                                       tempPotentialAE[i] * radialMesh[i];
+                        return (Value);
+                      };
+                    tempAE = tempPotentialAE.size() == 0 ?
+                               0.0 :
+                               simpsonIntegral(0, RmaxIndex + 1, IntegralLoop1);
+
+                    std::function<double(const unsigned int &)> IntegralLoop2 =
+                      [&](const unsigned int &i) {
+                        double Value = rab[i] * psCoreDensity[i] *
+                                       tempPotentialPS[i] * radialMesh[i];
+                        return (Value);
+                      };
+                    tempPS = tempPotentialPS.size() == 0 ?
+                               0.0 :
+                               simpsonIntegral(0, RmaxIndex + 1, IntegralLoop2);
+
+
+                    allElectronPhiIphiJCoreDensityContribution[index1] = tempAE;
+                    allElectronPhiIphiJCoreDensityContribution[index2] = tempAE;
+                    pseudoSmoothPhiIphiJCoreDensityContribution[index1] =
+                      tempPS;
+                    pseudoSmoothPhiIphiJCoreDensityContribution[index2] =
+                      tempPS;
+                  } // if core present
+
+                integralAllElectronPhiIphiJContribution[index1] =
+                  integralOfProjectorsInAugmentationSphere(
+                    aePhi[iProj * meshSize],
+                    aePhi[jProj * meshSize],
+                    radialMesh,
+                    rab,
+                    0,
+                    RmaxIndex + 1);
+                integralAllElectronPhiIphiJContribution[index2] =
+                  integralAllElectronPhiIphiJContribution[index1];
+
+                int shapeFnIndex = 0;
+                for (int L = 0; L < numRadialShapeFunctions; L++)
+                  {
+                    std::function<double(const unsigned int &)> IntegralLoop =
+                      [&](const unsigned int &i) {
+                        double Value = rab[i] * gLPotential[L][i] *
+                                       psPhi[iProj * meshSize + i] *
+                                       psPhi[jProj * meshSize + i] *
+                                       radialMesh[i];
+                        return (Value);
+                      };
+                    double ValTempShapeFnContribution =
+                      simpsonIntegral(0, RmaxIndex + 1, IntegralLoop);
+                    for (int m = -L; m <= L; m++)
+                      {
+                        pseudoSmoothPhiIphiJgLContribution
+                          [iProj * numberOfRadialProjectors *
+                             numShapeFunctions +
+                           jProj * numShapeFunctions + shapeFnIndex] =
+                            ValTempShapeFnContribution;
+                        pseudoSmoothPhiIphiJgLContribution
+                          [jProj * numberOfRadialProjectors *
+                             numShapeFunctions +
+                           iProj * numShapeFunctions + shapeFnIndex] =
+                            ValTempShapeFnContribution;
+                        shapeFnIndex++;
+                      }
+                  }
+
+
+              } // jProj
+          }     // iProj
+        // Computing Delta C0 Term
+        double dL0       = d_DeltaL0coeff[*it];
+        double valueTemp = 0.0;
+
+        valueTemp = 0.5 * (AllElectronDensityContribution);
+        pcout << " Core-Core contribution: " << valueTemp << std::endl;
+        DeltaC += valueTemp;
+
+
+        valueTemp = -0.5 * (PseudoElectronDensityContribution);
+        pcout << " - psedo-pseduo contribution: " << valueTemp << std::endl;
+        DeltaC += valueTemp;
+        DeltaCValence += valueTemp;
+
+        valueTemp = -0.5 * (dL0 * dL0 * ShapeFnContribution[0]);
+        pcout << " -g_L(x)g_L(x) contribution: " << valueTemp << std::endl;
+        DeltaC += valueTemp;
+        DeltaCValence += valueTemp;
+
+        valueTemp =
+          -(d_DeltaL0coeff[*it]) * (ShapeFn0PseudoElectronDensityContribution);
+        pcout << " -g_L(x)-pseudo contribution: " << valueTemp << std::endl;
+        DeltaC += valueTemp;
+        DeltaCValence += valueTemp;
+
+        valueTemp =
+          -sqrt(4 * M_PI) * (*it) *
+          integralOfDensity(aeCoreDensity, radialMesh, rab, 0, RmaxIndex + 1);
+
+        pcout << " integral core/r: " << valueTemp << std::endl;
+        DeltaC += valueTemp;
+
+        pcout << "Start of Filling in entries to Delta C_ij matrices"
+              << std::endl;
+
+        for (int i = 0; i < numberOfProjectors; i++)
+          {
+            int l_i           = projectorDetailsOfAtom[i][1];
+            int m_i           = projectorDetailsOfAtom[i][2];
+            int radProjIndexI = projectorDetailsOfAtom[i][0];
+
+            for (int j = 0; j < numberOfProjectors; j++)
+              {
+                int    l_j           = projectorDetailsOfAtom[j][1];
+                int    m_j           = projectorDetailsOfAtom[j][2];
+                int    radProjIndexJ = projectorDetailsOfAtom[j][0];
+                double GauntValueij  = gaunt(l_i, l_j, 0, m_i, m_j, 0);
+                if (d_atomTypeCoreFlagMap[*it])
+                  {
+                    Delta_Cij[i * numberOfProjectors + j] +=
+                      GauntValueij *
+                      (allElectronPhiIphiJCoreDensityContribution
+                         [radProjIndexI * numberOfRadialProjectors +
+                          radProjIndexJ] -
+                       pseudoSmoothPhiIphiJCoreDensityContribution
+                         [radProjIndexI * numberOfRadialProjectors +
+                          radProjIndexJ]);
+                  }
+                if (l_i == l_j && m_i == m_j)
+                  {
+                    Delta_Cij[i * numberOfProjectors + j] +=
+                      -(*it) * integralAllElectronPhiIphiJContribution
+                                 [radProjIndexI * numberOfRadialProjectors +
+                                  radProjIndexJ];
+                  }
+                double multipoleValue =
+                  multipoleTable[radProjIndexI * numberOfRadialProjectors +
+                                 radProjIndexJ];
+                Delta_Cij[i * numberOfProjectors + j] -=
+                  multipoleValue * GauntValueij *
+                  (dL0 * ShapeFnContribution[0]);
+                if (d_atomTypeCoreFlagMap[*it])
+                  {
+                    Delta_Cij[i * numberOfProjectors + j] -=
+                      multipoleValue *
+                      ShapeFn0PseudoElectronDensityContribution * GauntValueij;
+                  }
+                Delta_Cij[i * numberOfProjectors + j] -=
+                  GauntValueij * dL0 *
+                  pseudoSmoothPhiIphiJgLContribution
+                    [radProjIndexI * numShapeFunctions *
+                       numberOfRadialProjectors +
+                     radProjIndexJ * numShapeFunctions + 0];
+              } // j
+          }     // i
+        pcout << "Start of Filling in entries to Delta C_ijkl matrices"
+              << std::endl;
+        for (int iProj = 0; iProj < numberOfProjectors; iProj++)
+          {
+            int l_i           = projectorDetailsOfAtom[iProj][1];
+            int m_i           = projectorDetailsOfAtom[iProj][2];
+            int radProjIndexI = projectorDetailsOfAtom[iProj][0];
+
+            for (int jProj = 0; jProj < numberOfProjectors; jProj++)
+              {
+                int       l_j           = projectorDetailsOfAtom[jProj][1];
+                int       m_j           = projectorDetailsOfAtom[jProj][2];
+                int       radProjIndexJ = projectorDetailsOfAtom[jProj][0];
+                const int index_ij =
+                  numberOfRadialProjectors * radProjIndexI + radProjIndexJ;
+
+                for (int kProj = 0; kProj < numberOfProjectors; kProj++)
+                  {
+                    int l_k           = projectorDetailsOfAtom[kProj][1];
+                    int m_k           = projectorDetailsOfAtom[kProj][2];
+                    int radProjIndexK = projectorDetailsOfAtom[kProj][0];
+                    for (int lProj = 0; lProj < numberOfProjectors; lProj++)
+                      {
+                        int l_l           = projectorDetailsOfAtom[lProj][1];
+                        int m_l           = projectorDetailsOfAtom[lProj][2];
+                        int radProjIndexL = projectorDetailsOfAtom[lProj][0];
+                        const int index   = pow(numberOfProjectors, 3) * iProj +
+                                          pow(numberOfProjectors, 2) * jProj +
+                                          pow(numberOfProjectors, 1) * kProj +
+                                          lProj;
+                        const int index_ijkl =
+                          pow(numberOfRadialProjectors, 3) * radProjIndexI +
+                          pow(numberOfRadialProjectors, 2) * radProjIndexJ +
+                          pow(numberOfRadialProjectors, 1) * radProjIndexK +
+                          radProjIndexL;
+
+                        double radValijkl = 0.0;
+                        int    lmin =
+                          std::min(std::abs(l_i - l_j), std::abs(l_k - l_l));
+                        int lmax = std::max((l_i + l_j), (l_k + l_l));
+
+
+                        for (int lproj = lmin; lproj <= lmax; lproj++)
+                          {
+                            bool flag = false;
+                            for (int mproj = -lproj; mproj <= lproj; mproj++)
+                              {
+                                double CG1, CG2;
+                                CG1 = gaunt(l_i, l_j, lproj, m_i, m_j, mproj);
+                                CG2 = gaunt(l_k, l_l, lproj, m_k, m_l, mproj);
+                                if (std::fabs(CG1 * CG2) > 1E-10)
+                                  flag = true;
+                              } // mproj
+                            if (flag)
+                              {
+                                if (phiIphiJPotentialAE
+                                      .find(std::make_pair(index_ij, lproj))
+                                      ->second.size() > 0)
+                                  {
+                                    std::vector<double> potentialPhiIPhiJ =
+                                      phiIphiJPotentialAE
+                                        .find(std::make_pair(index_ij, lproj))
+                                        ->second;
+                                    std::vector<double>
+                                      potentialTildePhiITildePhiJ =
+                                        phiIphiJPotentialPS
+                                          .find(std::make_pair(index_ij, lproj))
+                                          ->second;
+
+
+                                    std::function<double(const unsigned int &)>
+                                      IntegralContribution =
+                                        [&](const unsigned int &i) {
+                                          double Value1 =
+                                            rab[i] * potentialPhiIPhiJ[i] *
+                                            aePhi[radProjIndexK * meshSize +
+                                                  i] *
+                                            aePhi[radProjIndexL * meshSize +
+                                                  i] *
+                                            radialMesh[i];
+                                          double Value2 =
+                                            rab[i] *
+                                            potentialTildePhiITildePhiJ[i] *
+                                            psPhi[radProjIndexK * meshSize +
+                                                  i] *
+                                            psPhi[radProjIndexL * meshSize +
+                                                  i] *
+                                            radialMesh[i];
+                                          return (Value1 - Value2);
+                                        };
+
+
+                                    double TotalValue =
+                                      simpsonIntegral(0,
+                                                      RmaxIndex + 1,
+                                                      IntegralContribution);
+                                    double TotalContribution = 0.0;
+
+                                    for (int mproj = -lproj; mproj <= lproj;
+                                         mproj++)
+                                      {
+                                        double CG1, CG2;
+                                        CG1 = gaunt(
+                                          l_i, l_j, lproj, m_i, m_j, mproj);
+                                        CG2 = gaunt(
+                                          l_k, l_l, lproj, m_k, m_l, mproj);
+                                        if (std::fabs(CG1 * CG2) > 1E-10)
+                                          TotalContribution +=
+                                            (TotalValue)*CG1 * CG2;
+
+                                      } // mproj
+                                    Delta_Cijkl[index] +=
+                                      0.5 * TotalContribution;
+                                    // pcout
+                                    //   << "DEBUG: Value Check: " <<
+                                    //   (TotalValue)
+                                    //   << " " << i << " " << j << " " << k <<
+                                    //   " "
+                                    //   << l << " " << lproj << std::endl;
+                                  }
+
+                                else
+                                  {
+                                    pcout
+                                      << "Mising Entries for lproj: " << lproj
+                                      << " " << index_ij << std::endl;
+                                  }
+                              }
+                          }
+                        double val           = 0;
+                        int    lShapeFnIndex = 0;
+                        for (int L = 0; L < numRadialShapeFunctions; L++)
+                          {
+                            int lQuantumNo = L;
+                            for (int mQuantumNo = -lQuantumNo;
+                                 mQuantumNo <= lQuantumNo;
+                                 mQuantumNo++)
+                              {
+                                double multipoleValue1 =
+                                  multipoleTable[lQuantumNo *
+                                                   numberOfRadialProjectors *
+                                                   numberOfRadialProjectors +
+                                                 radProjIndexI *
+                                                   numberOfRadialProjectors +
+                                                 radProjIndexJ];
+                                double multipoleValue2 =
+                                  multipoleTable[lQuantumNo *
+                                                   numberOfRadialProjectors *
+                                                   numberOfRadialProjectors +
+                                                 radProjIndexK *
+                                                   numberOfRadialProjectors +
+                                                 radProjIndexL];
+                                double GauntValueijL = gaunt(
+                                  l_i, l_j, lQuantumNo, m_i, m_j, mQuantumNo);
+                                double GauntValueklL = gaunt(
+                                  l_k, l_l, lQuantumNo, m_k, m_l, mQuantumNo);
+                                val += multipoleValue2 * GauntValueklL *
+                                       pseudoSmoothPhiIphiJgLContribution
+                                         [radProjIndexI * numShapeFunctions *
+                                            numberOfRadialProjectors +
+                                          radProjIndexJ * numShapeFunctions +
+                                          lShapeFnIndex] *
+                                       GauntValueijL;
+
+                                val += 0.5 * multipoleValue1 * GauntValueijL *
+                                       multipoleValue2 * GauntValueklL *
+                                       ShapeFnContribution[lShapeFnIndex];
+
+                                lShapeFnIndex++;
+                              } // mQuantumNo
+                          }     // L
+                        Delta_Cijkl[index] -= val;
+
+                      } // lProj
+                  }     // kProj
+
+
+              } // j
+          }     // i
+
+        // Copying the data to class
+        d_deltaCij[*it]      = Delta_Cij;
+        d_deltaCijkl[*it]    = Delta_Cijkl;
+        d_deltaC[*it]        = DeltaC;
+        d_deltaValenceC[*it] = DeltaCValence;
+
+        // printing the entries
+        pcout << "** Delta C0 Term: " << DeltaC << std::endl;
+        pcout << "** Delta C0 Valence Term: " << DeltaCValence << std::endl;
+      } //*it
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::initialiseZeroPotential()
+  {
+    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+         it != d_atomTypes.end();
+         ++it)
+      {
+        unsigned int       atomicNumber = *it;
+        const unsigned int numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(atomicNumber);
+        const unsigned int numberOfRadialProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(atomicNumber);
+        const std::map<std::pair<unsigned int, unsigned int>,
+                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+          sphericalFunction =
+            d_atomicProjectorFnsContainer->getSphericalFunctions();
+
+        unsigned int        RmaxIndex  = d_RmaxAugIndex[atomicNumber];
+        std::vector<double> radialMesh = d_radialMesh[atomicNumber];
+        std::vector<double> rab        = d_radialJacobianData[atomicNumber];
+
+        std::vector<double> tempZeroPotentialIJ(numberOfProjectors *
+                                                  numberOfProjectors,
+                                                0.0);
+        std::vector<double> radialIntegralData(numberOfRadialProjectors *
+                                                 numberOfRadialProjectors,
+                                               0.0);
+        std::vector<double> radialPSWaveFunctionsData =
+          d_radialWfcValPS[atomicNumber];
+        std::vector<double> zeroPotentialData =
+          d_zeroPotentialRadialValues[atomicNumber];
+        for (int i = 0; i < numberOfRadialProjectors; i++)
+          {
+            for (int j = 0; j <= i; j++)
+              {
+                radialIntegralData[i * numberOfRadialProjectors + j] =
+                  threeTermIntegrationOverAugmentationSphere(
+                    radialPSWaveFunctionsData[i * radialMesh.size()],
+                    radialPSWaveFunctionsData[j * radialMesh.size()],
+                    zeroPotentialData[0],
+                    radialMesh,
+                    rab,
+                    0,
+                    RmaxIndex + 1);
+                radialIntegralData[j * numberOfRadialProjectors + i] =
+                  radialIntegralData[i * numberOfRadialProjectors + j];
+              } // j
+          }     // i
+
+        int projIndexI = 0;
+        for (int iProj = 0; iProj < numberOfRadialProjectors; iProj++)
+          {
+            std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_i =
+              sphericalFunction.find(std::make_pair(atomicNumber, iProj))
+                ->second;
+            const int lQuantumNo_i = sphFn_i->getQuantumNumberl();
+            for (int mQuantumNumber_i = -lQuantumNo_i;
+                 mQuantumNumber_i <= lQuantumNo_i;
+                 mQuantumNumber_i++)
+              {
+                int projIndexJ = 0;
+                for (int jProj = 0; jProj < numberOfRadialProjectors; jProj++)
+                  {
+                    std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_j =
+                      sphericalFunction
+                        .find(std::make_pair(atomicNumber, jProj))
+                        ->second;
+                    const int lQuantumNo_j = sphFn_j->getQuantumNumberl();
+                    for (int mQuantumNumber_j = -lQuantumNo_j;
+                         mQuantumNumber_j <= lQuantumNo_j;
+                         mQuantumNumber_j++)
+                      {
+                        tempZeroPotentialIJ[projIndexI * numberOfProjectors +
+                                            projIndexJ] =
+                          gaunt(lQuantumNo_i,
+                                lQuantumNo_j,
+                                0,
+                                mQuantumNumber_i,
+                                mQuantumNumber_j,
+                                0) *
+                          radialIntegralData[iProj * numberOfRadialProjectors +
+                                             jProj];
+                        projIndexJ++;
+                      } // mQuantumNumber_j
+
+                  } // jProj
+                projIndexI++;
+              } // mQuantumNumber_i
+
+
+
+          } // iProj
+
+        d_zeroPotentialij[*it] = tempZeroPotentialIJ;
+      } //*it
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType,
+           memorySpace>::initialiseExchangeCorrelationEnergyCorrection()
+  {
+    std::map<unsigned int, std::vector<std::vector<int>> projectorDetailsOfAtomFull;
+    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+         it != d_atomTypes.end();
+         ++it)
+      {
+        unsigned int atomicNumber = *it;
+
+        const unsigned int numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(atomicNumber);
+        const unsigned int numberOfRadialProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(atomicNumber);
+        const std::map<std::pair<unsigned int, unsigned int>,
+                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+          sphericalFunction =
+            d_atomicProjectorFnsContainer->getSphericalFunctions();
+
+
+
+        std::vector<std::vector<int>> temp_projectorDetailsOfAtom;
+        for (int iProj = 0; iProj < numberOfRadialProjectors; iProj++)
+          {
+            const std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
+              sphericalFunction.find(std::make_pair(atomicNumber, iProj))
+                ->second;
+            const int lQuantumNo    = sphFn->getQuantumNumberl();
+            mapOfRadProjLval[iProj] = lQuantumNo;
+            std::vector<int> temp(3, 0);
+            for (int mQuantumNumber = -lQuantumNo; mQuantumNumber <= lQuantumNo;
+                 mQuantumNumber++)
+              {
+                temp[0] = iProj;
+                temp[1] = lQuantumNo;
+                temp[2] = mQuantumNumber;
+                temp_projectorDetailsOfAtom.push_back(temp);
+              }
+          }
+
+        pcout << "DEBUG check number of entries are matching? "
+              << numberOfProjectors << " " << temp_projectorDetailsOfAtom.size()
+              << std::endl;
+        projectorDetailsOfAtomFull[*it] = temp_projectorDetailsOfAtom;      
+      } //*it
+      
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::initialiseKineticEnergyCorrection()
+  {
+    pcout << "PAWClass: Reading KE_ij correction terms from XML file..."
+          << std::endl;
+    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+         it != d_atomTypes.end();
+         ++it)
+      {
+        unsigned int atomicNumber = *it;
+        char         keFileName[256];
+        strcpy(keFileName,
+               (d_dftfeScratchFolderName + "/z" + std::to_string(atomicNumber) +
+                "/" + "KineticEnergyij.dat")
+                 .c_str());
+
+        std::vector<double> KineticEnergyij;
+        dftUtils::readFile(KineticEnergyij, keFileName);
+        d_KineticEnergyCorrectionTerm[atomicNumber] = KineticEnergyij;
+      } //*it
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::computeRadialMultipoleData()
+  {}
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::computeInverseOfMultipoleData()
+  {
+    pcout << "PAWClass: Computing inverse multipole data from XML file..."
+          << std::endl;
+    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+         it != d_atomTypes.end();
+         ++it)
+      {
+        unsigned int        atomicNumber   = *it;
+        std::vector<double> multipoleTable = d_multipole[atomicNumber];
+        const unsigned int  numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(atomicNumber);
+        const unsigned int numberOfRadialProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(atomicNumber);
+        const std::map<std::pair<unsigned int, unsigned int>,
+                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+          sphericalFunction =
+            d_atomicProjectorFnsContainer->getSphericalFunctions();
+        std::vector<double> Multipole(numberOfProjectors * numberOfProjectors,
+                                      0.0);
+        int                 projIndexI = 0;
+        for (int iProj = 0; iProj < numberOfRadialProjectors; iProj++)
+          {
+            std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_i =
+              sphericalFunction.find(std::make_pair(atomicNumber, iProj))
+                ->second;
+            const int lQuantumNo_i = sphFn_i->getQuantumNumberl();
+            for (int mQuantumNumber_i = -lQuantumNo_i;
+                 mQuantumNumber_i <= lQuantumNo_i;
+                 mQuantumNumber_i++)
+              {
+                int projIndexJ = 0;
+                for (int jProj = 0; jProj < numberOfRadialProjectors; jProj++)
+                  {
+                    std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_j =
+                      sphericalFunction
+                        .find(std::make_pair(atomicNumber, jProj))
+                        ->second;
+                    const int lQuantumNo_j = sphFn_j->getQuantumNumberl();
+                    for (int mQuantumNumber_j = -lQuantumNo_j;
+                         mQuantumNumber_j <= lQuantumNo_j;
+                         mQuantumNumber_j++)
+                      {
+                        Multipole[projIndexI * numberOfProjectors +
+                                  projIndexJ] =
+                          gaunt(lQuantumNo_i,
+                                lQuantumNo_j,
+                                0,
+                                mQuantumNumber_i,
+                                mQuantumNumber_j,
+                                0) *
+                          multipoleTable[iProj * numberOfRadialProjectors +
+                                         jProj] *
+                          sqrt(4 * M_PI);
+                        projIndexJ++;
+                      } // mQuantumNumber_j
+
+                  } // jProj
+                projIndexI++;
+              } // mQuantumNumber_i
+
+
+
+          } // iProj
+        const char          uplo = 'L';
+        const int           N    = numberOfProjectors;
+        std::vector<double> A    = Multipole;
+        // pcout << "Multipole Table: " << std::endl;
+        // for (int i = 0; i < numberOfProjectors; i++)
+        //   {
+        //     for (int j = 0; j < numberOfProjectors; j++)
+        //       pcout << A[i * numberOfProjectors + j] << " ";
+        //     pcout << std::endl;
+        //   }
+
+        dftfe::linearAlgebraOperations::inverse(&A[0], N);
+        d_multipoleInverse[atomicNumber] = A;
+
+        // pcout << "Multipole Table Inverse: " << std::endl;
+        // for (int i = 0; i < numberOfProjectors; i++)
+        //   {
+        //     for (int j = 0; j < numberOfProjectors; j++)
+        //       pcout << A[i * numberOfProjectors + j] << " ";
+        //     pcout << std::endl;
+        //   }
+      } //*it
+  }
+
+
 } // namespace dftfe

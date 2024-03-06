@@ -49,6 +49,14 @@
 #endif
 namespace dftfe
 {
+  enum class CouplingType
+  {
+    HamiltonianEntries,
+    pawOverlapEntries,
+    inversePawOverlapEntries
+  };
+
+
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   class pawClass
   {
@@ -172,10 +180,61 @@ namespace dftfe
 
     void
     computeCompensationCharge();
-
+    // Utils Functions
     double
     gaunt(int l_i, int l_j, int l, int m_i, int m_j, int m);
 
+    double
+    simpsonIntegral(
+      unsigned int                                 startIndex,
+      unsigned int                                 EndIndex,
+      std::function<double(const unsigned int &)> &IntegrandValue);
+
+    // COmputes \int{f1(r)*f2(r)*f3(r)*r^2dr*J_r}
+    double
+    threeTermIntegrationOverAugmentationSphere(double *             f1,
+                                               double *             f2,
+                                               double *             f3,
+                                               std::vector<double> &radial,
+                                               std::vector<double> &rab,
+                                               const unsigned int   rminIndex,
+                                               const unsigned int   rmaxIndex);
+    // Computes the potential due to charge fun
+    void
+    oneTermPoissonPotential(const double *             fun,
+                            const unsigned int         l,
+                            const unsigned int         rminIndex,
+                            const unsigned int         rmaxIndex,
+                            const int                  powerofR,
+                            const std::vector<double> &radial,
+                            const std::vector<double> &rab,
+                            std::vector<double> &      Potential);
+
+    void
+    twoTermPoissonPotential(const double *             fun1,
+                            const double *             fun2,
+                            const unsigned int         l,
+                            const unsigned int         rminIndex,
+                            const unsigned int         rmaxIndex,
+                            const int                  powerofR,
+                            const std::vector<double> &radial,
+                            const std::vector<double> &rab,
+                            std::vector<double> &      Potential);
+
+    double
+    integralOfProjectorsInAugmentationSphere(const double *       f1,
+                                             const double *       f2,
+                                             std::vector<double> &radial,
+                                             std::vector<double> &rab,
+                                             const unsigned int   rminIndex,
+                                             const unsigned int   rmaxIndex);
+
+    double
+    integralOfDensity(const double *       f1,
+                      std::vector<double> &radial,
+                      std::vector<double> &rab,
+                      const unsigned int   rminIndex,
+                      const unsigned int   rmaxIndex);
 
     /**
      * @brief Initialises local potential
@@ -225,7 +284,8 @@ namespace dftfe
 
 
     const dftfe::utils::MemoryStorage<ValueType, memorySpace> &
-    getCouplingMatrix();
+    getCouplingMatrix(
+      CouplingType copulingtype = CouplingType::HamiltonianEntries);
 
 
     const std::shared_ptr<
@@ -233,6 +293,37 @@ namespace dftfe
     getNonLocalOperator();
 
   private:
+    void
+    initialiseDataonRadialMesh();
+
+    void
+    initialiseColoumbicEnergyCorrection();
+
+    void
+    initialiseZeroPotential();
+
+    void
+    initialiseExchangeCorrelationEnergyCorrection();
+
+    void
+    initialiseKineticEnergyCorrection();
+
+    void
+    computeRadialMultipoleData();
+
+    void
+    computeInverseOfMultipoleData();
+
+    std::map<unsigned int, std::vector<double>> d_KineticEnergyCorrectionTerm;
+    std::map<unsigned int, std::vector<double>> d_zeroPotentialij;
+    std::map<unsigned int, std::vector<double>>
+                                                d_ExchangeCorrelationEnergyCorrectionTerm;
+    std::map<unsigned int, std::vector<double>> d_ColoumbicEnergyCorrectionTerm;
+    std::map<unsigned int, std::vector<double>> d_DeltaColoumbicEnergyDij;
+    std::map<unsigned int, double>              d_coreKE, d_deltaC, d_coreXC,
+      d_deltaValenceC;
+    std::map<unsigned int, std::vector<double>> d_deltaCij, d_deltaCijkl;
+
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
      * @param[in] atomLocations atomic Coordinates
@@ -291,10 +382,13 @@ namespace dftfe
 #endif
     std::vector<std::vector<double>> d_nonLocalPseudoPotentialConstants;
     std::map<unsigned int, std::vector<double>>
-                                                        d_atomicNonLocalPseudoPotentialConstants;
-    dftfe::utils::MemoryStorage<ValueType, memorySpace> d_couplingMatrixEntries;
+      d_atomicNonLocalPseudoPotentialConstants;
+    std::map<CouplingType, dftfe::utils::MemoryStorage<ValueType, memorySpace>>
+      d_couplingMatrixEntries;
 
-    bool d_HamiltonianCouplingMatrixEntriesUpdated;
+    bool d_HamiltonianCouplingMatrixEntriesUpdated,
+      d_overlapCouplingMatrixEntriesUpdated,
+      d_inverseCouplingMatrixEntriesUpdated;
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicWaveFnsVector;
     std::shared_ptr<AtomCenteredSphericalFunctionContainer>
@@ -348,11 +442,37 @@ namespace dftfe
     std::map<unsigned int, std::vector<double>>
                                                 d_ProductOfQijShapeFnAtQuadPoints;
     std::map<unsigned int, std::vector<double>> D_ij;
-    std::map<unsigned int, std::vector<double>> d_multipole;
+    std::map<unsigned int, std::vector<double>> d_multipole, d_multipoleInverse;
+    std::vector<double> d_deltaInverseMatrix, d_deltaMatrix;
     std::map<unsigned int, std::vector<double>> d_gLValuesQuadPoints;
     std::map<unsigned int, double>              d_DeltaL0coeff, d_NtildeCore;
     std::map<unsigned int, double>       d_RmaxAug, d_RminAug, d_RmaxComp;
     std::map<unsigned int, unsigned int> d_RmaxAugIndex;
+
+    // Radial Data on meshGrid
+    std::map<unsigned int, std::vector<double>> d_radialMesh,
+      d_radialJacobianData;
+    std::map<unsigned int, double> d_radialValueCoreSmooth0,
+      d_radialValueCoreAE0;
+    std::map<unsigned int, std::vector<double>> d_PSWfc0, d_AEWfc0;
+    std::map<unsigned int, std::vector<double>> d_productOfAEpartialWfc,
+      d_productOfPSpartialWfc, d_atomCoreDensityAE, d_atomCoreDensityPS,
+      d_atomicShapeFn;
+    std::map<unsigned int, std::vector<double>>
+                                                d_productDerCoreDensityWfcDerWfcAE, d_productDerCoreDensityWfcDerWfcPS;
+    std::map<unsigned int, std::vector<double>> d_productOfPSpartialWfcDer,
+      d_productOfAEpartialWfcDer;
+    std::map<unsigned int, std::vector<double>> d_productOfPSpartialWfcValue,
+      d_productOfAEpartialWfcValue;
+    std::map<unsigned int, std::vector<double>> d_gradCoreSqAE, d_gradCoreSqPS;
+
+    std::map<unsigned int, std::vector<double>> d_tensorWfcAE, d_tensorWfcPS,
+      d_tensorWfcDerAE, d_tensorWfcDerPS;
+
+    std::map<unsigned int, std::vector<double>> d_radialWfcDerAE,
+      d_radialWfcValAE, d_radialWfcDerPS, d_radialWfcValPS, d_radialCoreDerAE,
+      d_radialCoreDerPS;
+    std::map<unsigned int, std::vector<double>> d_zeroPotentialRadialValues;
     // Total Comepsantion charge field
     std::map<dealii::CellId, std::vector<double>> *d_bQuadValuesAllAtoms;
     // Total Compensation charge field only due to the g_0(r)Delta_0 component

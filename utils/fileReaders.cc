@@ -29,6 +29,39 @@ namespace dftfe
 {
   namespace dftUtils
   {
+    void
+    readFile(std::vector<double> &data, const std::string &fileName)
+    {
+      std::ifstream readFile(fileName.c_str());
+      if (readFile.fail())
+        {
+          std::cerr << "Error opening file: " << fileName.c_str() << std::endl;
+          exit(-1);
+        }
+
+      //
+      // String to store line and word
+      //
+      std::string readLine;
+      std::string word;
+
+      //
+      // column index
+      //
+
+
+      if (readFile.is_open())
+        {
+          while (std::getline(readFile, readLine))
+            {
+              std::istringstream iss(readLine);
+              iss >> word;
+              data.push_back(atof(word.c_str()));
+            }
+        }
+      readFile.close();
+    }
+
     // Utility functions to read external files relevant to DFT
     void
     readFile(const unsigned int                numColumns,

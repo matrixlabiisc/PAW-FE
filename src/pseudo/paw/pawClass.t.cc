@@ -459,4 +459,111 @@ namespace dftfe
 
       } // iAtom
   }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  const dftfe::utils::MemoryStorage<ValueType, memorySpace> &
+  pawClass<ValueType, memorySpace>::getCouplingMatrix(CouplingType couplingtype)
+  {
+    if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+      {
+        if (couplingtype == CouplingType::HamiltonianEntries)
+          {
+            if (!d_HamiltonianCouplingMatrixEntriesUpdated)
+              {
+                std::vector<ValueType> Entries;
+                dftfe::utils::MemoryStorage<ValueType,
+                                            dftfe::utils::MemorySpace::HOST>
+                  couplingEntriesHost;
+
+
+                couplingEntriesHost.resize(Entries.size());
+                couplingEntriesHost.copyFrom(Entries);
+                d_couplingMatrixEntries[CouplingType::HamiltonianEntries] =
+                  couplingEntriesHost;
+              }
+          }
+        else if (couplingtype == CouplingType::pawOverlapEntries)
+          {
+            if (!d_overlapCouplingMatrixEntriesUpdated)
+              {
+                std::vector<ValueType> Entries;
+                dftfe::utils::MemoryStorage<ValueType,
+                                            dftfe::utils::MemorySpace::HOST>
+                                                couplingEntriesHost;
+                const std::vector<unsigned int> atomIdsInProcessor =
+                  d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
+                std::vector<unsigned int> atomicNumber =
+                  d_atomicProjectorFnsContainer->getAtomicNumbers();
+                for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
+                  {
+                    unsigned int atomId = atomIdsInProcessor[iAtom];
+                    unsigned int Zno    = atomicNumber[atomId];
+                    unsigned int numberSphericalFunctions =
+                      d_atomicProjectorFnsContainer
+                        ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+                    for (unsigned int alpha = 0;
+                         alpha < numberSphericalFunctions;
+                         alpha++)
+                      {
+                        double V =
+                          d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
+                        Entries.push_back(V);
+                      }
+                  }
+                couplingEntriesHost.resize(Entries.size());
+                couplingEntriesHost.copyFrom(Entries);
+                d_couplingMatrixEntries[CouplingType::pawOverlapEntries] =
+                  couplingEntriesHost;
+                d_overlapCouplingMatrixEntriesUpdated = true;
+              }
+          }
+        else if (couplingtype == CouplingType::inversePawOverlapEntries)
+          {
+            if (!d_inverseCouplingMatrixEntriesUpdated)
+              {
+                std::vector<ValueType> Entries;
+                dftfe::utils::MemoryStorage<ValueType,
+                                            dftfe::utils::MemorySpace::HOST>
+                  couplingEntriesHost;
+
+                const std::vector<unsigned int> atomIdsInProcessor =
+                  d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
+                std::vector<unsigned int> atomicNumber =
+                  d_atomicProjectorFnsContainer->getAtomicNumbers();
+                for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
+                  {
+                    unsigned int atomId = atomIdsInProcessor[iAtom];
+                    unsigned int Zno    = atomicNumber[atomId];
+                    unsigned int numberSphericalFunctions =
+                      d_atomicProjectorFnsContainer
+                        ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+                    for (unsigned int alpha = 0;
+                         alpha < numberSphericalFunctions;
+                         alpha++)
+                      {
+                        double V =
+                          d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
+                        Entries.push_back(V);
+                      }
+                  }
+                couplingEntriesHost.resize(Entries.size());
+                couplingEntriesHost.copyFrom(Entries);
+                d_couplingMatrixEntries
+                  [CouplingType::inversePawOverlapEntries] =
+                    couplingEntriesHost;
+                d_inverseCouplingMatrixEntriesUpdated = true;
+              }
+          }
+      }
+    else
+      {
+        AssertThrow(dftfe::utils::MemorySpace::HOST == memorySpace,
+                    dealii::ExcMessage(
+                      "DFT-FE Error: Not yet implemented on GPUs."));
+      }
+
+    return d_couplingMatrixEntries[couplingtype];
+  }
+
+
 } // namespace dftfe
