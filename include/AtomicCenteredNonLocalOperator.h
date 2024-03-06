@@ -242,9 +242,8 @@ namespace dftfe
      * elements
      */
     void
-    applyCconjtransOnX(
-      const dftfe::utils::MemoryStorage<ValueType, memorySpace> &X,
-      const std::pair<unsigned int, unsigned int>                cellRange);
+    applyCconjtransOnX(const ValueType *                           X,
+                       const std::pair<unsigned int, unsigned int> cellRange);
 
     /**
      * @brief completes the VCconjX on nodal vector src. The src vector must have all ghost nodes and contraint nodes updated.
@@ -297,9 +296,8 @@ namespace dftfe
      * elements
      */
     void
-    applyCOnVCconjtransX(
-      dftfe::utils::MemoryStorage<ValueType, memorySpace> &Xout,
-      const std::pair<unsigned int, unsigned int>          cellRange);
+    applyCOnVCconjtransX(ValueType *                                 Xout,
+                         const std::pair<unsigned int, unsigned int> cellRange);
 
 
   protected:

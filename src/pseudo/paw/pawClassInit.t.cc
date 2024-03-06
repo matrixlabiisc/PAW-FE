@@ -1340,50 +1340,50 @@ namespace dftfe
   pawClass<ValueType,
            memorySpace>::initialiseExchangeCorrelationEnergyCorrection()
   {
-    std::map<unsigned int, std::vector<std::vector<int>> projectorDetailsOfAtomFull;
-    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
-         it != d_atomTypes.end();
-         ++it)
-      {
-        unsigned int atomicNumber = *it;
+    // std::map<unsigned int, std::vector<std::vector<int>> projectorDetailsOfAtomFull;
+    // for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+    //      it != d_atomTypes.end();
+    //      ++it)
+    //   {
+    //     unsigned int atomicNumber = *it;
 
-        const unsigned int numberOfProjectors =
-          d_atomicProjectorFnsContainer
-            ->getTotalNumberOfSphericalFunctionsPerAtom(atomicNumber);
-        const unsigned int numberOfRadialProjectors =
-          d_atomicProjectorFnsContainer
-            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(atomicNumber);
-        const std::map<std::pair<unsigned int, unsigned int>,
-                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
-          sphericalFunction =
-            d_atomicProjectorFnsContainer->getSphericalFunctions();
+    //     const unsigned int numberOfProjectors =
+    //       d_atomicProjectorFnsContainer
+    //         ->getTotalNumberOfSphericalFunctionsPerAtom(atomicNumber);
+    //     const unsigned int numberOfRadialProjectors =
+    //       d_atomicProjectorFnsContainer
+    //         ->getTotalNumberOfRadialSphericalFunctionsPerAtom(atomicNumber);
+    //     const std::map<std::pair<unsigned int, unsigned int>,
+    //                    std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+    //       sphericalFunction =
+    //         d_atomicProjectorFnsContainer->getSphericalFunctions();
 
 
 
-        std::vector<std::vector<int>> temp_projectorDetailsOfAtom;
-        for (int iProj = 0; iProj < numberOfRadialProjectors; iProj++)
-          {
-            const std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
-              sphericalFunction.find(std::make_pair(atomicNumber, iProj))
-                ->second;
-            const int lQuantumNo    = sphFn->getQuantumNumberl();
-            mapOfRadProjLval[iProj] = lQuantumNo;
-            std::vector<int> temp(3, 0);
-            for (int mQuantumNumber = -lQuantumNo; mQuantumNumber <= lQuantumNo;
-                 mQuantumNumber++)
-              {
-                temp[0] = iProj;
-                temp[1] = lQuantumNo;
-                temp[2] = mQuantumNumber;
-                temp_projectorDetailsOfAtom.push_back(temp);
-              }
-          }
+    //     std::vector<std::vector<int>> temp_projectorDetailsOfAtom;
+    //     for (int iProj = 0; iProj < numberOfRadialProjectors; iProj++)
+    //       {
+    //         const std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
+    //           sphericalFunction.find(std::make_pair(atomicNumber, iProj))
+    //             ->second;
+    //         const int lQuantumNo    = sphFn->getQuantumNumberl();
+    //         mapOfRadProjLval[iProj] = lQuantumNo;
+    //         std::vector<int> temp(3, 0);
+    //         for (int mQuantumNumber = -lQuantumNo; mQuantumNumber <= lQuantumNo;
+    //              mQuantumNumber++)
+    //           {
+    //             temp[0] = iProj;
+    //             temp[1] = lQuantumNo;
+    //             temp[2] = mQuantumNumber;
+    //             temp_projectorDetailsOfAtom.push_back(temp);
+    //           }
+    //       }
 
-        pcout << "DEBUG check number of entries are matching? "
-              << numberOfProjectors << " " << temp_projectorDetailsOfAtom.size()
-              << std::endl;
-        projectorDetailsOfAtomFull[*it] = temp_projectorDetailsOfAtom;      
-      } //*it
+    //     pcout << "DEBUG check number of entries are matching? "
+    //           << numberOfProjectors << " " << temp_projectorDetailsOfAtom.size()
+    //           << std::endl;
+    //     projectorDetailsOfAtomFull[*it] = temp_projectorDetailsOfAtom;      
+    //   } //*it
       
   }
 
