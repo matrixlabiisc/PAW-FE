@@ -596,7 +596,28 @@ namespace dftfe
         dftfe::utils::makeDataTypeDeviceCompatible(addToVec),
         addToVecStartingContiguousBlockIds);
     }
-
+    template <typename ValueType>
+    void
+    BLASWrapper<dftfe::utils::MemorySpace::DEVICE>::stridedBlockAxpy(
+      const dftfe::size_type contiguousBlockSize,
+      const dftfe::size_type numContiguousBlocks,
+      const ValueType *      addFromVec,
+      const ValueType *      scalingVector,
+      const ValueType        a,
+      ValueType *            addToVec) const
+    {
+      stridedBlockAxpyDeviceKernel<<<(contiguousBlockSize *
+                                      numContiguousBlocks) /
+                                         dftfe::utils::DEVICE_BLOCK_SIZE +
+                                       1,
+                                     dftfe::utils::DEVICE_BLOCK_SIZE>>>(
+        contiguousBlockSize,
+        numContiguousBlocks,
+        dftfe::utils::makeDataTypeDeviceCompatible(a),
+        dftfe::utils::makeDataTypeDeviceCompatible(scalingVector),
+        dftfe::utils::makeDataTypeDeviceCompatible(addFromVec),
+        dftfe::utils::makeDataTypeDeviceCompatible(addToVec));
+    }
 
     template <typename ValueType1, typename ValueType2>
     void
@@ -1606,6 +1627,24 @@ namespace dftfe
       const std::complex<double> *   addFromVec,
       std::complex<double> *         addToVec,
       const dftfe::global_size_type *addToVecStartingContiguousBlockIds) const;
+
+    template void
+    BLASWrapper<dftfe::utils::MemorySpace::DEVICE>::stridedBlockAxpy(
+      const dftfe::size_type contiguousBlockSize,
+      const dftfe::size_type numContiguousBlocks,
+      const double *         addFromVec,
+      const double *         scalingVector,
+      const double           a,
+      double *               addToVec) const;
+
+    template void
+    BLASWrapper<dftfe::utils::MemorySpace::DEVICE>::stridedBlockAxpy(
+      const dftfe::size_type      contiguousBlockSize,
+      const dftfe::size_type      numContiguousBlocks,
+      const std::complex<double> *addFromVec,
+      const std::complex<double> *scalingVector,
+      const std::complex<double>  a,
+      std::complex<double> *      addToVec) const;
 
     template void
     BLASWrapper<dftfe::utils::MemorySpace::DEVICE>::axpby(const unsigned int n,
