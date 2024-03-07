@@ -173,6 +173,16 @@ namespace dftfe
        const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
+    overlapMatrixTimesX(
+      dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
+      const double scalarOX,
+      const double scalarY,
+      const double scalarX,
+      dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
+      const bool useApproximateMatrixEntries                   = false,
+      const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
+    void
     HXCheby(
       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
       const double scalarHX,

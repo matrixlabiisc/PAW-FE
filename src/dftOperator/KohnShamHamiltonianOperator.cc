@@ -727,11 +727,11 @@ namespace dftfe
         !onlyHPrimePartForFirstOrderDensityMatResponse)
       if (!d_isExternalPotCorrHamiltonianComputed)
         computeCellHamiltonianMatrixExtPotContribution();
-    const unsigned int nCells        = d_basisOperationsPtr->nCells();
-    const unsigned int nQuadsPerCell = d_basisOperationsPtr->nQuadsPerCell();
-    const unsigned int nDofsPerCell  = d_basisOperationsPtr->nDofsPerCell();
-    const double scalarCoeffAlpha = 1.0;
-    const double scalarCoeffHalf  = 0.5;
+    const unsigned int nCells           = d_basisOperationsPtr->nCells();
+    const unsigned int nQuadsPerCell    = d_basisOperationsPtr->nQuadsPerCell();
+    const unsigned int nDofsPerCell     = d_basisOperationsPtr->nDofsPerCell();
+    const double       scalarCoeffAlpha = 1.0;
+    const double       scalarCoeffHalf  = 0.5;
     d_basisOperationsPtr->reinit(0,
                                  d_cellsBlockSizeHamiltonianConstruction,
                                  d_densityQuadratureID,
@@ -945,6 +945,91 @@ namespace dftfe
     scaledConstraintsNoneDataInfoPtr->set_zero(src);
     dst.accumulateAddLocallyOwned();
     dst.zeroOutGhosts();
+  }
+
+  template <dftfe::utils::MemorySpace memorySpace>
+  void
+  KohnShamHamiltonianOperator<memorySpace>::overlapMatrixTimesX(
+    dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
+    const double                                                       scalarOX,
+    const double                                                       scalarY,
+    const double                                                       scalarX,
+    dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
+    const bool useApproximateMatrixEntries                   = false,
+    const bool onlyHPrimePartForFirstOrderDensityMatResponse = false)
+  {
+    const unsigned int numCells       = d_basisOperationsPtr->nCells();
+    const unsigned int numDoFsPerCell = d_basisOperationsPtr->nDofsPerCell();
+    const unsigned int numberWavefunctions = src.numVectors();
+    if (d_numVectorsInternal != numberWavefunctions)
+      reinitNumberWavefunctions(numberWavefunctions);
+
+    if (d_basisOperationsPtr->d_nVectors != numberWavefunctions)
+      d_basisOperationsPtr->reinit(numberWavefunctions,
+                                   d_cellsBlockSizeHX,
+                                   d_densityQuadratureID,
+                                   false,
+                                   false);
+
+    d_BLASWrapperPtr->axpby(src.locallyOwnedSize() * src.numVectors(),
+                            scalarX,
+                            src.data(),
+                            scalarY,
+                            dst.data());
+    if (useApproximateMatrixEntries)
+      {
+        
+      }
+    else
+      {
+        src.updateGhostValues();
+        const dataTypes::number scalarCoeffAlpha = dataTypes::number(1.0),
+                                scalarCoeffBeta  = dataTypes::number(0.0);
+
+        for (unsigned int iCell = 0; iCell < numCells;
+             iCell += d_cellsBlockSizeHX)
+          {
+            std::pair<unsigned int, unsigned int> cellRange(
+              iCell, std::min(iCell + d_cellsBlockSizeHX, numCells));
+
+            d_BLASWrapperPtr->xgemmStridedBatched(
+              'N',
+              'N',
+              numberWavefunctions,
+              numDoFsPerCell,
+              numDoFsPerCell,
+              &scalarCoeffAlpha,
+              d_cellWaveFunctionMatrixSrc.data() +
+                cellRange.first * numDoFsPerCell * numberWavefunctions,
+              numberWavefunctions,
+              numDoFsPerCell * numberWavefunctions,
+              d_cellHamiltonianMatrix[d_HamiltonianIndex].data() +
+                cellRange.first * numDoFsPerCell * numDoFsPerCell,
+              numDoFsPerCell,
+              numDoFsPerCell * numDoFsPerCell,
+              &scalarCoeffBeta,
+              d_cellWaveFunctionMatrixDst.data(),
+              numberWavefunctions,
+              numDoFsPerCell * numberWavefunctions,
+              cellRange.second - cellRange.first);
+            d_BLASWrapperPtr->axpyStridedBlockAtomicAdd(
+              numberWavefunctions,
+              numDoFsPerCell * (cellRange.second - cellRange.first),
+              scalarHX,
+              d_basisOperationsPtr->cellInverseSqrtMassVectorBasisData()
+                  .data() +
+                cellRange.first * numDoFsPerCell,
+              d_cellWaveFunctionMatrixDst.data(),
+              dst.data(),
+              d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
+                  .data() +
+                cellRange.first * numDoFsPerCell);
+          }
+
+        src.zeroOutGhosts();
+        dst.accumulateAddLocallyOwned();
+        dst.zeroOutGhosts();
+      }
   }
 
 

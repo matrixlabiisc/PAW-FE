@@ -301,7 +301,7 @@ namespace dftfe
             d_basisOperationsPtrHost->computeCellStiffnessMatrix(
               d_feOrderPlusOneQuadratureId, 1, true, false);
             d_basisOperationsPtrHost->computeCellMassMatrix(
-              d_feOrderPlusOneQuadratureId, 1, true, false);
+              d_feOrderPlusOneQuadratureId, 1, true, true);
             d_basisOperationsPtrHost->computeInverseSqrtMassVector(true, false);
           }
       }
