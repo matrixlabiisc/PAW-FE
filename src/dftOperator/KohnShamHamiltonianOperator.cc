@@ -999,7 +999,7 @@ namespace dftfe
           blockSize,
           src.locallyOwnedSize(),
           src.data(),
-          d_basisOperationsPtr->d_inverseMassVectorCoeffType.data(),
+          d_basisOperationsPtr->d_massVectorCoeffType.data(),
           dataTypes::number(1.0),
           dst.data());
       }
@@ -1007,7 +1007,7 @@ namespace dftfe
       {
         src.updateGhostValues();
         d_basisOperationsPtr->distribute(src);
-        const dataTypes::number scalarCoeffAlpha = dataTypes::number(1.0),
+        const dataTypes::number scalarCoeffAlpha = scalarOX,
                                 scalarCoeffBeta  = dataTypes::number(0.0);
 
         for (unsigned int iCell = 0; iCell < numCells;
@@ -1039,15 +1039,15 @@ namespace dftfe
             d_BLASWrapperPtr->axpyStridedBlockAtomicAdd(
               numberWavefunctions,
               numDoFsPerCell * (cellRange.second - cellRange.first),
-              scalarOX,
-              &one,
               d_cellWaveFunctionMatrixDst.data(),
               dst.data(),
               d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
                   .data() +
                 cellRange.first * numDoFsPerCell);
           }
-
+        d_basisOperationsPtr
+          ->d_constraintInfo[d_basisOperationsPtr->d_dofHandlerID]
+          .distribute_slave_to_master(dst);
         src.zeroOutGhosts();
         inverseMassVectorScaledConstraintsNoneDataInfoPtr->set_zero(src);
         dst.accumulateAddLocallyOwned();
