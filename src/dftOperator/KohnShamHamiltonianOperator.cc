@@ -882,12 +882,9 @@ namespace dftfe
       {
         std::pair<unsigned int, unsigned int> cellRange(
           iCell, std::min(iCell + d_cellsBlockSizeHX, numCells));
-        d_BLASWrapperPtr->stridedBlockScaleCopy(
+        d_BLASWrapperPtr->stridedCopyToBlock(
           numberWavefunctions,
           numDoFsPerCell * (cellRange.second - cellRange.first),
-          1.0,
-          d_basisOperationsPtr->cellInverseSqrtMassVectorBasisData().data() +
-            cellRange.first * numDoFsPerCell,
           src.data(),
           d_cellWaveFunctionMatrixSrc.data() +
             cellRange.first * numDoFsPerCell * numberWavefunctions,
@@ -992,11 +989,13 @@ namespace dftfe
     if (useApproximateMatrixEntries)
       {
         const unsigned int blockSize = src.numVectors();
+
+
         d_BLASWrapperPtr->stridedBlockAxpy(
           blockSize,
           src.locallyOwnedSize(),
           src.data(),
-          d_basisOperationsPtr->d_massVectorCoeffType.data(),
+          d_basisOperationsPtr->massVector().data(),
           dataTypes::number(1.0),
           dst.data());
       }
@@ -1006,7 +1005,10 @@ namespace dftfe
         d_basisOperationsPtr->distribute(src);
         const dataTypes::number scalarCoeffAlpha = scalarOX,
                                 scalarCoeffBeta  = dataTypes::number(0.0);
-
+        pcout << "Size of vector: "
+              << d_basisOperationsPtr->d_cellMassMatrixCoeffType.size()
+              << std::endl;
+        MPI_Barrier(d_mpiCommParent);
         for (unsigned int iCell = 0; iCell < numCells;
              iCell += d_cellsBlockSizeHX)
           {
@@ -1024,7 +1026,7 @@ namespace dftfe
                 cellRange.first * numDoFsPerCell * numberWavefunctions,
               numberWavefunctions,
               numDoFsPerCell * numberWavefunctions,
-              d_basisOperationsPtr->d_cellMassMatrixCoeffType.data() +
+              d_basisOperationsPtr->cellMassMatrix().data() +
                 cellRange.first * numDoFsPerCell * numDoFsPerCell,
               numDoFsPerCell,
               numDoFsPerCell * numDoFsPerCell,

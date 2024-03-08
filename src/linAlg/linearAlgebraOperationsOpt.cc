@@ -346,7 +346,7 @@ namespace dftfe
 
       T      Onormsq;
       double XNorm;
-      operatorMatrix.overlapMatrixTimesX(X, 1.0, 0.0, 0.0, tempVec);
+      operatorMatrix.overlapMatrixTimesX(X, 1.0, 0.0, 0.0, tempVec, true);
       BLASWrapperPtr->xdot(local_size,
                            X.data(),
                            1,
@@ -384,7 +384,7 @@ namespace dftfe
       // filling only lower triangular part
       for (unsigned int j = 1; j < lanczosIterations; j++)
         {
-          operatorMatrix.overlapMatrixTimesX(Y, 1.0, 0.0, 0.0, tempVec);
+          operatorMatrix.overlapMatrixTimesX(Y, 1.0, 0.0, 0.0, tempVec, true);
           BLASWrapperPtr->xdot(local_size,
                                Y.data(),
                                1,
@@ -401,9 +401,9 @@ namespace dftfe
           alphaNeg = -beta;
           BLASWrapperPtr->xaxpy(
             local_size, &alphaNeg, Z.data(), 1, Y.data(), 1);
-
+          operatorMatrix.HX(X, 1.0, 0.0, 0.0, tempVec);
           BLASWrapperPtr->xdot(local_size,
-                               Y.data(),
+                               tempVec.data(),
                                1,
                                X.data(),
                                1,
@@ -417,8 +417,12 @@ namespace dftfe
           Tlanczos[index] = beta;
           index += lanczosIterations;
           Tlanczos[index] = alpha;
+          if (dealii::Utilities::MPI::this_mpi_process(
+                operatorMatrix.getMPICommunicatorDomain()) == 0)
+            std::cout << "Alpha and Beta: " << alpha << " " << beta
+                      << std::endl;
         }
-      operatorMatrix.overlapMatrixTimesX(Y, 1.0, 0.0, 0.0, tempVec);
+      operatorMatrix.overlapMatrixTimesX(Y, 1.0, 0.0, 0.0, tempVec, true);
       BLASWrapperPtr->xdot(local_size,
                            Y.data(),
                            1,
@@ -428,6 +432,9 @@ namespace dftfe
                            &betaTemp);
       beta = sqrt(std::abs(betaTemp));
       BLASWrapperPtr->xscal(Y.data(), 1.0 / beta, local_size);
+      if (dealii::Utilities::MPI::this_mpi_process(
+            operatorMatrix.getMPICommunicatorDomain()) == 0)
+        std::cout << "Beta: " << beta << std::endl;
       // eigen decomposition to find max eigen value of T matrix
       std::vector<double> eigenValuesT(lanczosIterations);
       char                jobz = 'N', uplo = 'L';

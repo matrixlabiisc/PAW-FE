@@ -285,8 +285,19 @@ namespace dftfe
       Vec templateVec;
       VecCreateMPI(mpiComm, localVectorSize, PETSC_DETERMINE, &templateVec);
       VecSetFromOptions(templateVec);
-
-
+      Mat M;
+      // MatCreateShell(PETSC_COMM_WORLD,
+      //                localVectorSize,
+      //                localVectorSize,
+      //                PETSC_DETERMINE,
+      //                PETSC_DETERMINE,
+      //                &slepcData,
+      //                &M);
+      // MatSetFromOptions(M);
+      // MatShellSetOperation(M, MATOP_MULT, (void (*)(void))computeMx);
+      // MatShellSetOperation(M,
+      //                      MATOP_MULT_TRANSPOSE,
+      //                      (void (*)(void))computeMx);
       //
       // Set BV options after creating BV object
       //
@@ -294,6 +305,7 @@ namespace dftfe
       BVCreate(mpiComm, &columnSpaceOfVectors);
       BVSetSizesFromVec(columnSpaceOfVectors, templateVec, numberVectors);
       BVSetFromOptions(columnSpaceOfVectors);
+      BVSetMaatrix(columnSpaceOfVectors, M);
 
 
       //

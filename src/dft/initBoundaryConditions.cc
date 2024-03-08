@@ -302,7 +302,7 @@ namespace dftfe
               d_feOrderPlusOneQuadratureId, 1, true, false);
             d_basisOperationsPtrHost->computeCellMassMatrix(
               d_feOrderPlusOneQuadratureId, 1, true, true);
-            d_basisOperationsPtrHost->computeInverseSqrtMassVector(true, false);
+            d_basisOperationsPtrHost->computeInverseSqrtMassVector(true, true);
           }
       }
     if (!d_dftParamsPtr->useDevice && recomputeBasisData)
@@ -364,7 +364,7 @@ namespace dftfe
             d_basisOperationsPtrDevice->computeCellMassMatrix(
               d_feOrderPlusOneQuadratureId, 50, true, false);
             d_basisOperationsPtrDevice->computeInverseSqrtMassVector(true,
-                                                                     false);
+                                                                     true);
             unsigned int BVec2 =
               std::min(d_dftParamsPtr->wfcBlockSize, d_numEigenValues);
             if (BVec != BVec2)
