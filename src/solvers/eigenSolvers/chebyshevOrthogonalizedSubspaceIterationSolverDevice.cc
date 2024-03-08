@@ -577,17 +577,6 @@ namespace dftfe
     // if (d_dftParams.measureOnlyChebyTime)
     //  exit(0);
 
-    //
-    // scale the eigenVectors (initial guess of single atom wavefunctions or
-    // previous guess) to convert into Lowden Orthonormalized FE basis
-    // multiply by M^{1/2}
-    dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
-      totalNumberWaveFunctions,
-      localVectorSize,
-      1.0,
-      operatorMatrix.getSqrtMassVector().data(),
-      eigenVectorsFlattenedDevice);
-
 
     if (d_dftParams.orthogType.compare("GS") == 0)
       {
@@ -628,7 +617,12 @@ namespace dftfe
           {
             linearAlgebraOperationsDevice::pseudoGramSchmidtOrthogonalization(
               elpaScala,
+              operatorMatrix,
               eigenVectorsFlattenedDevice,
+              deviceFlattenedArrayBlock,
+              d_deviceFlattenedFloatArrayBlock,
+              d_YArray,
+              projectorKetTimesVector,
               localVectorSize,
               totalNumberWaveFunctions,
               d_mpiCommParent,
@@ -731,24 +725,8 @@ namespace dftfe
       }
 
     //
-    // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
-    // the usual FE basis
-    //
-    dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
-      totalNumberWaveFunctions,
-      localVectorSize,
-      1.0,
-      operatorMatrix.getInverseSqrtMassVector().data(),
-      eigenVectorsFlattenedDevice);
 
 
-    if (eigenValues.size() != totalNumberWaveFunctions)
-      dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
-        eigenValues.size(),
-        localVectorSize,
-        1.0,
-        operatorMatrix.getInverseSqrtMassVector().data(),
-        eigenVectorsRotFracDensityFlattenedDevice);
 
     return d_upperBoundUnWantedSpectrum;
   }
@@ -1082,7 +1060,12 @@ namespace dftfe
 
         linearAlgebraOperationsDevice::pseudoGramSchmidtOrthogonalization(
           elpaScala,
+          operatorMatrix,
           eigenVectorsFlattenedDevice,
+          deviceFlattenedArrayBlock,
+          d_deviceFlattenedFloatArrayBlock,
+          d_YArray,
+          projectorKetTimesVector,
           localVectorSize,
           totalNumberWaveFunctions,
           d_mpiCommParent,
@@ -1155,17 +1138,6 @@ namespace dftfe
           deviceFlattenedArrayBlock.getMPIPatternP2P(), vectorsBlockSize);
       }
 
-    //
-    // scale the eigenVectors (initial guess of single atom wavefunctions or
-    // previous guess) to convert into Lowden Orthonormalized FE basis
-    // multiply by M^{1/2}
-    dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
-      totalNumberWaveFunctions,
-      localVectorSize,
-      1.0,
-      operatorMatrix.getSqrtMassVector().data(),
-      eigenVectorsFlattenedDevice);
-
 
 
     linearAlgebraOperationsDevice::densityMatrixEigenBasisFirstOrderResponse(
@@ -1189,17 +1161,6 @@ namespace dftfe
       d_dftParams);
 
 
-
-    //
-    // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
-    // the usual FE basis
-    //
-    dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
-      totalNumberWaveFunctions,
-      localVectorSize,
-      1.0,
-      operatorMatrix.getInverseSqrtMassVector().data(),
-      eigenVectorsFlattenedDevice);
 
     dftfe::utils::deviceSynchronize();
     computingTimerStandard.leave_subsection(

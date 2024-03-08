@@ -28,15 +28,17 @@ namespace dftfe
   {
     template <typename T>
     unsigned int
-    pseudoGramSchmidtOrthogonalization(elpaScalaManager &   elpaScala,
-                                       T *                  X,
-                                       const unsigned int   numberVectors,
-                                       const unsigned int   numLocalDofs,
-                                       const MPI_Comm &     mpiCommParent,
-                                       const MPI_Comm &     interBandGroupComm,
-                                       const MPI_Comm &     mpiComm,
-                                       const bool           useMixedPrec,
-                                       const dftParameters &dftParams)
+    pseudoGramSchmidtOrthogonalization(
+      elpaScalaManager &                                 elpaScala,
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      T *                                                X,
+      const unsigned int                                 numberVectors,
+      const unsigned int                                 numLocalDofs,
+      const MPI_Comm &                                   mpiCommParent,
+      const MPI_Comm &                                   interBandGroupComm,
+      const MPI_Comm &                                   mpiComm,
+      const bool                                         useMixedPrec,
+      const dftParameters &                              dftParams)
 
     {
       dealii::ConditionalOStream pcout(
@@ -70,47 +72,15 @@ namespace dftfe
 
       // SConj=X^{T}*XConj with X^{T} stored in the column
       // major format
-      if (!(dftParams.useMixedPrecCGS_O && useMixedPrec))
-        {
-          computing_timer.enter_subsection("Fill overlap matrix CGS");
-          internal::fillParallelOverlapMatrix(X,
-                                              numberVectors * numLocalDofs,
-                                              numberVectors,
-                                              processGrid,
-                                              interBandGroupComm,
-                                              mpiComm,
-                                              overlapMatPar,
-                                              dftParams);
-          computing_timer.leave_subsection("Fill overlap matrix CGS");
-        }
-      else
-        {
-          computing_timer.enter_subsection(
-            "Fill overlap matrix mixed prec CGS");
-          if (std::is_same<T, std::complex<double>>::value)
-            internal::fillParallelOverlapMatrixMixedPrec<T,
-                                                         std::complex<float>>(
-              X,
-              numberVectors * numLocalDofs,
-              numberVectors,
-              processGrid,
-              interBandGroupComm,
-              mpiComm,
-              overlapMatPar,
-              dftParams);
-          else
-            internal::fillParallelOverlapMatrixMixedPrec<T, float>(
-              X,
-              numberVectors * numLocalDofs,
-              numberVectors,
-              processGrid,
-              interBandGroupComm,
-              mpiComm,
-              overlapMatPar,
-              dftParams);
-          computing_timer.leave_subsection(
-            "Fill overlap matrix mixed prec CGS");
-        }
+      XtOX(operatorMatrix,
+           X,
+           numberVectors,
+           numLocalDofs,
+           processGrid,
+           mpiComm,
+           interBandGroupComm,
+           dftParams,
+           overlapMatPar);
 
 
       // SConj=LConj*L^{T}

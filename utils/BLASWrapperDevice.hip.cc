@@ -697,7 +697,8 @@ namespace dftfe
                          contiguousBlockSize,
                          numContiguousBlocks,
                          dftfe::utils::makeDataTypeDeviceCompatible(a),
-                         dftfe::utils::makeDataTypeDeviceCompatible(scalingVector),
+                         dftfe::utils::makeDataTypeDeviceCompatible(
+                           scalingVector),
                          dftfe::utils::makeDataTypeDeviceCompatible(addFromVec),
                          dftfe::utils::makeDataTypeDeviceCompatible(addToVec));
     }

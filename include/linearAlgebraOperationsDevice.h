@@ -162,17 +162,22 @@ namespace dftfe
      */
     void
     pseudoGramSchmidtOrthogonalization(
-      elpaScalaManager &                elpaScala,
-      dataTypes::number *               X,
-      const unsigned int                M,
-      const unsigned int                N,
-      const MPI_Comm &                  mpiCommParent,
-      const MPI_Comm &                  mpiCommDomain,
-      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
-      const MPI_Comm &                  interBandGroupComm,
-      dftfe::utils::deviceBlasHandle_t &handle,
-      const dftParameters &             dftParams,
-      const bool                        useMixedPrecOverall = false);
+      elpaScalaManager &                                   elpaScala,
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      dataTypes::number *                                  X,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::numberFP32> &        floatXb,
+      distributedDeviceVec<dataTypes::number> &            OXb,
+      distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
+      const unsigned int                       M,
+      const unsigned int                       N,
+      const MPI_Comm &                         mpiCommParent,
+      const MPI_Comm &                         mpiCommDomain,
+      utils::DeviceCCLWrapper &                devicecclMpiCommDomain,
+      const MPI_Comm &                         interBandGroupComm,
+      dftfe::utils::deviceBlasHandle_t &       handle,
+      const dftParameters &                    dftParams,
+      const bool                               useMixedPrecOverall = false);
 
     void
     subspaceRotationScalapack(
@@ -354,6 +359,22 @@ namespace dftfe
          const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
+    XtOX(operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+         const dataTypes::number *                            X,
+         distributedDeviceVec<dataTypes::number> &            XBlock,
+         distributedDeviceVec<dataTypes::number> &            OXBlock,
+         distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
+         const unsigned int                       M,
+         const unsigned int                       N,
+         dftfe::utils::deviceBlasHandle_t &       handle,
+         const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+         dftfe::ScaLAPACKMatrix<dataTypes::number> &      projOverlapPar,
+         utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+         const MPI_Comm &         mpiCommDomain,
+         const MPI_Comm &         interBandGroupComm,
+         const dftParameters &    dftParams);
+
+    void
     XtHXMixedPrecOverlapComputeCommun(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       const dataTypes::number *                            X,
@@ -374,6 +395,25 @@ namespace dftfe
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
+    XtOXMixedPrecOverlapComputeCommun(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      const dataTypes::number *                            X,
+      distributedDeviceVec<dataTypes::number> &            XBlock,
+      distributedDeviceVec<dataTypes::numberFP32> &        tempFloatBlock,
+      distributedDeviceVec<dataTypes::number> &            OXBlock,
+      distributedDeviceVec<dataTypes::number> &        projectorKetTimesVector,
+      const unsigned int                               M,
+      const unsigned int                               N,
+      const unsigned int                               Noc,
+      dftfe::utils::deviceBlasHandle_t &               handle,
+      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projOverlapPar,
+      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
+      const MPI_Comm &                                 mpiCommDomain,
+      const MPI_Comm &                                 interBandGroupComm,
+      const dftParameters &                            dftParams);
+
+    void
     XtHXOverlapComputeCommun(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       const dataTypes::number *                            X,
@@ -390,6 +430,23 @@ namespace dftfe
       const MPI_Comm &                                 interBandGroupComm,
       const dftParameters &                            dftParams,
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
+    void
+    XtOXOverlapComputeCommun(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      const dataTypes::number *                            X,
+      distributedDeviceVec<dataTypes::number> &            XBlock,
+      distributedDeviceVec<dataTypes::number> &            OXBlock,
+      distributedDeviceVec<dataTypes::number> &        projectorKetTimesVector,
+      const unsigned int                               M,
+      const unsigned int                               N,
+      dftfe::utils::deviceBlasHandle_t &               handle,
+      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projOverlapPar,
+      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
+      const MPI_Comm &                                 mpiCommDomain,
+      const MPI_Comm &                                 interBandGroupComm,
+      const dftParameters &                            dftParams);
 
     void
     XtHXMixedPrecCommunOverlapComputeCommun(
@@ -409,6 +466,24 @@ namespace dftfe
       const MPI_Comm &                                 interBandGroupComm,
       const dftParameters &                            dftParams,
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
+    void
+    XtOXMixedPrecCommunOverlapComputeCommun(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      const dataTypes::number *                            X,
+      distributedDeviceVec<dataTypes::number> &            XBlock,
+      distributedDeviceVec<dataTypes::number> &            OXBlock,
+      distributedDeviceVec<dataTypes::number> &        projectorKetTimesVector,
+      const unsigned int                               M,
+      const unsigned int                               N,
+      const unsigned int                               Noc,
+      dftfe::utils::deviceBlasHandle_t &               handle,
+      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projOverlapPar,
+      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
+      const MPI_Comm &                                 mpiCommDomain,
+      const MPI_Comm &                                 interBandGroupComm,
+      const dftParameters &                            dftParams);
 
   } // namespace linearAlgebraOperationsDevice
 } // namespace dftfe

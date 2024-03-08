@@ -489,13 +489,12 @@ namespace dftfe
 
     template <typename ValueType>
     __global__ void
-    stridedBlockAxpyDeviceKernel(
-      const dftfe::size_type contiguousBlockSize,
-      const dftfe::size_type numContiguousBlocks,
-      const ValueType        a,
-      const ValueType *      s,
-      const ValueType *      addFromVec,
-      ValueType *            addToVec)
+    stridedBlockAxpyDeviceKernel(const dftfe::size_type contiguousBlockSize,
+                                 const dftfe::size_type numContiguousBlocks,
+                                 const ValueType        a,
+                                 const ValueType *      s,
+                                 const ValueType *      addFromVec,
+                                 ValueType *            addToVec)
     {
       const dftfe::size_type globalThreadId =
         blockIdx.x * blockDim.x + threadIdx.x;
@@ -506,9 +505,10 @@ namespace dftfe
            index += blockDim.x * gridDim.x)
         {
           dftfe::size_type blockIndex = index / contiguousBlockSize;
-          const ValueType     coeff      = dftfe::utils::mult(a, s[blockIndex]);
+          const ValueType  coeff      = dftfe::utils::mult(a, s[blockIndex]);
           addToVec[index] =
-            dftfe::utils::add(addToVec[index],dftfe::utils::mult(addFromVec[index], coeff));
+            dftfe::utils::add(addToVec[index],
+                              dftfe::utils::mult(addFromVec[index], coeff));
         }
     }
 
