@@ -951,9 +951,8 @@ namespace dftfe
             cellRange.first * numDoFsPerCell);
       }
 
-        d_basisOperationsPtr
-          ->d_constraintInfo[d_basisOperationsPtr->d_dofHandlerID]
-          .distribute_slave_to_master(dst);
+    d_basisOperationsPtr->d_constraintInfo[d_basisOperationsPtr->d_dofHandlerID]
+      .distribute_slave_to_master(dst);
 
     src.zeroOutGhosts();
     inverseSqrtMassVectorScaledConstraintsNoneDataInfoPtr->set_zero(src);

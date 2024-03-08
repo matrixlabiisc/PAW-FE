@@ -246,13 +246,14 @@ namespace dftfe
             computingTimerStandard.enter_subsection("Lanczos upper bound");
           }
 
-        const std::pair<double, double> bounds =
-          linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+        const std::pair<double, double> bounds = linearAlgebraOperations::
+          generalisedLanczosLowerUpperBoundEigenSpectrum(
             BLASWrapperPtr,
             operatorMatrix,
             operatorMatrix.getScratchFEMultivector(1, 0),
             operatorMatrix.getScratchFEMultivector(1, 1),
             operatorMatrix.getScratchFEMultivector(1, 2),
+            operatorMatrix.getScratchFEMultivector(1, 3),
             d_dftParams);
 
         if (d_dftParams.deviceFineGrainedTimings)
@@ -278,13 +279,15 @@ namespace dftfe
             computingTimerStandard.enter_subsection("Lanczos upper bound");
           }
 
-        const std::pair<double, double> bounds =
-          linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+        const std::pair<double, double> bounds = linearAlgebraOperations::
+          generalisedLanczosLowerUpperBoundEigenSpectrum(
             BLASWrapperPtr,
             operatorMatrix,
             operatorMatrix.getScratchFEMultivector(1, 0),
             operatorMatrix.getScratchFEMultivector(1, 1),
             operatorMatrix.getScratchFEMultivector(1, 2),
+            operatorMatrix.getScratchFEMultivector(1, 3),
+
             d_dftParams);
 
         if (d_dftParams.deviceFineGrainedTimings)
@@ -808,13 +811,14 @@ namespace dftfe
 
     if (!d_dftParams.reuseLanczosUpperBoundFromFirstCall)
       {
-        const std::pair<double, double> bounds =
-          linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+        const std::pair<double, double> bounds = linearAlgebraOperations::
+          generalisedLanczosLowerUpperBoundEigenSpectrum(
             BLASWrapperPtr,
             operatorMatrix,
             operatorMatrix.getScratchFEMultivector(1, 0),
             operatorMatrix.getScratchFEMultivector(1, 1),
             operatorMatrix.getScratchFEMultivector(1, 2),
+            operatorMatrix.getScratchFEMultivector(1, 3),
             d_dftParams);
 
         d_upperBoundUnWantedSpectrum = bounds.second;

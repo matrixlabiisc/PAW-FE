@@ -612,6 +612,7 @@ namespace dftfe
       dftfe::linearAlgebra::MultiVector<T, memorySpace> &X,
       dftfe::linearAlgebra::MultiVector<T, memorySpace> &Y,
       dftfe::linearAlgebra::MultiVector<T, memorySpace> &Z,
+      dftfe::linearAlgebra::MultiVector<T, memorySpace> &tempVec,
       const dftParameters &                              dftParams);
 
 

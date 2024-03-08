@@ -345,13 +345,14 @@ namespace dftfe
       {
         computing_timer.enter_subsection("Lanczos k-step Upper Bound");
 
-        std::pair<double, double> bounds =
-          linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+        std::pair<double, double> bounds = linearAlgebraOperations::
+          generalisedLanczosLowerUpperBoundEigenSpectrum(
             d_BLASWrapperPtrHost,
             kohnShamDFTEigenOperator,
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0),
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 1),
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 2),
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 3),
             *d_dftParamsPtr);
 
         const double upperBoundUnwantedSpectrum = bounds.second;
@@ -382,13 +383,14 @@ namespace dftfe
           {
             computing_timer.enter_subsection("Lanczos k-step Upper Bound");
 
-            std::pair<double, double> bounds =
-              linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+            std::pair<double, double> bounds = linearAlgebraOperations::
+              generalisedLanczosLowerUpperBoundEigenSpectrum(
                 d_BLASWrapperPtrHost,
                 kohnShamDFTEigenOperator,
                 kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0),
                 kohnShamDFTEigenOperator.getScratchFEMultivector(1, 1),
                 kohnShamDFTEigenOperator.getScratchFEMultivector(1, 2),
+                kohnShamDFTEigenOperator.getScratchFEMultivector(1, 3),
                 *d_dftParamsPtr);
             d_upperBoundUnwantedSpectrumValues
               [(1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType] =
@@ -782,13 +784,14 @@ namespace dftfe
       {
         computing_timer.enter_subsection("Lanczos k-step Upper Bound");
 
-        std::pair<double, double> bounds =
-          linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+        std::pair<double, double> bounds = linearAlgebraOperations::
+          generalisedLanczosLowerUpperBoundEigenSpectrum(
             d_BLASWrapperPtrHost,
             kohnShamDFTEigenOperator,
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0),
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 1),
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 2),
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 3),
             *d_dftParamsPtr);
         const double upperBoundUnwantedSpectrum = bounds.second;
         const double lowerBoundWantedSpectrum   = bounds.first;
@@ -810,13 +813,15 @@ namespace dftfe
       {
         computing_timer.enter_subsection("Lanczos k-step Upper Bound");
 
-        std::pair<double, double> bounds =
-          linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+        std::pair<double, double> bounds = linearAlgebraOperations::
+          generalisedLanczosLowerUpperBoundEigenSpectrum(
             d_BLASWrapperPtrHost,
             kohnShamDFTEigenOperator,
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0),
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 1),
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 2),
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 3),
+
             *d_dftParamsPtr);
         const double upperBoundUnwantedSpectrum = bounds.second;
         computing_timer.leave_subsection("Lanczos k-step Upper Bound");
