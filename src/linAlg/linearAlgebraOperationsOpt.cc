@@ -492,6 +492,7 @@ namespace dftfe
            overlapMatPar);
 
 
+
       computing_timer.leave_subsection("SConj=X^{T}OXConj, RR GEP step");
 
       // SConj=LConj*L^{T}
@@ -977,8 +978,11 @@ namespace dftfe
       std::shared_ptr<const dftfe::ProcessGrid> processGrid =
         elpaScala.getProcessGridDftfeScalaWrapper();
 
-
-      computing_timer.enter_subsection("SConj=X^{T}XConj, RR GEP step");
+      if (useMixedPrec && dftParams.useMixedPrecXTHXSpectrumSplit)
+        computing_timer.enter_subsection(
+          "SConj=X^{T}OXConj, with mixed precision RR GEP step");
+      else
+        computing_timer.enter_subsection("SConj=X^{T}OXConj, RR GEP step");
       //
       // compute overlap matrix
       //
@@ -993,16 +997,34 @@ namespace dftfe
                   T(0.0));
 
       // SConj=X^{T}*XConj
-      XtOX(operatorMatrix,
-           X,
-           numberWaveFunctions,
-           localVectorSize,
-           processGrid,
-           operatorMatrix.getMPICommunicatorDomain(),
-           interBandGroupComm,
-           dftParams,
-           overlapMatPar);
-      computing_timer.leave_subsection("SConj=X^{T}XConj, RR GEP step");
+      if (useMixedPrec && dftParams.useMixedPrecXTHXSpectrumSplit)
+        {
+          XtOXMixedPrec(operatorMatrix,
+                        X,
+                        numberWaveFunctions,
+                        numberCoreStates,
+                        localVectorSize,
+                        processGrid,
+                        mpiComm,
+                        interBandGroupComm,
+                        dftParams,
+                        overlapMatPar);
+        }
+      else
+        XtOX(operatorMatrix,
+             X,
+             numberWaveFunctions,
+             localVectorSize,
+             processGrid,
+             operatorMatrix.getMPICommunicatorDomain(),
+             interBandGroupComm,
+             dftParams,
+             overlapMatPar);
+      if (useMixedPrec && dftParams.useMixedPrecXTHXSpectrumSplit)
+        computing_timer.leave_subsection(
+          "SConj=X^{T}OXConj, with mixed precision RR GEP step");
+      else
+        computing_timer.leave_subsection("SConj=X^{T}OXConj, RR GEP step");
       // Sc=Lc*L^{T}
       computing_timer.enter_subsection("Cholesky and triangular matrix invert");
 
@@ -4094,7 +4116,7 @@ namespace dftfe
       if (dftParams.verbosity >= 4)
         dftUtils::printCurrentMemoryUsage(
           mpiCommDomain,
-          "Inside Blocked XtOX with parallel projected Ham matrix");
+          "Inside Blocked XtOX with parallel projected Overlap matrix");
 
       for (unsigned int jvec = 0; jvec < N; jvec += vectorsBlockSize)
         {
