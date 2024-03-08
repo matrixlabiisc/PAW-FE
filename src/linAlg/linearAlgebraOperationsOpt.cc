@@ -310,7 +310,7 @@ namespace dftfe
       const unsigned int lanczosIterations =
         dftParams.reproducible_output ? 40 : 20;
       double beta, betaNeg;
-
+      T      betaTemp;
 
       T alpha, alphaNeg;
 
@@ -344,14 +344,20 @@ namespace dftfe
       // evaluate l2 norm
       //
 
-      std::vector<double> Onormsq;
-      double              XNorm;
-      BLASWrapperPtr->xnrm2(local_size,
-                            X.data(),
-                            1,
-                            operatorMatrix.getMPICommunicatorDomain(),
-                            &XNorm);
-      BLASWrapperPtr->xscal(X.data(), 1.0 / XNorm, local_size);
+      T      Onormsq;
+      double XNorm;
+      operatorMatrix.overlapMatrixTimesX(X, 1.0, 0.0, 0.0, tempVec);
+      BLASWrapperPtr->xdot(local_size,
+                           X.data(),
+                           1,
+                           tempVec.data(),
+                           1,
+                           operatorMatrix.getMPICommunicatorDomain(),
+                           &Onormsq);
+
+      BLASWrapperPtr->xscal(X.data(),
+                            1.0 / sqrt(std::abs(Onormsq)),
+                            local_size);
 
       //
       // call matrix times X
@@ -378,16 +384,20 @@ namespace dftfe
       // filling only lower triangular part
       for (unsigned int j = 1; j < lanczosIterations; j++)
         {
-          BLASWrapperPtr->xnrm2(local_size,
-                                Y.data(),
-                                1,
-                                operatorMatrix.getMPICommunicatorDomain(),
-                                &beta);
-          Z = X;
+          operatorMatrix.overlapMatrixTimesX(Y, 1.0, 0.0, 0.0, tempVec);
+          BLASWrapperPtr->xdot(local_size,
+                               Y.data(),
+                               1,
+                               tempVec.data(),
+                               1,
+                               operatorMatrix.getMPICommunicatorDomain(),
+                               &betaTemp);
+          beta = sqrt(std::abs(betaTemp));
+          Z    = X;
           BLASWrapperPtr->axpby(
             local_size, 1.0 / beta, Y.data(), 0.0, X.data());
 
-          operatorMatrix.HX(X, 1.0, 0.0, 0.0, Y);
+          operatorMatrix.HXCheby(X, 1.0, 0.0, 0.0, Y);
           alphaNeg = -beta;
           BLASWrapperPtr->xaxpy(
             local_size, &alphaNeg, Z.data(), 1, Y.data(), 1);
@@ -408,7 +418,16 @@ namespace dftfe
           index += lanczosIterations;
           Tlanczos[index] = alpha;
         }
-
+      operatorMatrix.overlapMatrixTimesX(Y, 1.0, 0.0, 0.0, tempVec);
+      BLASWrapperPtr->xdot(local_size,
+                           Y.data(),
+                           1,
+                           tempVec.data(),
+                           1,
+                           operatorMatrix.getMPICommunicatorDomain(),
+                           &betaTemp);
+      beta = sqrt(std::abs(betaTemp));
+      BLASWrapperPtr->xscal(Y.data(), 1.0 / beta, local_size);
       // eigen decomposition to find max eigen value of T matrix
       std::vector<double> eigenValuesT(lanczosIterations);
       char                jobz = 'N', uplo = 'L';
