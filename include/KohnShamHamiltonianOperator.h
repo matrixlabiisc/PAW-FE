@@ -179,7 +179,7 @@ namespace dftfe
       const double scalarY,
       const double scalarX,
       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
-      const bool useApproximateMatrixEntries = false);
+      const bool useApproximateMatrixEntries = true);
 
     void
     HXCheby(

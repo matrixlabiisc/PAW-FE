@@ -441,8 +441,7 @@ namespace dftfe
           std::transform(addFromVec + iBlock * contiguousBlockSize,
                          addFromVec + (iBlock + 1) * contiguousBlockSize,
                          addToVec + iBlock * contiguousBlockSize,
-                         addToVec + (iBlock + 1) * contiguousBlockSize,
-                         [&coeff](auto &p, auto &q) { return p * coeff + q; });
+                         [&coeff](auto &p) { return p * coeff; });
         }
     }
 

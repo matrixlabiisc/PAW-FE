@@ -4081,7 +4081,7 @@ namespace dftfe
 
                   // evaluate XBlock^{T} times H^{T} and store in OXBlock
                   operatorMatrix.overlapMatrixTimesX(
-                    XBlock, 1.0, 0.0, 0.0, OXBlock, false);
+                    XBlock, 1.0, 0.0, 0.0, OXBlock);
 
                   dftfe::utils::deviceKernelsGeneric::
                     stridedCopyFromBlockConstantStride(B,
@@ -4671,7 +4671,7 @@ namespace dftfe
 
                       // evaluate H times XBlock^{T} and store in HXBlock^{T}
                       operatorMatrix.overlapMatrixTimesX(
-                        XBlock, 1.0, 0.0, 0.0, OXBlock, false);
+                        XBlock, 1.0, 0.0, 0.0, OXBlock);
 
                       dftfe::utils::deviceKernelsGeneric::
                         stridedCopyFromBlockConstantStride(B,
@@ -4736,7 +4736,7 @@ namespace dftfe
 
                       // evaluate H times XBlock^{T} and store in HXBlock^{T}
                       operatorMatrix.overlapMatrixTimesX(
-                        XBlock, 1.0, 0.0, 0.0, OXBlock, false);
+                        XBlock, 1.0, 0.0, 0.0, OXBlock);
 
                       dftfe::utils::deviceKernelsGeneric::
                         stridedCopyFromBlockConstantStride(B,

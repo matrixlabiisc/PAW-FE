@@ -3302,7 +3302,7 @@ namespace dftfe
               MPI_Barrier(mpiCommDomain);
               // evaluate H times XBlock and store in HXBlock^{T}
               operatorMatrix.overlapMatrixTimesX(
-                *XBlock, 1.0, 0.0, 0.0, *OXBlock, false);
+                *XBlock, 1.0, 0.0, 0.0, *OXBlock);
               MPI_Barrier(mpiCommDomain);
 
               const char transA = 'N';
@@ -3720,7 +3720,7 @@ namespace dftfe
               MPI_Barrier(mpiCommDomain);
               // evaluate H times XBlock and store in HXBlock^{T}
               operatorMatrix.overlapMatrixTimesX(
-                *XBlock, 1.0, 0.0, 0.0, *OXBlock, false);
+                *XBlock, 1.0, 0.0, 0.0, *OXBlock);
 
 
               MPI_Barrier(mpiCommDomain);

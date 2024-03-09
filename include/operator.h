@@ -113,7 +113,7 @@ namespace dftfe
       const double scalarY,
       const double scalarX,
       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
-      const bool useApproximateMatrixEntries = false) = 0;
+      const bool useApproximateMatrixEntries = true) = 0;
 
     virtual void
     HXCheby(
