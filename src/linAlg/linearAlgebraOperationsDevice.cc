@@ -218,6 +218,24 @@ namespace dftfe
 
 
       __global__ void
+      computeDiagQTimesXKernel(const double *                     diagValues,
+                               dftfe::utils::deviceDoubleComplex *X,
+                               const unsigned int                 N,
+                               const unsigned int                 M)
+      {
+        const unsigned int numEntries = N * M;
+        for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < numEntries;
+             i += blockDim.x * gridDim.x)
+          {
+            const unsigned int idof = i / N;
+            const unsigned int ivec = i % N;
+
+            *(X + N * idof + ivec) =
+              dftfe::utils::mult(*(X + N * idof + ivec), diagValues[ivec]);
+          }
+      }
+
+      __global__ void
       computeDiagQTimesXKernel(
         const dftfe::utils::deviceDoubleComplex *diagValues,
         dftfe::utils::deviceDoubleComplex *      X,
@@ -235,7 +253,6 @@ namespace dftfe
               dftfe::utils::mult(*(X + N * idof + ivec), diagValues[ivec]);
           }
       }
-
 
       // MX|Lambda
       __global__ void
@@ -3799,35 +3816,69 @@ namespace dftfe
                   // evaluate H times XBlock^{T} and store in HXBlock^{T}
                   operatorMatrix.overlapMatrixTimesX(
                     XBlock, 1.0, 0.0, 0.0, HXBlock);
+                  MPI_Barrier(mpiCommDomain);
+                  std::cout << "DEBUG: Line 3821" << std::endl;
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-                  computeScaledOXVectors<<<
-                    (B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                      dftfe::utils::DEVICE_BLOCK_SIZE * M,
+                  computeDiagQTimesXKernel<<<
+                    (M * B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                      dftfe::utils::DEVICE_BLOCK_SIZE,
                     dftfe::utils::DEVICE_BLOCK_SIZE>>>(
-                    B,
-                    M,
-                    jvec,
-                    eigenValuesDevice.begin(),
-                    dftfe::utils::makeDataTypeDeviceCompatible(HXBlock.begin()),
                     dftfe::utils::makeDataTypeDeviceCompatible(
-                      HXBlock.begin()));
+                      eigenValuesDevice.begin() + jvec),
+                    dftfe::utils::makeDataTypeDeviceCompatible(HXBlock.begin()),
+                    B,
+                    M);
 #elif DFTFE_WITH_DEVICE_LANG_HIP
                   hipLaunchKernelGGL(
-                    computeScaledOXVectors,
-                    (B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                      dftfe::utils::DEVICE_BLOCK_SIZE * M,
+                    computeDiagQTimesXKernel,
+                    (M * B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                      dftfe::utils::DEVICE_BLOCK_SIZE,
                     dftfe::utils::DEVICE_BLOCK_SIZE,
                     0,
                     0,
-                    B,
-                    M,
-                    jvec,
-                    eigenValuesDevice.begin(),
-                    dftfe::utils::makeDataTypeDeviceCompatible(HXBlock.begin()),
                     dftfe::utils::makeDataTypeDeviceCompatible(
-                      HXBlock.begin()));
+                      eigenValuesDevice.begin() + jvec),
+                    dftfe::utils::makeDataTypeDeviceCompatible(HXBlock.begin()),
+                    B,
+                    M);
 #endif
+                  MPI_Barrier(mpiCommDomain);
+                  std::cout << "DEBUG: Line 3845" << std::endl;
+                  // #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
+                  //                   computeScaledOXVectors<<<
+                  //                     (B + (dftfe::utils::DEVICE_BLOCK_SIZE -
+                  //                     1)) /
+                  //                       dftfe::utils::DEVICE_BLOCK_SIZE * M,
+                  //                     dftfe::utils::DEVICE_BLOCK_SIZE>>>(
+                  //                     B,
+                  //                     M,
+                  //                     jvec,
+                  //                     eigenValuesDevice.begin(),
+                  //                     dftfe::utils::makeDataTypeDeviceCompatible(HXBlock.begin()),
+                  //                     dftfe::utils::makeDataTypeDeviceCompatible(
+                  //                       HXBlock.begin()));
+                  // #elif DFTFE_WITH_DEVICE_LANG_HIP
+                  //                   hipLaunchKernelGGL(
+                  //                     computeScaledOXVectors,
+                  //                     (B + (dftfe::utils::DEVICE_BLOCK_SIZE -
+                  //                     1)) /
+                  //                       dftfe::utils::DEVICE_BLOCK_SIZE * M,
+                  //                     dftfe::utils::DEVICE_BLOCK_SIZE,
+                  //                     0,
+                  //                     0,
+                  //                     B,
+                  //                     M,
+                  //                     jvec,
+                  //                     eigenValuesDevice.begin(),
+                  //                     dftfe::utils::makeDataTypeDeviceCompatible(HXBlock.begin()),
+                  //                     dftfe::utils::makeDataTypeDeviceCompatible(
+                  //                       HXBlock.begin()));
+                  // #endif
+                  MPI_Barrier(mpiCommDomain);
+                  std::cout << "DEBUG: Line 3878" << std::endl;
                   operatorMatrix.HX(XBlock, 1.0, -1.0, 0.0, HXBlock);
+                  MPI_Barrier(mpiCommDomain);
+                  std::cout << "DEBUG: Line 3880" << std::endl;
                   dftfe::utils::deviceKernelsGeneric::
                     stridedCopyFromBlockConstantStride(B,
                                                        chebyBlockSize,
@@ -3835,6 +3886,8 @@ namespace dftfe
                                                        k - jvec,
                                                        HXBlock.begin(),
                                                        HXBlockFull.begin());
+                  MPI_Barrier(mpiCommDomain);
+                  std::cout << "DEBUG: Line 3884" << std::endl;
                 }
 
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
@@ -3863,6 +3916,8 @@ namespace dftfe
                                    HXBlockFull.begin()),
                                  residualSqDevice.begin());
 #endif
+              MPI_Barrier(mpiCommDomain);
+              std::cout << "DEBUG: Line 3914" << std::endl;
 
               dftfe::utils::deviceBlasWrapper::gemm(
                 handle,
@@ -3879,9 +3934,12 @@ namespace dftfe
                 &beta,
                 residualNormSquareDevice.begin() + jvec,
                 1);
+              MPI_Barrier(mpiCommDomain);
+              std::cout << "DEBUG: Line 3933" << std::endl;
             }
         }
-
+      MPI_Barrier(mpiCommDomain);
+      std::cout << "DEBUG: Line 3936" << std::endl;
 
       dftfe::utils::deviceMemcpyD2H(&residualNorm[0],
                                     residualNormSquareDevice.begin(),
