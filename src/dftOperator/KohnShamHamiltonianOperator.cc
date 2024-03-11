@@ -849,6 +849,7 @@ namespace dftfe
     const unsigned int numCells       = d_basisOperationsPtr->nCells();
     const unsigned int numDoFsPerCell = d_basisOperationsPtr->nDofsPerCell();
     const unsigned int numberWavefunctions = src.numVectors();
+    pcout<<"DEBUG Line 852: "<<numberWavefunctions<<std::endl;
     if (d_numVectorsInternal != numberWavefunctions)
       reinitNumberWavefunctions(numberWavefunctions);
 
@@ -858,14 +859,15 @@ namespace dftfe
                                    d_densityQuadratureID,
                                    false,
                                    false);
-
+    pcout<<"DEBUG Line 861"<<std::endl;
     d_BLASWrapperPtr->axpby(src.locallyOwnedSize() * src.numVectors(),
                             scalarX,
                             src.data(),
                             scalarY,
                             dst.data());
-
+    pcout<<"DEBUG Line 867"<<std::endl;
     src.updateGhostValues();
+    pcout<<"DEBUG Line 869"<<std::endl;
     d_basisOperationsPtr->distribute(src);
     const dataTypes::number scalarCoeffAlpha = scalarHX,
                             scalarCoeffBeta  = dataTypes::number(0.0);
@@ -877,7 +879,7 @@ namespace dftfe
       (d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor() >
        0) &&
       !onlyHPrimePartForFirstOrderDensityMatResponse;
-
+    pcout<<"DEBUG Line 881"<<std::endl;
     for (unsigned int iCell = 0; iCell < numCells; iCell += d_cellsBlockSizeHX)
       {
         std::pair<unsigned int, unsigned int> cellRange(
@@ -909,7 +911,7 @@ namespace dftfe
           d_ONCVNonLocalProjectorTimesVectorBlock,
           true);
       }
-
+    pcout<<"DEBUG Line 913"<<std::endl;
     for (unsigned int iCell = 0; iCell < numCells; iCell += d_cellsBlockSizeHX)
       {
         std::pair<unsigned int, unsigned int> cellRange(
@@ -950,7 +952,7 @@ namespace dftfe
 
     d_basisOperationsPtr->d_constraintInfo[d_basisOperationsPtr->d_dofHandlerID]
       .distribute_slave_to_master(dst);
-
+    pcout<<"DEBUG Line 954"<<std::endl;
     src.zeroOutGhosts();
     inverseSqrtMassVectorScaledConstraintsNoneDataInfoPtr->set_zero(src);
     dst.accumulateAddLocallyOwned();
