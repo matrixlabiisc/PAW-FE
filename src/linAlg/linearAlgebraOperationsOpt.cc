@@ -320,6 +320,7 @@ namespace dftfe
       X.setValue(T(0.0));
       Y.setValue(T(0.0));
       Z.setValue(T(0.0));
+      tempVec.setValue(T(0.0));
       const unsigned int local_size = X.locallyOwnedSize();
 #if defined(DFTFE_WITH_DEVICE)
       dftfe::utils::MemoryStorage<T, dftfe::utils::MemorySpace::HOST> XHost(
@@ -344,25 +345,9 @@ namespace dftfe
       // evaluate l2 norm
       //
 
-      T      Onormsq;
-      double XNorm;
-          //       BLASWrapperPtr->xnrm2(local_size,
-          //                       X.data(),
-          //                       1,
-          //                       operatorMatrix.getMPICommunicatorDomain(),
-          //                       &XNorm);
-          // if (dealii::Utilities::MPI::this_mpi_process(
-          //       operatorMatrix.getMPICommunicatorDomain()) == 0)
-          //   std::cout << "Norm Before MX: " << XNorm << std::endl;                                
-      operatorMatrix.overlapMatrixTimesX(X, 1.0, 0.0, 0.0, tempVec, false);
-          //       BLASWrapperPtr->xnrm2(local_size,
-          //                       X.data(),
-          //                       1,
-          //                       operatorMatrix.getMPICommunicatorDomain(),
-          //                       &XNorm);
-          // if (dealii::Utilities::MPI::this_mpi_process(
-          //       operatorMatrix.getMPICommunicatorDomain()) == 0)
-          //   std::cout << "Norm after MX: " << XNorm << std::endl;       
+      T Onormsq;
+      operatorMatrix.overlapMatrixTimesX(X, 1.0, 0.0, 0.0, tempVec, true);
+
       BLASWrapperPtr->xdot(local_size,
                            X.data(),
                            1,
@@ -375,27 +360,9 @@ namespace dftfe
                             1.0 / sqrt(std::abs(Onormsq)),
                             local_size);
 
-      //
-      // call matrix times X
-      //
-          //       BLASWrapperPtr->xnrm2(local_size,
-          //                       X.data(),
-          //                       1,
-          //                       operatorMatrix.getMPICommunicatorDomain(),
-          //                       &XNorm);
-          // if (dealii::Utilities::MPI::this_mpi_process(
-          //       operatorMatrix.getMPICommunicatorDomain()) == 0)
-          //   std::cout << "Norm Before HX: " << XNorm << std::endl;       
+
       operatorMatrix.HX(X, 1.0, 0.0, 0.0, Y);
-          //       BLASWrapperPtr->xnrm2(local_size,
-          //                       X.data(),
-          //                       1,
-          //                       operatorMatrix.getMPICommunicatorDomain(),
-          //                       &XNorm);
-          // if (dealii::Utilities::MPI::this_mpi_process(
-          //       operatorMatrix.getMPICommunicatorDomain()) == 0)
-          //   std::cout << "Norm after HX: " << XNorm << std::endl;  
-      // evaluate fVector^{H}*vVector
+
       BLASWrapperPtr->xdot(local_size,
                            Y.data(),
                            1,
@@ -415,7 +382,7 @@ namespace dftfe
       // filling only lower triangular part
       for (unsigned int j = 1; j < lanczosIterations; j++)
         {
-          operatorMatrix.overlapMatrixTimesX(Y, 1.0, 0.0, 0.0, tempVec, false);
+          operatorMatrix.overlapMatrixTimesX(Y, 1.0, 0.0, 0.0, tempVec, true);
           BLASWrapperPtr->xdot(local_size,
                                Y.data(),
                                1,
@@ -427,23 +394,9 @@ namespace dftfe
           Z    = X;
           BLASWrapperPtr->axpby(
             local_size, 1.0 / beta, Y.data(), 0.0, X.data());
-          //       BLASWrapperPtr->xnrm2(local_size,
-          //                       X.data(),
-          //                       1,
-          //                       operatorMatrix.getMPICommunicatorDomain(),
-          //                       &XNorm);
-          // if (dealii::Utilities::MPI::this_mpi_process(
-          //       operatorMatrix.getMPICommunicatorDomain()) == 0)
-          //   std::cout << "Norm before HXCheby: " << XNorm << std::endl;  
+
           operatorMatrix.HXCheby(X, 1.0, 0.0, 0.0, Y);
-          //       BLASWrapperPtr->xnrm2(local_size,
-          //                       X.data(),
-          //                       1,
-          //                       operatorMatrix.getMPICommunicatorDomain(),
-          //                       &XNorm);
-          // if (dealii::Utilities::MPI::this_mpi_process(
-          //       operatorMatrix.getMPICommunicatorDomain()) == 0)
-          //   std::cout << "Norm after HXCheby: " << XNorm << std::endl;           
+
           alphaNeg = -beta;
           BLASWrapperPtr->xaxpy(
             local_size, &alphaNeg, Z.data(), 1, Y.data(), 1);
@@ -468,7 +421,7 @@ namespace dftfe
             std::cout << "Alpha and Beta: " << alpha << " " << beta
                       << std::endl;
         }
-      operatorMatrix.overlapMatrixTimesX(Y, 1.0, 0.0, 0.0, tempVec, false);
+      operatorMatrix.overlapMatrixTimesX(Y, 1.0, 0.0, 0.0, tempVec, true);
       BLASWrapperPtr->xdot(local_size,
                            Y.data(),
                            1,

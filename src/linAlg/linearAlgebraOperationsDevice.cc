@@ -237,16 +237,14 @@ namespace dftfe
       }
 
 
-      // R^2=||Y-X*Gamma||^2
+      // MX|Lambda
       __global__ void
-      computeResidualDeviceKernel(const unsigned int numVectors,
-                                  const unsigned int numDofs,
-                                  const unsigned int N,
-                                  const unsigned int startingVecId,
-                                  const double *     eigenValues,
-                                  const double *     x,
-                                  const double *     y,
-                                  double *           r)
+      computeScaledOXVectors(const unsigned int numVectors,
+                             const unsigned int numDofs,
+                             const unsigned int startingVecId,
+                             const double *     eigenValues,
+                             const double *     x,
+                             double *           y)
       {
         for (int i = blockIdx.x * blockDim.x + threadIdx.x;
              i < numVectors * numDofs;
@@ -254,38 +252,69 @@ namespace dftfe
           {
             const unsigned int dofIndex  = i / numVectors;
             const unsigned int waveIndex = i % numVectors;
-            r[i] = y[i] - x[dofIndex * N + startingVecId + waveIndex] *
-                            eigenValues[startingVecId + waveIndex];
-            r[i] = r[i] * r[i];
+            y[i] = x[i] * eigenValues[startingVecId + waveIndex];
           }
       }
 
-      // R^2=||Y-X*Gamma||^2
+      // MX|Lambda
       __global__ void
-      computeResidualDeviceKernel(const unsigned int numVectors,
-                                  const unsigned int numDofs,
-                                  const unsigned int N,
-                                  const unsigned int startingVecId,
-                                  const double *     eigenValues,
-                                  const dftfe::utils::deviceDoubleComplex *X,
-                                  const dftfe::utils::deviceDoubleComplex *Y,
-                                  double *                                 r)
+      computeScaledOXVectors(const unsigned int numVectors,
+                             const unsigned int numDofs,
+                             const unsigned int startingVecId,
+                             const double *     eigenValues,
+                             const dftfe::utils::deviceDoubleComplex *X,
+                             dftfe::utils::deviceDoubleComplex *      Y)
       {
         for (int i = blockIdx.x * blockDim.x + threadIdx.x;
              i < numVectors * numDofs;
              i += blockDim.x * gridDim.x)
           {
-            const unsigned int                      dofIndex  = i / numVectors;
-            const unsigned int                      waveIndex = i % numVectors;
-            const dftfe::utils::deviceDoubleComplex diff =
-              dftfe::utils::makeComplex(
-                Y[i].x - X[dofIndex * N + startingVecId + waveIndex].x *
-                           eigenValues[startingVecId + waveIndex],
-                Y[i].y - X[dofIndex * N + startingVecId + waveIndex].y *
-                           eigenValues[startingVecId + waveIndex]);
-            r[i] = diff.x * diff.x + diff.y * diff.y;
+            const unsigned int dofIndex  = i / numVectors;
+            const unsigned int waveIndex = i % numVectors;
+            Y[i].x = X[i].x * eigenValues[startingVecId + waveIndex];
+            Y[i].y = X[i].y * eigenValues[startingVecId + waveIndex];
           }
       }
+
+      // R^2=||Y-X*Gamma||^2
+      __global__ void
+      computeResidualDeviceKernelGeneralised(const unsigned int numVectors,
+                                             const unsigned int numDofs,
+                                             const unsigned int N,
+                                             const unsigned int startingVecId,
+                                             const double *     y,
+                                             double *           r)
+      {
+        for (int i = blockIdx.x * blockDim.x + threadIdx.x;
+             i < numVectors * numDofs;
+             i += blockDim.x * gridDim.x)
+          {
+            const unsigned int dofIndex  = i / numVectors;
+            const unsigned int waveIndex = i % numVectors;
+            r[i]                         = y[i] * y[i];
+          }
+      }
+
+      // R^2=||Y-X*Gamma||^2
+      __global__ void
+      computeResidualDeviceKernelGeneralised(
+        const unsigned int                       numVectors,
+        const unsigned int                       numDofs,
+        const unsigned int                       N,
+        const unsigned int                       startingVecId,
+        const dftfe::utils::deviceDoubleComplex *Y,
+        double *                                 r)
+      {
+        for (int i = blockIdx.x * blockDim.x + threadIdx.x;
+             i < numVectors * numDofs;
+             i += blockDim.x * gridDim.x)
+          {
+            const unsigned int dofIndex  = i / numVectors;
+            const unsigned int waveIndex = i % numVectors;
+            r[i]                         = Y[i].x * Y[i].x + Y[i].y * Y[i].y;
+          }
+      }
+
 
       __global__ void
       copyFloatArrToDoubleArrLocallyOwned(
@@ -3768,7 +3797,37 @@ namespace dftfe
                       chebyBlockSize, N, M, k, X, XBlock.begin());
 
                   // evaluate H times XBlock^{T} and store in HXBlock^{T}
-                  operatorMatrix.HX(XBlock, 1.0, 0.0, 0.0, HXBlock);
+                  operatorMatrix.overlapMatrixTimesX(
+                    XBlock, 1.0, 0.0, 0.0, HXBlock);
+#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
+                  computeScaledOXVectors<<<
+                    (B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                      dftfe::utils::DEVICE_BLOCK_SIZE * M,
+                    dftfe::utils::DEVICE_BLOCK_SIZE>>>(
+                    B,
+                    M,
+                    jvec,
+                    eigenValuesDevice.begin(),
+                    dftfe::utils::makeDataTypeDeviceCompatible(HXBlock.begin()),
+                    dftfe::utils::makeDataTypeDeviceCompatible(
+                      HXBlock.begin()));
+#elif DFTFE_WITH_DEVICE_LANG_HIP
+                  hipLaunchKernelGGL(
+                    computeScaledOXVectors,
+                    (B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                      dftfe::utils::DEVICE_BLOCK_SIZE * M,
+                    dftfe::utils::DEVICE_BLOCK_SIZE,
+                    0,
+                    0,
+                    B,
+                    M,
+                    jvec,
+                    eigenValuesDevice.begin(),
+                    dftfe::utils::makeDataTypeDeviceCompatible(HXBlock.begin()),
+                    dftfe::utils::makeDataTypeDeviceCompatible(
+                      HXBlock.begin()));
+#endif
+                  operatorMatrix.HX(XBlock, 1.0, -1.0, 0.0, HXBlock);
                   dftfe::utils::deviceKernelsGeneric::
                     stridedCopyFromBlockConstantStride(B,
                                                        chebyBlockSize,
@@ -3779,7 +3838,7 @@ namespace dftfe
                 }
 
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-              computeResidualDeviceKernel<<<
+              computeResidualDeviceKernelGeneralised<<<
                 (B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
                   dftfe::utils::DEVICE_BLOCK_SIZE * M,
                 dftfe::utils::DEVICE_BLOCK_SIZE>>>(
@@ -3787,12 +3846,10 @@ namespace dftfe
                 M,
                 N,
                 jvec,
-                eigenValuesDevice.begin(),
-                dftfe::utils::makeDataTypeDeviceCompatible(X),
                 dftfe::utils::makeDataTypeDeviceCompatible(HXBlockFull.begin()),
                 residualSqDevice.begin());
 #elif DFTFE_WITH_DEVICE_LANG_HIP
-              hipLaunchKernelGGL(computeResidualDeviceKernel,
+              hipLaunchKernelGGL(computeResidualDeviceKernelGeneralised,
                                  (B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
                                    dftfe::utils::DEVICE_BLOCK_SIZE * M,
                                  dftfe::utils::DEVICE_BLOCK_SIZE,
@@ -3802,8 +3859,6 @@ namespace dftfe
                                  M,
                                  N,
                                  jvec,
-                                 eigenValuesDevice.begin(),
-                                 dftfe::utils::makeDataTypeDeviceCompatible(X),
                                  dftfe::utils::makeDataTypeDeviceCompatible(
                                    HXBlockFull.begin()),
                                  residualSqDevice.begin());

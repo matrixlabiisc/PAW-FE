@@ -2217,16 +2217,26 @@ namespace dftfe
                     X[iNode * totalNumberVectors + jvec + iWave];
 
               MPI_Barrier(mpiCommDomain);
+              MPI_Barrier(mpiCommDomain);
               // evaluate H times XBlock and store in HXBlock
-              operatorMatrix.HX(*XBlock, 1.0, 0.0, 0.0, *HXBlock);
+              operatorMatrix.overlapMatrixTimesX(
+                *XBlock, 1.0, 0.0, 0.0, *HXBlock);
+              // Call diagonal scale
+              // d_BLASWrapperPtr->();
+              for (unsigned int iDof = 0; iDof < localVectorSize; ++iDof)
+                for (unsigned int iWave = 0; iWave < B; iWave++)
+                  {
+                    HXBlock->data()[B * iDof + iWave] *=
+                      eigenValues[jvec + iWave];
+                  }
+
+              operatorMatrix.HX(*XBlock, 1.0, -1.0, 0.0, *HXBlock);
               // compute residual norms:
               for (unsigned int iDof = 0; iDof < localVectorSize; ++iDof)
                 for (unsigned int iWave = 0; iWave < B; iWave++)
                   {
                     const double temp =
-                      std::abs(HXBlock->data()[B * iDof + iWave] -
-                               eigenValues[jvec + iWave] *
-                                 XBlock->data()[B * iDof + iWave]);
+                      std::abs(HXBlock->data()[B * iDof + iWave]);
                     residualNormSquare[jvec + iWave] += temp * temp;
                   }
             }
@@ -2993,7 +3003,7 @@ namespace dftfe
       //
       // evaluate H times XTemp and store in Y
       //
-      operatorMatrix.overlapMatrixTimesX(XTemp, 1.0, 0.0, 0.0, Y);
+      operatorMatrix.overlapMatrixTimesX(XTemp, 1.0, 0.0, 0.0, Y, true);
 
 #ifdef USE_COMPLEX
       for (unsigned int i = 0; i < Y.locallyOwnedSize(); ++i)
@@ -3302,7 +3312,7 @@ namespace dftfe
               MPI_Barrier(mpiCommDomain);
               // evaluate H times XBlock and store in HXBlock^{T}
               operatorMatrix.overlapMatrixTimesX(
-                *XBlock, 1.0, 0.0, 0.0, *OXBlock);
+                *XBlock, 1.0, 0.0, 0.0, *OXBlock, true);
               MPI_Barrier(mpiCommDomain);
 
               const char transA = 'N';
@@ -3720,7 +3730,7 @@ namespace dftfe
               MPI_Barrier(mpiCommDomain);
               // evaluate H times XBlock and store in HXBlock^{T}
               operatorMatrix.overlapMatrixTimesX(
-                *XBlock, 1.0, 0.0, 0.0, *OXBlock);
+                *XBlock, 1.0, 0.0, 0.0, *OXBlock, true);
 
 
               MPI_Barrier(mpiCommDomain);
