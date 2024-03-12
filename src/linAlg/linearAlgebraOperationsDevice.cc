@@ -3815,35 +3815,36 @@ namespace dftfe
 
                   // evaluate H times XBlock^{T} and store in HXBlock^{T}
                   operatorMatrix.overlapMatrixTimesX(
-                    XBlock, 1.0, 0.0, 0.0, HXBlock, dftParams.diagonalMassMatrix);
-                  MPI_Barrier(mpiCommDomain);
-                  std::cout << "DEBUG: Line 3821" << std::endl;
+                    XBlock,
+                    1.0,
+                    0.0,
+                    0.0,
+                    HXBlock,
+                    dftParams.diagonalMassMatrix);
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
                   computeDiagQTimesXKernel<<<
-                    (B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                      dftfe::utils::DEVICE_BLOCK_SIZE*M,
+                    (chebyBlockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                      dftfe::utils::DEVICE_BLOCK_SIZE * M,
                     dftfe::utils::DEVICE_BLOCK_SIZE>>>(
                     dftfe::utils::makeDataTypeDeviceCompatible(
-                      eigenValuesDevice.begin() + jvec),
+                      eigenValuesDevice.begin() + k),
                     dftfe::utils::makeDataTypeDeviceCompatible(HXBlock.begin()),
-                    B,
+                    chebyBlockSize,
                     M);
 #elif DFTFE_WITH_DEVICE_LANG_HIP
                   hipLaunchKernelGGL(
                     computeDiagQTimesXKernel,
-                    (B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                      dftfe::utils::DEVICE_BLOCK_SIZE*M,
+                    (chebyBlockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                      dftfe::utils::DEVICE_BLOCK_SIZE * M,
                     dftfe::utils::DEVICE_BLOCK_SIZE,
                     0,
                     0,
                     dftfe::utils::makeDataTypeDeviceCompatible(
-                      eigenValuesDevice.begin() + jvec),
+                      eigenValuesDevice.begin() + k),
                     dftfe::utils::makeDataTypeDeviceCompatible(HXBlock.begin()),
-                    B,
+                    chebyBlockSize,
                     M);
 #endif
-                  MPI_Barrier(mpiCommDomain);
-                  std::cout << "DEBUG: Line 3845" << std::endl;
                   // #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
                   //                   computeScaledOXVectors<<<
                   //                     (B + (dftfe::utils::DEVICE_BLOCK_SIZE -
@@ -3874,11 +3875,7 @@ namespace dftfe
                   //                     dftfe::utils::makeDataTypeDeviceCompatible(
                   //                       HXBlock.begin()));
                   // #endif
-                  MPI_Barrier(mpiCommDomain);
-                  std::cout << "DEBUG: Line 3878" << std::endl;
                   operatorMatrix.HX(XBlock, 1.0, -1.0, 0.0, HXBlock);
-                  MPI_Barrier(mpiCommDomain);
-                  std::cout << "DEBUG: Line 3880" << std::endl;
                   dftfe::utils::deviceKernelsGeneric::
                     stridedCopyFromBlockConstantStride(B,
                                                        chebyBlockSize,
@@ -3886,8 +3883,6 @@ namespace dftfe
                                                        k - jvec,
                                                        HXBlock.begin(),
                                                        HXBlockFull.begin());
-                  MPI_Barrier(mpiCommDomain);
-                  std::cout << "DEBUG: Line 3884" << std::endl;
                 }
 
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
@@ -3916,8 +3911,6 @@ namespace dftfe
                                    HXBlockFull.begin()),
                                  residualSqDevice.begin());
 #endif
-              MPI_Barrier(mpiCommDomain);
-              std::cout << "DEBUG: Line 3914" << std::endl;
 
               dftfe::utils::deviceBlasWrapper::gemm(
                 handle,
@@ -3934,12 +3927,8 @@ namespace dftfe
                 &beta,
                 residualNormSquareDevice.begin() + jvec,
                 1);
-              MPI_Barrier(mpiCommDomain);
-              std::cout << "DEBUG: Line 3933" << std::endl;
             }
         }
-      MPI_Barrier(mpiCommDomain);
-      std::cout << "DEBUG: Line 3936" << std::endl;
 
       dftfe::utils::deviceMemcpyD2H(&residualNorm[0],
                                     residualNormSquareDevice.begin(),
@@ -4194,7 +4183,12 @@ namespace dftfe
 
                   // evaluate XBlock^{T} times H^{T} and store in OXBlock
                   operatorMatrix.overlapMatrixTimesX(
-                    XBlock, 1.0, 0.0, 0.0, OXBlock,dftParams.diagonalMassMatrix);
+                    XBlock,
+                    1.0,
+                    0.0,
+                    0.0,
+                    OXBlock,
+                    dftParams.diagonalMassMatrix);
 
                   dftfe::utils::deviceKernelsGeneric::
                     stridedCopyFromBlockConstantStride(B,
@@ -4784,7 +4778,12 @@ namespace dftfe
 
                       // evaluate H times XBlock^{T} and store in HXBlock^{T}
                       operatorMatrix.overlapMatrixTimesX(
-                        XBlock, 1.0, 0.0, 0.0, OXBlock,dftParams.diagonalMassMatrix);
+                        XBlock,
+                        1.0,
+                        0.0,
+                        0.0,
+                        OXBlock,
+                        dftParams.diagonalMassMatrix);
 
                       dftfe::utils::deviceKernelsGeneric::
                         stridedCopyFromBlockConstantStride(B,
@@ -4849,7 +4848,12 @@ namespace dftfe
 
                       // evaluate H times XBlock^{T} and store in HXBlock^{T}
                       operatorMatrix.overlapMatrixTimesX(
-                        XBlock, 1.0, 0.0, 0.0, OXBlock,dftParams.diagonalMassMatrix);
+                        XBlock,
+                        1.0,
+                        0.0,
+                        0.0,
+                        OXBlock,
+                        dftParams.diagonalMassMatrix);
 
                       dftfe::utils::deviceKernelsGeneric::
                         stridedCopyFromBlockConstantStride(B,

@@ -48,7 +48,7 @@ namespace dftfe
 
     double radiusAtomBall, mixingParameter;
     bool   adaptAndersonMixingParameter;
-    bool diagonalMassMatrix;
+    bool   diagonalMassMatrix;
     double absLinearSolverTolerance, selfConsistentSolverTolerance, TVal,
       start_magnetization, absLinearSolverToleranceHelmholtz;
 

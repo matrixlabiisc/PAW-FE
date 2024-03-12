@@ -416,10 +416,6 @@ namespace dftfe
           Tlanczos[index] = beta;
           index += lanczosIterations;
           Tlanczos[index] = alpha;
-          if (dealii::Utilities::MPI::this_mpi_process(
-                operatorMatrix.getMPICommunicatorDomain()) == 0)
-            std::cout << "Alpha and Beta: " << alpha << " " << beta
-                      << std::endl;
         }
       operatorMatrix.overlapMatrixTimesX(Y, 1.0, 0.0, 0.0, tempVec, true);
       BLASWrapperPtr->xdot(local_size,
