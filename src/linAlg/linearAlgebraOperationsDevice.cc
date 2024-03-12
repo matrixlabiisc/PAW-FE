@@ -3815,13 +3815,13 @@ namespace dftfe
 
                   // evaluate H times XBlock^{T} and store in HXBlock^{T}
                   operatorMatrix.overlapMatrixTimesX(
-                    XBlock, 1.0, 0.0, 0.0, HXBlock);
+                    XBlock, 1.0, 0.0, 0.0, HXBlock, dftParams.diagonalMassMatrix);
                   MPI_Barrier(mpiCommDomain);
                   std::cout << "DEBUG: Line 3821" << std::endl;
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
                   computeDiagQTimesXKernel<<<
-                    (M * B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                      dftfe::utils::DEVICE_BLOCK_SIZE,
+                    (B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                      dftfe::utils::DEVICE_BLOCK_SIZE*M,
                     dftfe::utils::DEVICE_BLOCK_SIZE>>>(
                     dftfe::utils::makeDataTypeDeviceCompatible(
                       eigenValuesDevice.begin() + jvec),
@@ -3831,8 +3831,8 @@ namespace dftfe
 #elif DFTFE_WITH_DEVICE_LANG_HIP
                   hipLaunchKernelGGL(
                     computeDiagQTimesXKernel,
-                    (M * B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                      dftfe::utils::DEVICE_BLOCK_SIZE,
+                    (B + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                      dftfe::utils::DEVICE_BLOCK_SIZE*M,
                     dftfe::utils::DEVICE_BLOCK_SIZE,
                     0,
                     0,
@@ -4194,7 +4194,7 @@ namespace dftfe
 
                   // evaluate XBlock^{T} times H^{T} and store in OXBlock
                   operatorMatrix.overlapMatrixTimesX(
-                    XBlock, 1.0, 0.0, 0.0, OXBlock);
+                    XBlock, 1.0, 0.0, 0.0, OXBlock,dftParams.diagonalMassMatrix);
 
                   dftfe::utils::deviceKernelsGeneric::
                     stridedCopyFromBlockConstantStride(B,
@@ -4784,7 +4784,7 @@ namespace dftfe
 
                       // evaluate H times XBlock^{T} and store in HXBlock^{T}
                       operatorMatrix.overlapMatrixTimesX(
-                        XBlock, 1.0, 0.0, 0.0, OXBlock);
+                        XBlock, 1.0, 0.0, 0.0, OXBlock,dftParams.diagonalMassMatrix);
 
                       dftfe::utils::deviceKernelsGeneric::
                         stridedCopyFromBlockConstantStride(B,
@@ -4849,7 +4849,7 @@ namespace dftfe
 
                       // evaluate H times XBlock^{T} and store in HXBlock^{T}
                       operatorMatrix.overlapMatrixTimesX(
-                        XBlock, 1.0, 0.0, 0.0, OXBlock);
+                        XBlock, 1.0, 0.0, 0.0, OXBlock,dftParams.diagonalMassMatrix);
 
                       dftfe::utils::deviceKernelsGeneric::
                         stridedCopyFromBlockConstantStride(B,

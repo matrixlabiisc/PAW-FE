@@ -988,7 +988,7 @@ namespace dftfe
                             src.data(),
                             scalarY,
                             dst.data());
-    if (true)
+    if (useApproximateMatrixEntries)
       {
         const unsigned int blockSize = src.numVectors();
 

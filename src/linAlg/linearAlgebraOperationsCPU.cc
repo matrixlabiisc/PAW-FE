@@ -2220,7 +2220,7 @@ namespace dftfe
               MPI_Barrier(mpiCommDomain);
               // evaluate H times XBlock and store in HXBlock
               operatorMatrix.overlapMatrixTimesX(
-                *XBlock, 1.0, 0.0, 0.0, *HXBlock);
+                *XBlock, 1.0, 0.0, 0.0, *HXBlock,dftParams.diagonalMassMatrix);
               // Call diagonal scale
               // d_BLASWrapperPtr->();
               for (unsigned int iDof = 0; iDof < localVectorSize; ++iDof)
@@ -3003,7 +3003,7 @@ namespace dftfe
       //
       // evaluate H times XTemp and store in Y
       //
-      operatorMatrix.overlapMatrixTimesX(XTemp, 1.0, 0.0, 0.0, Y, true);
+      operatorMatrix.overlapMatrixTimesX(XTemp, 1.0, 0.0, 0.0, Y, dftParams.diagonalMassMatrix);
 
 #ifdef USE_COMPLEX
       for (unsigned int i = 0; i < Y.locallyOwnedSize(); ++i)
@@ -3312,7 +3312,7 @@ namespace dftfe
               MPI_Barrier(mpiCommDomain);
               // evaluate H times XBlock and store in HXBlock^{T}
               operatorMatrix.overlapMatrixTimesX(
-                *XBlock, 1.0, 0.0, 0.0, *OXBlock, true);
+                *XBlock, 1.0, 0.0, 0.0, *OXBlock, dftParams.diagonalMassMatrix);
               MPI_Barrier(mpiCommDomain);
 
               const char transA = 'N';
@@ -3730,7 +3730,7 @@ namespace dftfe
               MPI_Barrier(mpiCommDomain);
               // evaluate H times XBlock and store in HXBlock^{T}
               operatorMatrix.overlapMatrixTimesX(
-                *XBlock, 1.0, 0.0, 0.0, *OXBlock, true);
+                *XBlock, 1.0, 0.0, 0.0, *OXBlock, dftParams.diagonalMassMatrix);
 
 
               MPI_Barrier(mpiCommDomain);

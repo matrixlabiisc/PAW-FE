@@ -927,6 +927,12 @@ namespace dftfe
             "[Advanced] ScaLAPACK process grid block size. Also sets the block size for ELPA if linked to ELPA. Default value of zero sets a heuristic block size. Note that if ELPA GPU KERNEL is set to true and ELPA is configured to run on GPUs, the SCALAPACK BLOCK SIZE is set to a power of 2.");
 
           prm.declare_entry(
+            "USE DIAGONAL M IN RR_ORTHO",
+            "false",
+            dealii::Patterns::Bool(),
+            "[Standard] Use diagonal approximation of FEM overlap matrix in RR step and Orthogonalization");
+
+          prm.declare_entry(
             "USE ELPA",
             "true",
             dealii::Patterns::Bool(),
@@ -1570,6 +1576,7 @@ namespace dftfe
           prm.get_integer("SPECTRUM SPLIT STARTING SCF ITER");
         chebyshevOrder     = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
         useELPA            = prm.get_bool("USE ELPA");
+        diagonalMassMatrix                  = prm.get_bool("USE DIAGONAL M IN RR_ORTHO");
         orthogType         = prm.get("ORTHOGONALIZATION TYPE");
         chebyshevTolerance = prm.get_double("CHEBYSHEV FILTER TOLERANCE");
         wfcBlockSize       = prm.get_integer("WFC BLOCK SIZE");
