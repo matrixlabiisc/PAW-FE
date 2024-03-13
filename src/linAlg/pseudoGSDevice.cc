@@ -135,7 +135,7 @@ namespace dftfe
 
       // SConj=X^{T}*XConj with X^{T} stored in the column
       // major format
-      if (useMixedPrecOverall && dftParams.useMixedPrecXTHXSpectrumSplit)
+      if (useMixedPrecOverall && dftParams.useMixedPrecXTHXSpectrumSplit && false)
         {
           if (dftParams.useMixedPrecCommunOnlyXTHXCGSO)
             XtOXMixedPrecCommunOverlapComputeCommun(operatorMatrix,

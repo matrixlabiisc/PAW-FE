@@ -941,7 +941,7 @@ namespace dftfe
                   T(0.0));
 
       // SConj=X^{T}*XConj
-      if (useMixedPrec && dftParams.useMixedPrecXTHXSpectrumSplit)
+      if (useMixedPrec && dftParams.useMixedPrecXTHXSpectrumSplit && false)
         {
           XtOXMixedPrec(operatorMatrix,
                         X,
