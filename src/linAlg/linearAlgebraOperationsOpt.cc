@@ -308,7 +308,7 @@ namespace dftfe
           operatorMatrix.getMPICommunicatorDomain());
 
       const unsigned int lanczosIterations =
-        dftParams.reproducible_output ? 40 : 20;
+        dftParams.reproducible_output ? 200 : 20;
       double beta, betaNeg;
       T      betaTemp;
 
@@ -361,10 +361,11 @@ namespace dftfe
                             local_size);
 
 
-      operatorMatrix.HX(X, 1.0, 0.0, 0.0, Y);
+      operatorMatrix.HX(X, 1.0, 0.0, 0.0, tempVec);
+      operatorMatrix.HXCheby(X, 1.0, 0.0, 0.0, Y);
 
       BLASWrapperPtr->xdot(local_size,
-                           Y.data(),
+                           tempVec.data(),
                            1,
                            X.data(),
                            1,

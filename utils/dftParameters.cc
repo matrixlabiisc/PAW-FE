@@ -928,7 +928,7 @@ namespace dftfe
 
           prm.declare_entry(
             "USE DIAGONAL MASS MATRIX IN RR_ORTHO",
-            "true",
+            "false",
             dealii::Patterns::Bool(),
             "[Standard] Use diagonal approximation of FEM overlap matrix in RR step and Orthogonalization");
 
