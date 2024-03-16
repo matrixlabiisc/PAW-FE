@@ -442,6 +442,14 @@ namespace dftfe
                 //   useMixedPrecOverall,
                 //   d_dftParams);
                 // FIXHXOPT Add CHF with overlap
+                if (useMixedPrecOverall && d_dftParams.useMixedPrecCheby)
+                  {
+                    deviceFlattenedArrayBlock.setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::single);
+                    d_YArray.setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::single);
+                  }
+
                 linearAlgebraOperations::chebyshevFilter(
                   operatorMatrix,
                   deviceFlattenedArrayBlock,
@@ -450,6 +458,20 @@ namespace dftfe
                   d_lowerBoundUnWantedSpectrum,
                   d_upperBoundUnWantedSpectrum,
                   d_lowerBoundWantedSpectrum);
+                if (useMixedPrecOverall && d_dftParams.useMixedPrecCheby)
+                  {
+                    deviceFlattenedArrayBlock.setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::full);
+                    d_YArray.setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::full);
+                  }
+                if (useMixedPrecOverall && d_dftParams.useMixedPrecCheby)
+                  {
+                    d_deviceFlattenedArrayBlock2.setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::single);
+                    d_YArray2.setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::single);
+                  }
                 linearAlgebraOperations::chebyshevFilter(
                   operatorMatrix,
                   d_deviceFlattenedArrayBlock2,
@@ -458,6 +480,13 @@ namespace dftfe
                   d_lowerBoundUnWantedSpectrum,
                   d_upperBoundUnWantedSpectrum,
                   d_lowerBoundWantedSpectrum);
+                if (useMixedPrecOverall && d_dftParams.useMixedPrecCheby)
+                  {
+                    d_deviceFlattenedArrayBlock2.setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::full);
+                    d_YArray2.setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::full);
+                  }
               }
             else
               {
@@ -469,6 +498,13 @@ namespace dftfe
                 //   d_lowerBoundUnWantedSpectrum,
                 //   d_upperBoundUnWantedSpectrum,
                 //   d_lowerBoundWantedSpectrum);
+                if (useMixedPrecOverall && d_dftParams.useMixedPrecCheby)
+                  {
+                    deviceFlattenedArrayBlock.setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::single);
+                    d_YArray.setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::single);
+                  }
                 linearAlgebraOperations::chebyshevFilter(
                   operatorMatrix,
                   deviceFlattenedArrayBlock,
@@ -477,6 +513,13 @@ namespace dftfe
                   d_lowerBoundUnWantedSpectrum,
                   d_upperBoundUnWantedSpectrum,
                   d_lowerBoundWantedSpectrum);
+                if (useMixedPrecOverall && d_dftParams.useMixedPrecCheby)
+                  {
+                    deviceFlattenedArrayBlock.setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::full);
+                    d_YArray.setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::full);
+                  }
               }
 
             // copy current wavefunction vectors block to vector containing
@@ -956,6 +999,17 @@ namespace dftfe
                         //   useMixedPrecOverall,
                         //   d_dftParams);
                         // FIXHXOPT Add CHF with overlap
+                        if (useMixedPrecOverall &&
+                            d_dftParams.useMixedPrecCheby)
+                          {
+                            deviceFlattenedArrayBlock.setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::
+                                single);
+                            d_YArray.setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::
+                                single);
+                          }
+
                         linearAlgebraOperations::chebyshevFilter(
                           operatorMatrix,
                           deviceFlattenedArrayBlock,
@@ -964,6 +1018,25 @@ namespace dftfe
                           d_lowerBoundUnWantedSpectrum,
                           d_upperBoundUnWantedSpectrum,
                           d_lowerBoundWantedSpectrum);
+                        if (useMixedPrecOverall &&
+                            d_dftParams.useMixedPrecCheby)
+                          {
+                            deviceFlattenedArrayBlock.setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::full);
+                            d_YArray.setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::full);
+                          }
+                        if (useMixedPrecOverall &&
+                            d_dftParams.useMixedPrecCheby)
+                          {
+                            d_deviceFlattenedArrayBlock2
+                              .setCommunicationPrecision(
+                                dftfe::utils::mpi::communicationPrecision::
+                                  single);
+                            d_YArray2.setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::
+                                single);
+                          }
                         linearAlgebraOperations::chebyshevFilter(
                           operatorMatrix,
                           d_deviceFlattenedArrayBlock2,
@@ -972,6 +1045,16 @@ namespace dftfe
                           d_lowerBoundUnWantedSpectrum,
                           d_upperBoundUnWantedSpectrum,
                           d_lowerBoundWantedSpectrum);
+                        if (useMixedPrecOverall &&
+                            d_dftParams.useMixedPrecCheby)
+                          {
+                            d_deviceFlattenedArrayBlock2
+                              .setCommunicationPrecision(
+                                dftfe::utils::mpi::communicationPrecision::
+                                  full);
+                            d_YArray2.setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::full);
+                          }
                       }
                     else
                       {
@@ -979,16 +1062,20 @@ namespace dftfe
                         //   operatorMatrix,
                         //   deviceFlattenedArrayBlock,
                         //   d_YArray,
-                        //   d_deviceFlattenedFloatArrayBlock,
-                        //   projectorKetTimesVector,
-                        //   localVectorSize,
-                        //   BVec,
                         //   chebyshevOrder,
                         //   d_lowerBoundUnWantedSpectrum,
                         //   d_upperBoundUnWantedSpectrum,
-                        //   d_lowerBoundWantedSpectrum,
-                        //   useMixedPrecOverall,
-                        //   d_dftParams);
+                        //   d_lowerBoundWantedSpectrum);
+                        if (useMixedPrecOverall &&
+                            d_dftParams.useMixedPrecCheby)
+                          {
+                            deviceFlattenedArrayBlock.setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::
+                                single);
+                            d_YArray.setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::
+                                single);
+                          }
                         linearAlgebraOperations::chebyshevFilter(
                           operatorMatrix,
                           deviceFlattenedArrayBlock,
@@ -997,7 +1084,16 @@ namespace dftfe
                           d_lowerBoundUnWantedSpectrum,
                           d_upperBoundUnWantedSpectrum,
                           d_lowerBoundWantedSpectrum);
+                        if (useMixedPrecOverall &&
+                            d_dftParams.useMixedPrecCheby)
+                          {
+                            deviceFlattenedArrayBlock.setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::full);
+                            d_YArray.setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::full);
+                          }
                       }
+
 
                     // copy current wavefunction vectors block to vector
                     // containing all wavefunction vectors
