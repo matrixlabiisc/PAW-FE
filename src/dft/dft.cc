@@ -1881,21 +1881,8 @@ namespace dftfe
     if (d_kohnShamDFTOperatorsInitialized)
       finalizeKohnShamDFTOperator();
 
-if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
-      d_kohnShamDFTOperatorPtr = new KohnShamHamiltonianOperator<memorySpace>(
-        d_BLASWrapperPtrHost,
-        d_basisOperationsPtrHost,
-        d_basisOperationsPtrHost,
-        d_oncvClassPtr,
-        d_excManagerPtr,
-        d_dftParamsPtr,
-        d_densityQuadratureId,
-        d_lpspQuadratureId,
-        d_feOrderPlusOneQuadratureId,
-        d_mpiCommParent,
-        mpi_communicator);
-#if defined(DFTFE_WITH_DEVICE)
-    else
+#ifdef DFTFE_WITH_DEVICE
+    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
       d_kohnShamDFTOperatorPtr = new KohnShamHamiltonianOperator<memorySpace>(
         d_BLASWrapperPtr,
         d_basisOperationsPtrDevice,
@@ -1908,7 +1895,21 @@ if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
         d_feOrderPlusOneQuadratureId,
         d_mpiCommParent,
         mpi_communicator);
-#endif        
+    else
+#endif
+      d_kohnShamDFTOperatorPtr = new KohnShamHamiltonianOperator<memorySpace>(
+        d_BLASWrapperPtrHost,
+        d_basisOperationsPtrHost,
+        d_basisOperationsPtrHost,
+        d_oncvClassPtr,
+        d_excManagerPtr,
+        d_dftParamsPtr,
+        d_densityQuadratureId,
+        d_lpspQuadratureId,
+        d_feOrderPlusOneQuadratureId,
+        d_mpiCommParent,
+        mpi_communicator);
+        
 
 
 
