@@ -3876,6 +3876,18 @@ namespace dftfe
                   //                       HXBlock.begin()));
                   // #endif
                   operatorMatrix.HX(XBlock, 1.0, -1.0, 0.0, HXBlock);
+                  if (dftParams.reproducible_output &&
+                      dftParams.diagonalMassMatrix)
+                    {
+                      dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
+                        chebyBlockSize,
+                        M,
+                        1.0,
+                        operatorMatrix.getInverseSqrtMassVector().data(),
+                        HXBlock.data());
+
+                      // pointWiseScaleWithDiagonal(operatorMatrix.getInverseSqrtMassVector().data(),B,localVectorSize,HXBlock->data());
+                    }
                   //
                   dftfe::utils::deviceKernelsGeneric::
                     stridedCopyFromBlockConstantStride(B,

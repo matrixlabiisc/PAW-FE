@@ -74,7 +74,7 @@ namespace dftfe
 #endif
         }
     }
-    
+
 
     void
     callevd(const unsigned int dimensionMatrix,
@@ -2257,8 +2257,12 @@ namespace dftfe
                   }
 
               operatorMatrix.HX(*XBlock, 1.0, -1.0, 0.0, *HXBlock);
-              if(dftParams.reproducible_output && dftParams.diagonalMassMatrix )
-                pointWiseScaleWithDiagonal(operatorMatrix.getInverseSqrtMassVector().data(),B,localVectorSize,HXBlock->data());
+              if (dftParams.reproducible_output && dftParams.diagonalMassMatrix)
+                pointWiseScaleWithDiagonal(
+                  operatorMatrix.getInverseSqrtMassVector().data(),
+                  B,
+                  localVectorSize,
+                  HXBlock->data());
               // compute residual norms:
               for (unsigned int iDof = 0; iDof < localVectorSize; ++iDof)
                 for (unsigned int iWave = 0; iWave < B; iWave++)

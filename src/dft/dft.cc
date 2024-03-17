@@ -1909,8 +1909,6 @@ namespace dftfe
         d_feOrderPlusOneQuadratureId,
         d_mpiCommParent,
         mpi_communicator);
-        
-
 
 
 

@@ -918,7 +918,8 @@ namespace dftfe
                     overlapMatPar.local_m() * overlapMatPar.local_n(),
                   dataTypes::number(0.0));
 
-      if (useMixedPrecOverall && dftParams.useMixedPrecXTHXSpectrumSplit && false)
+      if (useMixedPrecOverall && dftParams.useMixedPrecXTHXSpectrumSplit &&
+          false)
         {
           if (dftParams.useMixedPrecCommunOnlyXTHXCGSO)
             XtOXMixedPrecCommunOverlapComputeCommun(operatorMatrix,
