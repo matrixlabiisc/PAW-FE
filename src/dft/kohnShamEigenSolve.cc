@@ -25,31 +25,31 @@ namespace dftfe
 {
   namespace internal
   {
-    void
-    pointWiseScaleWithDiagonal(const double *     diagonal,
-                               const unsigned int numberFields,
-                               const unsigned int numberDofs,
-                               dataTypes::number *fieldsArrayFlattened)
-    {
-      const unsigned int inc = 1;
+//     void
+//     pointWiseScaleWithDiagonal(const double *     diagonal,
+//                                const unsigned int numberFields,
+//                                const unsigned int numberDofs,
+//                                dataTypes::number *fieldsArrayFlattened)
+//     {
+//       const unsigned int inc = 1;
 
-      for (unsigned int i = 0; i < numberDofs; ++i)
-        {
-#ifdef USE_COMPLEX
-          double scalingCoeff = diagonal[i];
-          zdscal_(&numberFields,
-                  &scalingCoeff,
-                  &fieldsArrayFlattened[i * numberFields],
-                  &inc);
-#else
-          double scalingCoeff = diagonal[i];
-          dscal_(&numberFields,
-                 &scalingCoeff,
-                 &fieldsArrayFlattened[i * numberFields],
-                 &inc);
-#endif
-        }
-    }
+//       for (unsigned int i = 0; i < numberDofs; ++i)
+//         {
+// #ifdef USE_COMPLEX
+//           double scalingCoeff = diagonal[i];
+//           zdscal_(&numberFields,
+//                   &scalingCoeff,
+//                   &fieldsArrayFlattened[i * numberFields],
+//                   &inc);
+// #else
+//           double scalingCoeff = diagonal[i];
+//           dscal_(&numberFields,
+//                  &scalingCoeff,
+//                  &fieldsArrayFlattened[i * numberFields],
+//                  &inc);
+// #endif
+//         }
+//     }
   } // namespace internal
 
   //

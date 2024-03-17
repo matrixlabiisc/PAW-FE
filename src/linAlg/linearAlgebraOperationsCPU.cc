@@ -49,6 +49,32 @@ namespace dftfe
       delete[] IPIV;
       delete[] WORK;
     }
+    void
+    pointWiseScaleWithDiagonal(const double *     diagonal,
+                               const unsigned int numberFields,
+                               const unsigned int numberDofs,
+                               dataTypes::number *fieldsArrayFlattened)
+    {
+      const unsigned int inc = 1;
+
+      for (unsigned int i = 0; i < numberDofs; ++i)
+        {
+#ifdef USE_COMPLEX
+          double scalingCoeff = diagonal[i];
+          zdscal_(&numberFields,
+                  &scalingCoeff,
+                  &fieldsArrayFlattened[i * numberFields],
+                  &inc);
+#else
+          double scalingCoeff = diagonal[i];
+          dscal_(&numberFields,
+                 &scalingCoeff,
+                 &fieldsArrayFlattened[i * numberFields],
+                 &inc);
+#endif
+        }
+    }
+    
 
     void
     callevd(const unsigned int dimensionMatrix,
@@ -2231,6 +2257,8 @@ namespace dftfe
                   }
 
               operatorMatrix.HX(*XBlock, 1.0, -1.0, 0.0, *HXBlock);
+              if(dftParams.reproducible_output && dftParams.diagonalMassMatrix )
+                pointWiseScaleWithDiagonal(operatorMatrix.getInverseSqrtMassVector().data(),B,localVectorSize,HXBlock->data());
               // compute residual norms:
               for (unsigned int iDof = 0; iDof < localVectorSize; ++iDof)
                 for (unsigned int iWave = 0; iWave < B; iWave++)
