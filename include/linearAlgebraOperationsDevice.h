@@ -67,6 +67,33 @@ namespace dftfe
    */
   namespace linearAlgebraOperationsDevice
   {
+    /** @brief Apply Chebyshev filter to a given subspace
+     *
+     *  @param[in] operatorMatrix An object which has access to the given matrix
+     *  @param[in,out]  X Given subspace as a dealii array representing multiple
+     * fields as a flattened array. In-place update of the given subspace.
+     *  @param[in]  numberComponents Number of multiple-fields
+     *  @param[in]  m Chebyshev polynomial degree
+     *  @param[in]  a lower bound of unwanted spectrum
+     *  @param[in]  b upper bound of unwanted spectrum
+     *  @param[in]  a0 lower bound of wanted spectrum
+     */
+    void
+    chebyshevFilterOverlapComputeCommunication(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                        dftfe::utils::MemorySpace::DEVICE> &X1,
+      dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                        dftfe::utils::MemorySpace::DEVICE> &Y1,
+      dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                        dftfe::utils::MemorySpace::DEVICE> &X2,
+      dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                        dftfe::utils::MemorySpace::DEVICE> &Y2,
+      const unsigned int                                                    m,
+      const double                                                          a,
+      const double                                                          b,
+      const double                                                          a0);
+
     /** @brief Computes Sc=X^{T}*Xc.
      *
      *
@@ -246,19 +273,17 @@ namespace dftfe
       elpaScalaManager &                                   elpaScala,
       dataTypes::number *                                  X,
       distributedDeviceVec<dataTypes::number> &            Xb,
-      distributedDeviceVec<dataTypes::numberFP32> &        floatXb,
       distributedDeviceVec<dataTypes::number> &            HXb,
-      distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
-      const unsigned int                       M,
-      const unsigned int                       N,
-      const MPI_Comm &                         mpiCommParent,
-      const MPI_Comm &                         mpiCommDomain,
-      utils::DeviceCCLWrapper &                devicecclMpiCommDomain,
-      const MPI_Comm &                         interBandGroupComm,
-      std::vector<double> &                    eigenValues,
-      dftfe::utils::deviceBlasHandle_t &       handle,
-      const dftParameters &                    dftParams,
-      const bool                               useMixedPrecOverall = false);
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const MPI_Comm &                                     mpiCommParent,
+      const MPI_Comm &                                     mpiCommDomain,
+      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
+      const MPI_Comm &                  interBandGroupComm,
+      std::vector<double> &             eigenValues,
+      dftfe::utils::deviceBlasHandle_t &handle,
+      const dftParameters &             dftParams,
+      const bool                        useMixedPrecOverall = false);
 
     void
     rayleighRitzGEP(
@@ -266,19 +291,17 @@ namespace dftfe
       elpaScalaManager &                                   elpaScala,
       dataTypes::number *                                  X,
       distributedDeviceVec<dataTypes::number> &            Xb,
-      distributedDeviceVec<dataTypes::numberFP32> &        floatXb,
       distributedDeviceVec<dataTypes::number> &            HXb,
-      distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
-      const unsigned int                       M,
-      const unsigned int                       N,
-      const MPI_Comm &                         mpiCommParent,
-      const MPI_Comm &                         mpiCommDomain,
-      utils::DeviceCCLWrapper &                devicecclMpiCommDomain,
-      const MPI_Comm &                         interBandGroupComm,
-      std::vector<double> &                    eigenValues,
-      dftfe::utils::deviceBlasHandle_t &       handle,
-      const dftParameters &                    dftParams,
-      const bool                               useMixedPrecOverall = false);
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const MPI_Comm &                                     mpiCommParent,
+      const MPI_Comm &                                     mpiCommDomain,
+      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
+      const MPI_Comm &                  interBandGroupComm,
+      std::vector<double> &             eigenValues,
+      dftfe::utils::deviceBlasHandle_t &handle,
+      const dftParameters &             dftParams,
+      const bool                        useMixedPrecOverall = false);
 
     void
     rayleighRitzGEPSpectrumSplitDirect(
@@ -287,20 +310,18 @@ namespace dftfe
       dataTypes::number *                                  X,
       dataTypes::number *                                  XFrac,
       distributedDeviceVec<dataTypes::number> &            Xb,
-      distributedDeviceVec<dataTypes::numberFP32> &        floatXb,
       distributedDeviceVec<dataTypes::number> &            HXb,
-      distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
-      const unsigned int                       M,
-      const unsigned int                       N,
-      const unsigned int                       Noc,
-      const MPI_Comm &                         mpiCommParent,
-      const MPI_Comm &                         mpiCommDomain,
-      utils::DeviceCCLWrapper &                devicecclMpiCommDomain,
-      const MPI_Comm &                         interBandGroupComm,
-      std::vector<double> &                    eigenValues,
-      dftfe::utils::deviceBlasHandle_t &       handle,
-      const dftParameters &                    dftParams,
-      const bool                               useMixedPrecOverall = false);
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const unsigned int                                   Noc,
+      const MPI_Comm &                                     mpiCommParent,
+      const MPI_Comm &                                     mpiCommDomain,
+      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
+      const MPI_Comm &                  interBandGroupComm,
+      std::vector<double> &             eigenValues,
+      dftfe::utils::deviceBlasHandle_t &handle,
+      const dftParameters &             dftParams,
+      const bool                        useMixedPrecOverall = false);
 
 
     void
@@ -308,21 +329,19 @@ namespace dftfe
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       dataTypes::number *                                  X,
       distributedDeviceVec<dataTypes::number> &            Xb,
-      distributedDeviceVec<dataTypes::numberFP32> &        floatXb,
       distributedDeviceVec<dataTypes::number> &            HXb,
-      distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
-      const unsigned int                       M,
-      const unsigned int                       N,
-      const MPI_Comm &                         mpiCommParent,
-      const MPI_Comm &                         mpiCommDomain,
-      utils::DeviceCCLWrapper &                devicecclMpiCommDomain,
-      const MPI_Comm &                         interBandGroupComm,
-      const std::vector<double> &              eigenValues,
-      const double                             fermiEnergy,
-      std::vector<double> &                    densityMatDerFermiEnergy,
-      dftfe::elpaScalaManager &                elpaScala,
-      dftfe::utils::deviceBlasHandle_t &       handle,
-      const dftParameters &                    dftParams);
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const MPI_Comm &                                     mpiCommParent,
+      const MPI_Comm &                                     mpiCommDomain,
+      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
+      const MPI_Comm &                  interBandGroupComm,
+      const std::vector<double> &       eigenValues,
+      const double                      fermiEnergy,
+      std::vector<double> &             densityMatDerFermiEnergy,
+      dftfe::elpaScalaManager &         elpaScala,
+      dftfe::utils::deviceBlasHandle_t &handle,
+      const dftParameters &             dftParams);
 
     void
     computeEigenResidualNorm(
@@ -330,28 +349,26 @@ namespace dftfe
       dataTypes::number *                                  X,
       distributedDeviceVec<dataTypes::number> &            Xb,
       distributedDeviceVec<dataTypes::number> &            HXb,
-      distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
-      const unsigned int                       M,
-      const unsigned int                       N,
-      const std::vector<double> &              eigenValues,
-      const MPI_Comm &                         mpiCommDomain,
-      const MPI_Comm &                         interBandGroupComm,
-      dftfe::utils::deviceBlasHandle_t &       handle,
-      std::vector<double> &                    residualNorm,
-      const dftParameters &                    dftParams,
-      const bool                               useBandParal = false);
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const std::vector<double> &                          eigenValues,
+      const MPI_Comm &                                     mpiCommDomain,
+      const MPI_Comm &                                     interBandGroupComm,
+      dftfe::utils::deviceBlasHandle_t &                   handle,
+      std::vector<double> &                                residualNorm,
+      const dftParameters &                                dftParams,
+      const bool useBandParal = false);
 
     void
     XtHX(operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
          const dataTypes::number *                            X,
          distributedDeviceVec<dataTypes::number> &            XBlock,
          distributedDeviceVec<dataTypes::number> &            HXBlock,
-         distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
-         const unsigned int                       M,
-         const unsigned int                       N,
-         dftfe::utils::deviceBlasHandle_t &       handle,
-         const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
-         dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
+         const unsigned int                                   M,
+         const unsigned int                                   N,
+         dftfe::utils::deviceBlasHandle_t &                   handle,
+         const std::shared_ptr<const dftfe::ProcessGrid> &    processGrid,
+         dftfe::ScaLAPACKMatrix<dataTypes::number> &          projHamPar,
          utils::DeviceCCLWrapper &devicecclMpiCommDomain,
          const MPI_Comm &         mpiCommDomain,
          const MPI_Comm &         interBandGroupComm,
@@ -379,19 +396,17 @@ namespace dftfe
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       const dataTypes::number *                            X,
       distributedDeviceVec<dataTypes::number> &            XBlock,
-      distributedDeviceVec<dataTypes::numberFP32> &        tempFloatBlock,
       distributedDeviceVec<dataTypes::number> &            HXBlock,
-      distributedDeviceVec<dataTypes::number> &        projectorKetTimesVector,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      const unsigned int                               Noc,
-      dftfe::utils::deviceBlasHandle_t &               handle,
-      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
-      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
-      const MPI_Comm &                                 mpiCommDomain,
-      const MPI_Comm &                                 interBandGroupComm,
-      const dftParameters &                            dftParams,
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const unsigned int                                   Noc,
+      dftfe::utils::deviceBlasHandle_t &                   handle,
+      const std::shared_ptr<const dftfe::ProcessGrid> &    processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &          projHamPar,
+      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+      const MPI_Comm &         mpiCommDomain,
+      const MPI_Comm &         interBandGroupComm,
+      const dftParameters &    dftParams,
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
@@ -419,16 +434,15 @@ namespace dftfe
       const dataTypes::number *                            X,
       distributedDeviceVec<dataTypes::number> &            XBlock,
       distributedDeviceVec<dataTypes::number> &            HXBlock,
-      distributedDeviceVec<dataTypes::number> &        projectorKetTimesVector,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      dftfe::utils::deviceBlasHandle_t &               handle,
-      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
-      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
-      const MPI_Comm &                                 mpiCommDomain,
-      const MPI_Comm &                                 interBandGroupComm,
-      const dftParameters &                            dftParams,
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      dftfe::utils::deviceBlasHandle_t &                   handle,
+      const std::shared_ptr<const dftfe::ProcessGrid> &    processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &          projHamPar,
+      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+      const MPI_Comm &         mpiCommDomain,
+      const MPI_Comm &         interBandGroupComm,
+      const dftParameters &    dftParams,
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
@@ -454,17 +468,16 @@ namespace dftfe
       const dataTypes::number *                            X,
       distributedDeviceVec<dataTypes::number> &            XBlock,
       distributedDeviceVec<dataTypes::number> &            HXBlock,
-      distributedDeviceVec<dataTypes::number> &        projectorKetTimesVector,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      const unsigned int                               Noc,
-      dftfe::utils::deviceBlasHandle_t &               handle,
-      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
-      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
-      const MPI_Comm &                                 mpiCommDomain,
-      const MPI_Comm &                                 interBandGroupComm,
-      const dftParameters &                            dftParams,
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const unsigned int                                   Noc,
+      dftfe::utils::deviceBlasHandle_t &                   handle,
+      const std::shared_ptr<const dftfe::ProcessGrid> &    processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &          projHamPar,
+      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+      const MPI_Comm &         mpiCommDomain,
+      const MPI_Comm &         interBandGroupComm,
+      const dftParameters &    dftParams,
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void

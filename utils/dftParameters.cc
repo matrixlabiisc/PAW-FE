@@ -91,6 +91,12 @@ namespace dftfe
           R"([Adavanced] Use GPUDIRECT MPI\_Allreduce. This route will only work if DFT-FE is either compiled with NVIDIA NCCL library or withGPUAwareMPI=ON. Both these routes require GPU Aware MPI library to be available as well relevant hardware. If both NVIDIA NCCL library and withGPUAwareMPI modes are toggled on, the NCCL mode takes precedence. Also note that one MPI rank per GPU can be used when using this option. Default: false.)");
 
         prm.declare_entry(
+          "USE DCCL",
+          "false",
+          dealii::Patterns::Bool(),
+          R"([Adavanced] Use NCCL/RCCL for GPUDIRECT communications. Default: false.)");
+
+        prm.declare_entry(
           "USE ELPA GPU KERNEL",
           "false",
           dealii::Patterns::Bool(),
@@ -1047,6 +1053,11 @@ namespace dftfe
                           "false",
                           dealii::Patterns::Bool(),
                           "[Advanced] Toggle GPU MODE in Poisson solve.");
+
+        prm.declare_entry("VSELF GPU MODE",
+                          "false",
+                          dealii::Patterns::Bool(),
+                          "[Advanced] Toggle GPU MODE in vself Poisson solve.");
       }
       prm.leave_subsection();
 
@@ -1361,6 +1372,7 @@ namespace dftfe
       autoDeviceBlockSizes = useDevice && prm.get_bool("AUTO GPU BLOCK SIZES");
       useDeviceDirectAllReduce =
         useDevice && prm.get_bool("USE GPUDIRECT MPI ALL REDUCE");
+      useDCCL             = useDevice && prm.get_bool("USE DCCL");
       useELPADeviceKernel = useDevice && prm.get_bool("USE ELPA GPU KERNEL");
       deviceMemOptMode    = prm.get_bool("GPU MEM OPT MODE");
     }
@@ -1621,6 +1633,7 @@ namespace dftfe
       maxLinearSolverIterations = prm.get_integer("MAXIMUM ITERATIONS");
       absLinearSolverTolerance  = prm.get_double("TOLERANCE");
       poissonGPU                = prm.get_bool("GPU MODE");
+      vselfGPU                  = prm.get_bool("VSELF GPU MODE");
     }
     prm.leave_subsection();
 

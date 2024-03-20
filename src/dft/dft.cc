@@ -197,7 +197,8 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
     d_devicecclMpiCommDomainPtr = new utils::DeviceCCLWrapper;
     if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
-      d_devicecclMpiCommDomainPtr->init(mpi_comm_domain);
+      if (d_dftParamsPtr->useDCCL)
+        d_devicecclMpiCommDomainPtr->init(mpi_comm_domain);
 #endif
     d_pspCutOff =
       d_dftParamsPtr->reproducible_output ?
@@ -2121,7 +2122,7 @@ namespace dftfe
     computing_timer.enter_subsection("Nuclear self-potential solve");
     computingTimerStandard.enter_subsection("Nuclear self-potential solve");
 #ifdef DFTFE_WITH_DEVICE
-    if (d_dftParamsPtr->useDevice and false)
+    if (d_dftParamsPtr->useDevice and d_dftParamsPtr->vselfGPU)
       d_vselfBinsManager.solveVselfInBinsDevice(
         d_basisOperationsPtrElectroHost,
         d_baseDofHandlerIndexElectro,
