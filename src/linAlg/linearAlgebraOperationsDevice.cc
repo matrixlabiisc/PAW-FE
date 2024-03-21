@@ -4079,20 +4079,16 @@ namespace dftfe
             processGrid, projHamPar, interBandGroupComm);
         }
     }
-
-
-    // X^{T}*OConj*XConj
     void
     XtOX(operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
          const dataTypes::number *                            X,
          distributedDeviceVec<dataTypes::number> &            XBlock,
          distributedDeviceVec<dataTypes::number> &            OXBlock,
-         distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
-         const unsigned int                       M,
-         const unsigned int                       N,
-         dftfe::utils::deviceBlasHandle_t &       handle,
-         const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
-         dftfe::ScaLAPACKMatrix<dataTypes::number> &      projOverlapPar,
+         const unsigned int                                   M,
+         const unsigned int                                   N,
+         dftfe::utils::deviceBlasHandle_t &                   handle,
+         const std::shared_ptr<const dftfe::ProcessGrid> &    processGrid,
+         dftfe::ScaLAPACKMatrix<dataTypes::number> &          projOverlapPar,
          utils::DeviceCCLWrapper &devicecclMpiCommDomain,
          const MPI_Comm &         mpiCommDomain,
          const MPI_Comm &         interBandGroupComm,
@@ -4152,7 +4148,7 @@ namespace dftfe
                     stridedCopyToBlockConstantStride(
                       chebyBlockSize, N, M, k, X, XBlock.begin());
 
-                  // evaluate XBlock^{T} times H^{T} and store in OXBlock
+                  // evaluate XBlock^{T} times H^{T} and store in HXBlock
                   operatorMatrix.overlapMatrixTimesX(
                     XBlock,
                     1.0,
@@ -4239,6 +4235,8 @@ namespace dftfe
             processGrid, projOverlapPar, interBandGroupComm);
         }
     }
+
+
     // X^{T}*HConj*XConj  with overlap of computation and
     // communication
     void
@@ -4596,25 +4594,21 @@ namespace dftfe
             processGrid, projHamPar, interBandGroupComm);
         }
     }
-
-    // X^{T}*HConj*XConj  with overlap of computation and
-    // communication
     void
     XtOXOverlapComputeCommun(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       const dataTypes::number *                            X,
       distributedDeviceVec<dataTypes::number> &            XBlock,
       distributedDeviceVec<dataTypes::number> &            OXBlock,
-      distributedDeviceVec<dataTypes::number> &        projectorKetTimesVector,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      dftfe::utils::deviceBlasHandle_t &               handle,
-      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projOverlapPar,
-      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
-      const MPI_Comm &                                 mpiCommDomain,
-      const MPI_Comm &                                 interBandGroupComm,
-      const dftParameters &                            dftParams)
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      dftfe::utils::deviceBlasHandle_t &                   handle,
+      const std::shared_ptr<const dftfe::ProcessGrid> &    processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &          projOverlapPar,
+      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+      const MPI_Comm &         mpiCommDomain,
+      const MPI_Comm &         interBandGroupComm,
+      const dftParameters &    dftParams)
     {
       /////////////PSEUDO CODE for the implementation below for Overlapping
       /// compute and communication/////////////////
@@ -4623,16 +4617,16 @@ namespace dftfe
       // consecutive blocks of wavefunctions: block i and block i+1 are
       // overlapped.
       // ----------------------------------------------------------
-      // CMP denotes computuation of X^{T} times HXBlock
-      // COP denotes Device->CPU copy of X^{T} times HXBlock
-      // COM denotes blocking MPI_Allreduce on X^{T}HXBlock and copy to
+      // CMP denotes computuation of X^{T} times OXBlock
+      // COP denotes Device->CPU copy of X^{T} times OXBlock
+      // COM denotes blocking MPI_Allreduce on X^{T}OXBlock and copy to
       // scalapack matrix
       // ----------------------------------------------------------
       // Two Device streams are created: compute and copy
       // CMP is performed in compute Device stream and COP is performed in copy
       // Device stream. COP for a block can only start after the CMP for that
       // block in the compute stream is completed. COM is performed for a block
-      // only after COP even for that block is completed.
+      // only after COP event for that block is completed.
       //
       // In a blocked loop do:
       // 1) [CMP] Call compute on first block (edge case only for first
@@ -4689,9 +4683,9 @@ namespace dftfe
 
       dftfe::utils::MemoryStorage<dataTypes::number,
                                   dftfe::utils::MemorySpace::HOST_PINNED>
-        projOverlapBlockHost;
-      projOverlapBlockHost.resize(vectorsBlockSize * N, 0);
-      std::memset(projOverlapBlockHost.begin(),
+        projOvpBlockHost;
+      projOvpBlockHost.resize(vectorsBlockSize * N, 0);
+      std::memset(projOvpBlockHost.begin(),
                   0,
                   vectorsBlockSize * N * sizeof(dataTypes::number));
 
@@ -4700,10 +4694,10 @@ namespace dftfe
         OXBlockFull(vectorsBlockSize * M, dataTypes::number(0.0));
       dftfe::utils::MemoryStorage<dataTypes::number,
                                   dftfe::utils::MemorySpace::DEVICE>
-        projOverlapBlock(vectorsBlockSize * N, dataTypes::number(0.0));
+        projOvpBlock(vectorsBlockSize * N, dataTypes::number(0.0));
       dftfe::utils::MemoryStorage<dataTypes::number,
                                   dftfe::utils::MemorySpace::DEVICE>
-        projOverlapBlockNext(vectorsBlockSize * N, dataTypes::number(0.0));
+        projOvpBlockNext(vectorsBlockSize * N, dataTypes::number(0.0));
 
       dftfe::utils::MemoryStorage<dataTypes::numberValueType,
                                   dftfe::utils::MemorySpace::DEVICE>
@@ -4781,7 +4775,7 @@ namespace dftfe
                     OXBlockFull.begin(),
                     B,
                     &beta,
-                    projOverlapBlock.begin(),
+                    projOvpBlock.begin(),
                     D);
 
                   // record completion of compute for first block
@@ -4800,7 +4794,7 @@ namespace dftfe
                      computeEvents[blockCount]) ==
                    dftfe::utils::deviceSuccess) &&
                   (jvec > bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId]))
-                projOverlapBlock.swap(projOverlapBlockNext);
+                projOvpBlock.swap(projOvpBlockNext);
 
               const unsigned int jvecNew = jvec + vectorsBlockSize;
               const unsigned int DNew    = N - jvecNew;
@@ -4851,7 +4845,7 @@ namespace dftfe
                     OXBlockFull.begin(),
                     B,
                     &beta,
-                    projOverlapBlockNext.begin(),
+                    projOvpBlockNext.begin(),
                     DNew);
 
                   // record completion of compute for next block
@@ -4867,8 +4861,8 @@ namespace dftfe
                                    std::complex<double>>::value)
                     {
                       devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
-                        projOverlapBlock.begin(),
-                        projOverlapBlock.begin(),
+                        projOvpBlock.begin(),
+                        projOvpBlock.begin(),
                         D * B,
                         tempReal.begin(),
                         tempImag.begin(),
@@ -4876,16 +4870,16 @@ namespace dftfe
                     }
                   else
                     devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
-                      projOverlapBlock.begin(),
-                      projOverlapBlock.begin(),
+                      projOvpBlock.begin(),
+                      projOvpBlock.begin(),
                       D * B,
                       streamDataMove);
                 }
 
               dftfe::utils::deviceMemcpyAsyncD2H(
-                projOverlapBlockHost.begin(),
+                projOvpBlockHost.begin(),
                 dftfe::utils::makeDataTypeDeviceCompatible(
-                  projOverlapBlock.begin()),
+                  projOvpBlock.begin()),
                 D * B * sizeof(dataTypes::number),
                 streamDataMove);
 
@@ -4903,15 +4897,15 @@ namespace dftfe
                   // processors
                   if (!dftParams.useDeviceDirectAllReduce)
                     MPI_Allreduce(MPI_IN_PLACE,
-                                  projOverlapBlockHost.begin(),
+                                  projOvpBlockHost.begin(),
                                   D * B,
                                   dataTypes::mpi_type_id(
-                                    projOverlapBlockHost.begin()),
+                                    projOvpBlockHost.begin()),
                                   MPI_SUM,
                                   mpiCommDomain);
 
                   // Copying only the lower triangular part to the ScaLAPACK
-                  // projected Overlap matrix
+                  // projected Hamiltonian matrix
                   if (processGrid->is_process_active())
                     for (unsigned int j = 0; j < B; ++j)
                       if (globalToLocalColumnIdMap.find(j + jvec) !=
@@ -4927,7 +4921,7 @@ namespace dftfe
                               if (it != globalToLocalRowIdMap.end())
                                 projOverlapPar.local_el(it->second,
                                                         localColumnId) =
-                                  projOverlapBlockHost[j * D + i - jvec];
+                                  projOvpBlockHost[j * D + i - jvec];
                             }
                         }
                 }
@@ -4955,6 +4949,7 @@ namespace dftfe
             processGrid, projOverlapPar, interBandGroupComm);
         }
     }
+
 
     // X^{T}*HConj*XConj  (Xc denotes complex conjugate)
     /////////////PSEUDO CODE for the implementation below for Overlapping
@@ -5521,20 +5516,530 @@ namespace dftfe
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       const dataTypes::number *                            X,
       distributedDeviceVec<dataTypes::number> &            XBlock,
-      distributedDeviceVec<dataTypes::numberFP32> &        tempFloatBlock,
       distributedDeviceVec<dataTypes::number> &            OXBlock,
-      distributedDeviceVec<dataTypes::number> &        projectorKetTimesVector,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      const unsigned int                               Noc,
-      dftfe::utils::deviceBlasHandle_t &               handle,
-      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projOverlapPar,
-      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
-      const MPI_Comm &                                 mpiCommDomain,
-      const MPI_Comm &                                 interBandGroupComm,
-      const dftParameters &                            dftParams)
-    {}
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const unsigned int                                   Noc,
+      dftfe::utils::deviceBlasHandle_t &                   handle,
+      const std::shared_ptr<const dftfe::ProcessGrid> &    processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &          projOverlapPar,
+      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+      const MPI_Comm &         mpiCommDomain,
+      const MPI_Comm &         interBandGroupComm,
+      const dftParameters &    dftParams)
+    {
+      std::unordered_map<unsigned int, unsigned int> globalToLocalColumnIdMap;
+      std::unordered_map<unsigned int, unsigned int> globalToLocalRowIdMap;
+      linearAlgebraOperations::internal::createGlobalToLocalIdMapsScaLAPACKMat(
+        processGrid,
+        projOverlapPar,
+        globalToLocalRowIdMap,
+        globalToLocalColumnIdMap);
+
+      // band group parallelization data structures
+      const unsigned int numberBandGroups =
+        dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
+      const unsigned int bandGroupTaskId =
+        dealii::Utilities::MPI::this_mpi_process(interBandGroupComm);
+      std::vector<unsigned int> bandGroupLowHighPlusOneIndices;
+      dftUtils::createBandParallelizationIndices(
+        interBandGroupComm, N, bandGroupLowHighPlusOneIndices);
+
+
+      const unsigned int vectorsBlockSize = std::min(dftParams.wfcBlockSize, N);
+
+      const unsigned int numberBlocks = N / vectorsBlockSize;
+
+      // create device compute and copy streams
+      dftfe::utils::deviceStream_t streamCompute, streamDataMove;
+      dftfe::utils::deviceStreamCreate(&streamCompute);
+      dftfe::utils::deviceStreamCreate(&streamDataMove);
+
+      // attach deviceblas handle to compute stream
+      dftfe::utils::deviceBlasWrapper::setStream(handle, streamCompute);
+
+      // create array of compute and copy events on Devices
+      // for all the blocks. These are required for synchronization
+      // between compute, copy and communication as discussed above in the
+      // pseudo code
+      dftfe::utils::deviceEvent_t computeEvents[numberBlocks];
+      dftfe::utils::deviceEvent_t copyEvents[numberBlocks];
+
+      for (int i = 0; i < numberBlocks; ++i)
+        {
+          dftfe::utils::deviceEventCreate(&computeEvents[i]);
+          dftfe::utils::deviceEventCreate(&copyEvents[i]);
+        }
+
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        XFP32(M * N, dataTypes::numberFP32(0.0));
+
+      dftfe::utils::deviceKernelsGeneric::copyValueType1ArrToValueType2Arr(
+        N * M, X, XFP32.begin());
+
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::HOST_PINNED>
+        projOvpBlockHost;
+      projOvpBlockHost.resize(vectorsBlockSize * N, 0);
+      std::memset(projOvpBlockHost.begin(),
+                  0,
+                  vectorsBlockSize * N * sizeof(dataTypes::number));
+
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32,
+                                  dftfe::utils::MemorySpace::HOST_PINNED>
+        projOvpBlockHostFP32;
+      projOvpBlockHostFP32.resize(vectorsBlockSize * N, 0);
+      std::memset(projOvpBlockHostFP32.begin(),
+                  0,
+                  vectorsBlockSize * N * sizeof(dataTypes::numberFP32));
+
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        OXBlockFull(vectorsBlockSize * M, dataTypes::number(0.0));
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        OXBlockFullFP32(vectorsBlockSize * M, dataTypes::numberFP32(0.0));
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        projOvpBlock(vectorsBlockSize * N, dataTypes::number(0.0));
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        projOvpBlockFP32(vectorsBlockSize * N, dataTypes::numberFP32(0.0));
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        projOvpBlockNext(vectorsBlockSize * N, dataTypes::number(0.0));
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        projOvpBlockFP32Next(vectorsBlockSize * N, dataTypes::numberFP32(0.0));
+
+
+      dftfe::utils::MemoryStorage<dataTypes::numberValueType,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        tempReal;
+      dftfe::utils::MemoryStorage<dataTypes::numberValueType,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        tempImag;
+
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32ValueType,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        tempRealFP32;
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32ValueType,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        tempImagFP32;
+      if (std::is_same<dataTypes::number, std::complex<double>>::value)
+        {
+          tempReal.resize(vectorsBlockSize * N, 0);
+          tempImag.resize(vectorsBlockSize * N, 0);
+          tempRealFP32.resize(vectorsBlockSize * N, 0);
+          tempImagFP32.resize(vectorsBlockSize * N, 0);
+        }
+
+      unsigned int blockCount = 0;
+      for (unsigned int jvec = 0; jvec < N; jvec += vectorsBlockSize)
+        {
+          // Correct block dimensions if block "goes off edge of" the matrix
+          const unsigned int B = std::min(vectorsBlockSize, N - jvec);
+
+          if ((jvec + B) <=
+                bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId + 1] &&
+              (jvec + B) > bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
+            {
+              const unsigned int chebyBlockSize =
+                std::min(dftParams.chebyWfcBlockSize, N);
+
+              const dataTypes::number alpha = dataTypes::number(1.0),
+                                      beta  = dataTypes::number(0.0);
+              const dataTypes::numberFP32 alphaFP32 =
+                                            dataTypes::numberFP32(1.0),
+                                          betaFP32 = dataTypes::numberFP32(0.0);
+              const unsigned int D                 = N - jvec;
+
+              // handle edge case for the first block or the first block in the
+              // band group in case of band parallelization
+              if (jvec == bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
+                {
+                  // compute HXBlockFull or HXBlockFullFP32 in an inner loop
+                  // over blocks of B wavefunction vectors
+                  for (unsigned int k = jvec; k < jvec + B; k += chebyBlockSize)
+                    {
+                      dftfe::utils::deviceKernelsGeneric::
+                        stridedCopyToBlockConstantStride(
+                          chebyBlockSize, N, M, k, X, XBlock.begin());
+
+                      // evaluate H times XBlock^{T} and store in HXBlock^{T}
+                      OXBlock.setValue(0);
+                      const bool   scaleFlag = false;
+                      const double scalar    = 1.0;
+                      if (!(jvec + B > Noc))
+                        {
+                          XBlock.setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::single);
+                          OXBlock.setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::single);
+                        }
+                      operatorMatrix.overlapMatrixTimesX(
+                        XBlock,
+                        1.0,
+                        0.0,
+                        0.0,
+                        OXBlock,
+                        dftParams.diagonalMassMatrix);
+                      if (!(jvec + B > Noc))
+                        {
+                          XBlock.setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::full);
+                          OXBlock.setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::full);
+                        }
+
+                      if (jvec + B > Noc)
+                        dftfe::utils::deviceKernelsGeneric::
+                          stridedCopyFromBlockConstantStride(
+                            B,
+                            chebyBlockSize,
+                            M,
+                            k - jvec,
+                            OXBlock.begin(),
+                            OXBlockFull.begin());
+                      else
+                        dftfe::utils::deviceKernelsGeneric::
+                          stridedCopyFromBlockConstantStride(
+                            B,
+                            chebyBlockSize,
+                            M,
+                            k - jvec,
+                            OXBlock.begin(),
+                            OXBlockFullFP32.begin());
+                    }
+
+                  // evaluate X^{T} times HXBlockFullConj or XFP32^{T} times
+                  // HXBlockFullFP32Conj
+                  if (jvec + B > Noc)
+                    dftfe::utils::deviceBlasWrapper::gemm(
+                      handle,
+                      dftfe::utils::DEVICEBLAS_OP_N,
+                      std::is_same<dataTypes::number,
+                                   std::complex<double>>::value ?
+                        dftfe::utils::DEVICEBLAS_OP_C :
+                        dftfe::utils::DEVICEBLAS_OP_T,
+                      D,
+                      B,
+                      M,
+                      &alpha,
+                      X + jvec,
+                      N,
+                      OXBlockFull.begin(),
+                      B,
+                      &beta,
+                      projOvpBlock.begin(),
+                      D);
+                  else
+                    dftfe::utils::deviceBlasWrapper::gemm(
+                      handle,
+                      dftfe::utils::DEVICEBLAS_OP_N,
+                      std::is_same<dataTypes::numberFP32,
+                                   std::complex<float>>::value ?
+                        dftfe::utils::DEVICEBLAS_OP_C :
+                        dftfe::utils::DEVICEBLAS_OP_T,
+                      D,
+                      B,
+                      M,
+                      &alphaFP32,
+                      XFP32.begin() + jvec,
+                      N,
+                      OXBlockFullFP32.begin(),
+                      B,
+                      &betaFP32,
+                      projOvpBlockFP32.begin(),
+                      D);
+
+                  // record completion of compute for next block
+                  dftfe::utils::deviceEventRecord(computeEvents[blockCount],
+                                                  streamCompute);
+                }
+
+              // Before swap host thread needs to wait till compute on
+              // currentblock is over. Since swap occurs on the null stream, any
+              // future calls in the streamDataMove will only occur after both
+              // the compute on currentblock and swap is over. Note that at this
+              // point there is nothing queued in the streamDataMove as all
+              // previous operations in that stream are over.
+              if ((dftfe::utils::deviceEventSynchronize(
+                     computeEvents[blockCount]) ==
+                   dftfe::utils::deviceSuccess) &&
+                  (jvec > bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId]))
+                {
+                  if (jvec + B > Noc)
+                    projOvpBlock.swap(projOvpBlockNext);
+                  else
+                    projOvpBlockFP32.swap(projOvpBlockFP32Next);
+                }
+
+              const unsigned int jvecNew = jvec + vectorsBlockSize;
+              const unsigned int DNew    = N - jvecNew;
+
+              if (jvecNew <
+                  bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId + 1])
+                {
+                  // compute HXBlockFull or HXBlockFullFP32 in an inner loop
+                  // over blocks of B wavefunction vectors
+                  for (unsigned int k = jvecNew; k < jvecNew + B;
+                       k += chebyBlockSize)
+                    {
+                      dftfe::utils::deviceKernelsGeneric::
+                        stridedCopyToBlockConstantStride(
+                          chebyBlockSize, N, M, k, X, XBlock.begin());
+
+                      // evaluate H times XBlock^{T} and store in HXBlock^{T}
+                      OXBlock.setValue(0);
+                      const bool   scaleFlag = false;
+                      const double scalar    = 1.0;
+                      if (!(jvecNew + B > Noc))
+                        {
+                          XBlock.setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::single);
+                          OXBlock.setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::single);
+                        }
+                      operatorMatrix.overlapMatrixTimesX(
+                        XBlock,
+                        1.0,
+                        0.0,
+                        0.0,
+                        OXBlock,
+                        dftParams.diagonalMassMatrix);
+                      if (!(jvecNew + B > Noc))
+                        {
+                          XBlock.setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::full);
+                          OXBlock.setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::full);
+                        }
+
+                      if (jvecNew + B > Noc)
+                        dftfe::utils::deviceKernelsGeneric::
+                          stridedCopyFromBlockConstantStride(
+                            B,
+                            chebyBlockSize,
+                            M,
+                            k - jvecNew,
+                            OXBlock.begin(),
+                            OXBlockFull.begin());
+                      else
+                        dftfe::utils::deviceKernelsGeneric::
+                          stridedCopyFromBlockConstantStride(
+                            B,
+                            chebyBlockSize,
+                            M,
+                            k - jvecNew,
+                            OXBlock.begin(),
+                            OXBlockFullFP32.begin());
+                    }
+
+                  // evaluate X^{T} times HXBlockFullConj or XFP32^{T} times
+                  // HXBlockFullFP32Conj
+                  if (jvecNew + B > Noc)
+                    dftfe::utils::deviceBlasWrapper::gemm(
+                      handle,
+                      dftfe::utils::DEVICEBLAS_OP_N,
+                      std::is_same<dataTypes::number,
+                                   std::complex<double>>::value ?
+                        dftfe::utils::DEVICEBLAS_OP_C :
+                        dftfe::utils::DEVICEBLAS_OP_T,
+                      DNew,
+                      B,
+                      M,
+                      &alpha,
+                      X + jvecNew,
+                      N,
+                      OXBlockFull.begin(),
+                      B,
+                      &beta,
+                      projOvpBlockNext.begin(),
+                      DNew);
+                  else
+                    dftfe::utils::deviceBlasWrapper::gemm(
+                      handle,
+                      dftfe::utils::DEVICEBLAS_OP_N,
+                      std::is_same<dataTypes::numberFP32,
+                                   std::complex<float>>::value ?
+                        dftfe::utils::DEVICEBLAS_OP_C :
+                        dftfe::utils::DEVICEBLAS_OP_T,
+                      DNew,
+                      B,
+                      M,
+                      &alphaFP32,
+                      XFP32.begin() + jvecNew,
+                      N,
+                      OXBlockFullFP32.begin(),
+                      B,
+                      &betaFP32,
+                      projOvpBlockFP32Next.begin(),
+                      DNew);
+
+                  // record completion of compute for next block
+                  dftfe::utils::deviceEventRecord(computeEvents[blockCount + 1],
+                                                  streamCompute);
+                }
+
+              if (dftParams.useDeviceDirectAllReduce)
+                {
+                  if (jvec + B > Noc)
+                    {
+                      if (std::is_same<dataTypes::number,
+                                       std::complex<double>>::value)
+                        devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
+                          projOvpBlock.begin(),
+                          projOvpBlock.begin(),
+                          D * B,
+                          tempReal.begin(),
+                          tempImag.begin(),
+                          streamDataMove);
+                      else
+                        devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
+                          projOvpBlock.begin(),
+                          projOvpBlock.begin(),
+                          D * B,
+                          streamDataMove);
+                    }
+                  else
+                    {
+                      if (std::is_same<dataTypes::number,
+                                       std::complex<double>>::value)
+                        devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
+                          projOvpBlockFP32.begin(),
+                          projOvpBlockFP32.begin(),
+                          D * B,
+                          tempRealFP32.begin(),
+                          tempImagFP32.begin(),
+                          streamDataMove);
+                      else
+                        devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
+                          projOvpBlockFP32.begin(),
+                          projOvpBlockFP32.begin(),
+                          D * B,
+                          streamDataMove);
+                    }
+                }
+
+              if (jvec + B > Noc)
+                dftfe::utils::deviceMemcpyAsyncD2H(
+                  projOvpBlockHost.begin(),
+                  dftfe::utils::makeDataTypeDeviceCompatible(
+                    projOvpBlock.begin()),
+                  D * B * sizeof(dataTypes::number),
+                  streamDataMove);
+              else
+                dftfe::utils::deviceMemcpyAsyncD2H(
+                  projOvpBlockHostFP32.begin(),
+                  dftfe::utils::makeDataTypeDeviceCompatible(
+                    projOvpBlockFP32.begin()),
+                  D * B * sizeof(dataTypes::numberFP32),
+                  streamDataMove);
+
+              // record completion of Device->CPU copy for current block
+              dftfe::utils::deviceEventRecord(copyEvents[blockCount],
+                                              streamDataMove);
+
+              // Check that Device->CPU on the current block has been completed.
+              // If completed, perform blocking MPI commmunication on the
+              // current block and copy to ScaLAPACK matrix
+              if (dftfe::utils::deviceEventSynchronize(
+                    copyEvents[blockCount]) == dftfe::utils::deviceSuccess)
+                {
+                  if (jvec + B > Noc)
+                    {
+                      // Sum local projHamBlock across domain decomposition
+                      // processors
+                      if (!dftParams.useDeviceDirectAllReduce)
+                        MPI_Allreduce(MPI_IN_PLACE,
+                                      projOvpBlockHost.begin(),
+                                      D * B,
+                                      dataTypes::mpi_type_id(
+                                        projOvpBlockHost.begin()),
+                                      MPI_SUM,
+                                      mpiCommDomain);
+
+                      // Copying only the lower triangular part to the ScaLAPACK
+                      // projected Hamiltonian matrix
+                      if (processGrid->is_process_active())
+                        for (unsigned int j = 0; j < B; ++j)
+                          if (globalToLocalColumnIdMap.find(j + jvec) !=
+                              globalToLocalColumnIdMap.end())
+                            {
+                              const unsigned int localColumnId =
+                                globalToLocalColumnIdMap[j + jvec];
+                              for (unsigned int i = j + jvec; i < N; ++i)
+                                {
+                                  std::unordered_map<unsigned int,
+                                                     unsigned int>::iterator
+                                    it = globalToLocalRowIdMap.find(i);
+                                  if (it != globalToLocalRowIdMap.end())
+                                    projOverlapPar.local_el(it->second,
+                                                            localColumnId) =
+                                      projOvpBlockHost[j * D + i - jvec];
+                                }
+                            }
+                    }
+                  else
+                    {
+                      // Sum local projHamBlock across domain decomposition
+                      // processors
+                      if (!dftParams.useDeviceDirectAllReduce)
+                        MPI_Allreduce(MPI_IN_PLACE,
+                                      projOvpBlockHostFP32.begin(),
+                                      D * B,
+                                      dataTypes::mpi_type_id(
+                                        projOvpBlockHostFP32.begin()),
+                                      MPI_SUM,
+                                      mpiCommDomain);
+
+                      // Copying only the lower triangular part to the ScaLAPACK
+                      // projected Hamiltonian matrix
+                      if (processGrid->is_process_active())
+                        for (unsigned int j = 0; j < B; ++j)
+                          if (globalToLocalColumnIdMap.find(j + jvec) !=
+                              globalToLocalColumnIdMap.end())
+                            {
+                              const unsigned int localColumnId =
+                                globalToLocalColumnIdMap[j + jvec];
+                              for (unsigned int i = j + jvec; i < N; ++i)
+                                {
+                                  std::unordered_map<unsigned int,
+                                                     unsigned int>::iterator
+                                    it = globalToLocalRowIdMap.find(i);
+                                  if (it != globalToLocalRowIdMap.end())
+                                    projOverlapPar.local_el(it->second,
+                                                            localColumnId) =
+                                      projOvpBlockHostFP32[j * D + i - jvec];
+                                }
+                            }
+                    }
+                }
+            } // band parallelization
+          blockCount += 1;
+        }
+
+      // return deviceblas handle to default stream
+      dftfe::utils::deviceBlasWrapper::setStream(handle, NULL);
+
+      for (int i = 0; i < numberBlocks; ++i)
+        {
+          dftfe::utils::deviceEventDestroy(computeEvents[i]);
+          dftfe::utils::deviceEventDestroy(copyEvents[i]);
+        }
+
+      dftfe::utils::deviceStreamDestroy(streamCompute);
+      dftfe::utils::deviceStreamDestroy(streamDataMove);
+
+      if (numberBandGroups > 1)
+        {
+          MPI_Barrier(interBandGroupComm);
+          linearAlgebraOperations::internal::sumAcrossInterCommScaLAPACKMat(
+            processGrid, projOverlapPar, interBandGroupComm);
+        }
+    }
 
     // X^{T}*HConj*XConj  with overlap of computation and
     // communication
@@ -5994,18 +6499,449 @@ namespace dftfe
       const dataTypes::number *                            X,
       distributedDeviceVec<dataTypes::number> &            XBlock,
       distributedDeviceVec<dataTypes::number> &            OXBlock,
-      distributedDeviceVec<dataTypes::number> &        projectorKetTimesVector,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      const unsigned int                               Noc,
-      dftfe::utils::deviceBlasHandle_t &               handle,
-      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projOverlapPar,
-      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
-      const MPI_Comm &                                 mpiCommDomain,
-      const MPI_Comm &                                 interBandGroupComm,
-      const dftParameters &                            dftParams)
-    {}
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const unsigned int                                   Noc,
+      dftfe::utils::deviceBlasHandle_t &                   handle,
+      const std::shared_ptr<const dftfe::ProcessGrid> &    processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &          projOverlapPar,
+      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+      const MPI_Comm &         mpiCommDomain,
+      const MPI_Comm &         interBandGroupComm,
+      const dftParameters &    dftParams)
+    {
+      /////////////PSEUDO CODE for the implementation below for Overlapping
+      /// compute and communication/////////////////
+      //
+      // In the algorithm below the communication and computation of two
+      // consecutive blocks of wavefunctions: block i and block i+1 are
+      // overlapped.
+      // ----------------------------------------------------------
+      // CMP denotes computuation of X^{T} times HXBlock
+      // COP denotes Device->CPU copy of X^{T} times HXBlock
+      // COM denotes blocking MPI_Allreduce on X^{T}HXBlock and copy to
+      // scalapack matrix
+      // ----------------------------------------------------------
+      // Two Device streams are created: compute and copy
+      // CMP is performed in compute Device stream and COP is performed in copy
+      // Device stream. COP for a block can only start after the CMP for that
+      // block in the compute stream is completed. COM is performed for a block
+      // only after COP even for that block is completed.
+      //
+      // In a blocked loop do:
+      // 1) [CMP] Call compute on first block (edge case only for first
+      // iteration) 2) Wait for CMP event for current block to be completed. 3)
+      // Swap current and next block memory (all iterations except edge case) 4)
+      // [COP] Call copy on current block 5) [CMP] Call compute on next block 6)
+      // Wait for COP event for current block to be completed 7) [COM] Perform
+      // blocking MPI_Allreduce on curent block and copy to scalapack matrix
+      /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+      std::unordered_map<unsigned int, unsigned int> globalToLocalColumnIdMap;
+      std::unordered_map<unsigned int, unsigned int> globalToLocalRowIdMap;
+      linearAlgebraOperations::internal::createGlobalToLocalIdMapsScaLAPACKMat(
+        processGrid,
+        projOverlapPar,
+        globalToLocalRowIdMap,
+        globalToLocalColumnIdMap);
+
+      // band group parallelization data structures
+      const unsigned int numberBandGroups =
+        dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
+      const unsigned int bandGroupTaskId =
+        dealii::Utilities::MPI::this_mpi_process(interBandGroupComm);
+      std::vector<unsigned int> bandGroupLowHighPlusOneIndices;
+      dftUtils::createBandParallelizationIndices(
+        interBandGroupComm, N, bandGroupLowHighPlusOneIndices);
+
+
+
+      const unsigned int vectorsBlockSize = std::min(dftParams.wfcBlockSize, N);
+      const unsigned int numberBlocks     = N / vectorsBlockSize;
+
+      // create separate Device streams for Device->CPU copy and computation
+      dftfe::utils::deviceStream_t streamCompute, streamDataMove;
+      dftfe::utils::deviceStreamCreate(&streamCompute);
+      dftfe::utils::deviceStreamCreate(&streamDataMove);
+
+      // attach deviceblas handle to compute stream
+      dftfe::utils::deviceBlasWrapper::setStream(handle, streamCompute);
+
+      // create array of compute and copy events on Devices
+      // for all the blocks. These are required for synchronization
+      // between compute, copy and communication as discussed above in the
+      // pseudo code
+      dftfe::utils::deviceEvent_t computeEvents[numberBlocks];
+      dftfe::utils::deviceEvent_t copyEvents[numberBlocks];
+
+      for (int i = 0; i < numberBlocks; ++i)
+        {
+          dftfe::utils::deviceEventCreate(&computeEvents[i]);
+          dftfe::utils::deviceEventCreate(&copyEvents[i]);
+        }
+
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::HOST_PINNED>
+        projOvpBlockHost;
+      projOvpBlockHost.resize(vectorsBlockSize * N, 0);
+      std::memset(projOvpBlockHost.begin(),
+                  0,
+                  vectorsBlockSize * N * sizeof(dataTypes::number));
+
+
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32,
+                                  dftfe::utils::MemorySpace::HOST_PINNED>
+        projOvpBlockHostFP32;
+      projOvpBlockHostFP32.resize(vectorsBlockSize * N, 0);
+      std::memset(projOvpBlockHostFP32.begin(),
+                  0,
+                  vectorsBlockSize * N * sizeof(dataTypes::numberFP32));
+
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        OXBlockFull(vectorsBlockSize * M, dataTypes::number(0.0));
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        projOvpBlock(vectorsBlockSize * N, dataTypes::number(0.0));
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        projOvpBlockNext(vectorsBlockSize * N, dataTypes::number(0.0));
+
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        projOvpBlockFP32(vectorsBlockSize * N, dataTypes::numberFP32(0.0));
+
+      dftfe::utils::MemoryStorage<dataTypes::numberValueType,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        tempReal;
+      dftfe::utils::MemoryStorage<dataTypes::numberValueType,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        tempImag;
+
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32ValueType,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        tempRealFP32;
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32ValueType,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        tempImagFP32;
+      if (std::is_same<dataTypes::number, std::complex<double>>::value)
+        {
+          tempReal.resize(vectorsBlockSize * N, 0);
+          tempImag.resize(vectorsBlockSize * N, 0);
+          tempRealFP32.resize(vectorsBlockSize * N, 0);
+          tempImagFP32.resize(vectorsBlockSize * N, 0);
+        }
+
+      unsigned int blockCount = 0;
+      for (unsigned int jvec = 0; jvec < N; jvec += vectorsBlockSize)
+        {
+          // Correct block dimensions if block "goes off edge of" the matrix
+          const unsigned int B = std::min(vectorsBlockSize, N - jvec);
+
+          if ((jvec + B) <=
+                bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId + 1] &&
+              (jvec + B) > bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
+            {
+              const unsigned int chebyBlockSize =
+                std::min(dftParams.chebyWfcBlockSize, N);
+
+              const dataTypes::number alpha = dataTypes::number(1.0),
+                                      beta  = dataTypes::number(0.0);
+              const unsigned int D          = N - jvec;
+
+              // handle edge case for the first block or the first block in the
+              // band group in case of band parallelization
+              if (jvec == bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
+                {
+                  // compute HXBlockFull in an inner loop over blocks of B
+                  // wavefunction vectors
+                  for (unsigned int k = jvec; k < jvec + B; k += chebyBlockSize)
+                    {
+                      dftfe::utils::deviceKernelsGeneric::
+                        stridedCopyToBlockConstantStride(
+                          chebyBlockSize, N, M, k, X, XBlock.begin());
+
+                      // evaluate H times XBlock^{T} and store in HXBlock^{T}
+                      operatorMatrix.overlapMatrixTimesX(
+                        XBlock,
+                        1.0,
+                        0.0,
+                        0.0,
+                        OXBlock,
+                        dftParams.diagonalMassMatrix);
+
+                      dftfe::utils::deviceKernelsGeneric::
+                        stridedCopyFromBlockConstantStride(B,
+                                                           chebyBlockSize,
+                                                           M,
+                                                           k - jvec,
+                                                           OXBlock.begin(),
+                                                           OXBlockFull.begin());
+                    }
+
+                  // evalute X^{T} times HXBlock
+                  dftfe::utils::deviceBlasWrapper::gemm(
+                    handle,
+                    dftfe::utils::DEVICEBLAS_OP_N,
+                    std::is_same<dataTypes::number,
+                                 std::complex<double>>::value ?
+                      dftfe::utils::DEVICEBLAS_OP_C :
+                      dftfe::utils::DEVICEBLAS_OP_T,
+                    D,
+                    B,
+                    M,
+                    &alpha,
+                    X + jvec,
+                    N,
+                    OXBlockFull.begin(),
+                    B,
+                    &beta,
+                    projOvpBlock.begin(),
+                    D);
+
+                  // record completion of compute for first block
+                  dftfe::utils::deviceEventRecord(computeEvents[blockCount],
+                                                  streamCompute);
+                }
+
+
+              // Before swap host thread needs to wait till compute on
+              // currentblock is over. Since swap occurs on the null stream, any
+              // future calls in the streamDataMove will only occur after both
+              // the compute on currentblock and swap is over. Note that at this
+              // point there is nothing queued in the streamDataMove as all
+              // previous operations in that stream are over.
+              if ((dftfe::utils::deviceEventSynchronize(
+                     computeEvents[blockCount]) ==
+                   dftfe::utils::deviceSuccess) &&
+                  (jvec > bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId]))
+                projOvpBlock.swap(projOvpBlockNext);
+
+              const unsigned int jvecNew = jvec + vectorsBlockSize;
+              const unsigned int DNew    = N - jvecNew;
+
+              // start computations on the next block
+              if (jvecNew <
+                  bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId + 1])
+                {
+                  for (unsigned int k = jvecNew; k < jvecNew + B;
+                       k += chebyBlockSize)
+                    {
+                      dftfe::utils::deviceKernelsGeneric::
+                        stridedCopyToBlockConstantStride(
+                          chebyBlockSize, N, M, k, X, XBlock.begin());
+
+                      // evaluate H times XBlock^{T} and store in HXBlock^{T}
+                      operatorMatrix.overlapMatrixTimesX(
+                        XBlock,
+                        1.0,
+                        0.0,
+                        0.0,
+                        OXBlock,
+                        dftParams.diagonalMassMatrix);
+
+                      dftfe::utils::deviceKernelsGeneric::
+                        stridedCopyFromBlockConstantStride(B,
+                                                           chebyBlockSize,
+                                                           M,
+                                                           k - jvecNew,
+                                                           OXBlock.begin(),
+                                                           OXBlockFull.begin());
+                    }
+
+                  // evalute X^{T} times HXBlock
+                  dftfe::utils::deviceBlasWrapper::gemm(
+                    handle,
+                    dftfe::utils::DEVICEBLAS_OP_N,
+                    std::is_same<dataTypes::number,
+                                 std::complex<double>>::value ?
+                      dftfe::utils::DEVICEBLAS_OP_C :
+                      dftfe::utils::DEVICEBLAS_OP_T,
+                    DNew,
+                    B,
+                    M,
+                    &alpha,
+                    X + jvecNew,
+                    N,
+                    OXBlockFull.begin(),
+                    B,
+                    &beta,
+                    projOvpBlockNext.begin(),
+                    DNew);
+
+                  // record completion of compute for next block
+                  dftfe::utils::deviceEventRecord(computeEvents[blockCount + 1],
+                                                  streamCompute);
+                }
+
+              if (!(jvec + B > Noc))
+                {
+                  dftfe::utils::deviceKernelsGeneric::
+                    copyValueType1ArrToValueType2Arr(D * B,
+                                                     projOvpBlock.begin(),
+                                                     projOvpBlockFP32.begin(),
+                                                     streamDataMove);
+                }
+
+              if (dftParams.useDeviceDirectAllReduce)
+                {
+                  if (jvec + B > Noc)
+                    {
+                      if (std::is_same<dataTypes::number,
+                                       std::complex<double>>::value)
+                        devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
+                          projOvpBlock.begin(),
+                          projOvpBlock.begin(),
+                          D * B,
+                          tempReal.begin(),
+                          tempImag.begin(),
+                          streamDataMove);
+                      else
+                        devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
+                          projOvpBlock.begin(),
+                          projOvpBlock.begin(),
+                          D * B,
+                          streamDataMove);
+                    }
+                  else
+                    {
+                      if (std::is_same<dataTypes::number,
+                                       std::complex<double>>::value)
+                        devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
+                          projOvpBlockFP32.begin(),
+                          projOvpBlockFP32.begin(),
+                          D * B,
+                          tempRealFP32.begin(),
+                          tempImagFP32.begin(),
+                          streamDataMove);
+                      else
+                        devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
+                          projOvpBlockFP32.begin(),
+                          projOvpBlockFP32.begin(),
+                          D * B,
+                          streamDataMove);
+                    }
+                }
+
+              if (jvec + B > Noc)
+                dftfe::utils::deviceMemcpyAsyncD2H(
+                  projOvpBlockHost.begin(),
+                  dftfe::utils::makeDataTypeDeviceCompatible(
+                    projOvpBlock.begin()),
+                  D * B * sizeof(dataTypes::number),
+                  streamDataMove);
+              else
+                dftfe::utils::deviceMemcpyAsyncD2H(
+                  projOvpBlockHostFP32.begin(),
+                  dftfe::utils::makeDataTypeDeviceCompatible(
+                    projOvpBlockFP32.begin()),
+                  D * B * sizeof(dataTypes::numberFP32),
+                  streamDataMove);
+
+              // record completion of Device->CPU copy for current block
+              dftfe::utils::deviceEventRecord(copyEvents[blockCount],
+                                              streamDataMove);
+
+              // Check that Device->CPU on the current block has been completed.
+              // If completed, perform blocking MPI commmunication on the
+              // current block and copy to ScaLAPACK matrix
+              if (dftfe::utils::deviceEventSynchronize(
+                    copyEvents[blockCount]) == dftfe::utils::deviceSuccess)
+                {
+                  if (jvec + B > Noc)
+                    {
+                      // Sum local projHamBlock across domain decomposition
+                      // processors
+                      if (!dftParams.useDeviceDirectAllReduce)
+                        MPI_Allreduce(MPI_IN_PLACE,
+                                      projOvpBlockHost.begin(),
+                                      D * B,
+                                      dataTypes::mpi_type_id(
+                                        projOvpBlockHost.begin()),
+                                      MPI_SUM,
+                                      mpiCommDomain);
+
+                      // Copying only the lower triangular part to the ScaLAPACK
+                      // projected Hamiltonian matrix
+                      if (processGrid->is_process_active())
+                        for (unsigned int j = 0; j < B; ++j)
+                          if (globalToLocalColumnIdMap.find(j + jvec) !=
+                              globalToLocalColumnIdMap.end())
+                            {
+                              const unsigned int localColumnId =
+                                globalToLocalColumnIdMap[j + jvec];
+                              for (unsigned int i = j + jvec; i < N; ++i)
+                                {
+                                  std::unordered_map<unsigned int,
+                                                     unsigned int>::iterator
+                                    it = globalToLocalRowIdMap.find(i);
+                                  if (it != globalToLocalRowIdMap.end())
+                                    projOverlapPar.local_el(it->second,
+                                                            localColumnId) =
+                                      projOvpBlockHost[j * D + i - jvec];
+                                }
+                            }
+                    }
+                  else
+                    {
+                      // Sum local projHamBlock across domain decomposition
+                      // processors
+                      if (!dftParams.useDeviceDirectAllReduce)
+                        MPI_Allreduce(MPI_IN_PLACE,
+                                      projOvpBlockHostFP32.begin(),
+                                      D * B,
+                                      dataTypes::mpi_type_id(
+                                        projOvpBlockHostFP32.begin()),
+                                      MPI_SUM,
+                                      mpiCommDomain);
+
+                      // Copying only the lower triangular part to the ScaLAPACK
+                      // projected Hamiltonian matrix
+                      if (processGrid->is_process_active())
+                        for (unsigned int j = 0; j < B; ++j)
+                          if (globalToLocalColumnIdMap.find(j + jvec) !=
+                              globalToLocalColumnIdMap.end())
+                            {
+                              const unsigned int localColumnId =
+                                globalToLocalColumnIdMap[j + jvec];
+                              for (unsigned int i = j + jvec; i < N; ++i)
+                                {
+                                  std::unordered_map<unsigned int,
+                                                     unsigned int>::iterator
+                                    it = globalToLocalRowIdMap.find(i);
+                                  if (it != globalToLocalRowIdMap.end())
+                                    projOverlapPar.local_el(it->second,
+                                                            localColumnId) =
+                                      projOvpBlockHostFP32[j * D + i - jvec];
+                                }
+                            }
+                    }
+                }
+
+            } // band parallelization
+          blockCount += 1;
+        }
+
+      // return deviceblas handle to default stream
+      dftfe::utils::deviceBlasWrapper::setStream(handle, NULL);
+
+      for (int i = 0; i < numberBlocks; ++i)
+        {
+          dftfe::utils::deviceEventDestroy(computeEvents[i]);
+          dftfe::utils::deviceEventDestroy(copyEvents[i]);
+        }
+
+      dftfe::utils::deviceStreamDestroy(streamCompute);
+      dftfe::utils::deviceStreamDestroy(streamDataMove);
+
+      if (numberBandGroups > 1)
+        {
+          MPI_Barrier(interBandGroupComm);
+          linearAlgebraOperations::internal::sumAcrossInterCommScaLAPACKMat(
+            processGrid, projOverlapPar, interBandGroupComm);
+        }
+    }
 
   } // namespace linearAlgebraOperationsDevice
 } // namespace dftfe
