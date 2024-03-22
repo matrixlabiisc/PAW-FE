@@ -364,9 +364,9 @@ namespace dftfe
               d_feOrderPlusOneQuadratureId, 50, true, false);
             if (std::is_same<dataTypes::number, std::complex<double>>::value)
               d_basisOperationsPtrDevice->computeCellMassMatrix(
-                d_feOrderPlusOneQuadratureId, 50, true, false);
+                d_feOrderPlusOneQuadratureId, 50, true, true);
             d_basisOperationsPtrDevice->computeInverseSqrtMassVector(true,
-                                                                     false);
+                                                                     true);
             unsigned int BVec2 =
               std::min(d_dftParamsPtr->wfcBlockSize, d_numEigenValues);
             if (BVec != BVec2)
