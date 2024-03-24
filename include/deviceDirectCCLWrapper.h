@@ -36,22 +36,16 @@ namespace dftfe
   namespace utils
   {
 #    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-#      define NCCLCHECKASYNC(commPtr)                     \
+#      define NCCLCHECK(cmd)                              \
         do                                                \
           {                                               \
-            ncclResult_t state;                           \
-            do                                            \
-              {                                           \
-                ncclCommGetAsyncError(*commPtr, &state);  \
-              }                                           \
-            while (state == ncclInProgress);              \
-            ncclCommGetAsyncError(*commPtr, &state);      \
-            if (state != ncclSuccess)                     \
+            ncclResult_t r = cmd;                         \
+            if (r != ncclSuccess)                         \
               {                                           \
                 printf("Failed, NCCL error %s:%d '%s'\n", \
                        __FILE__,                          \
                        __LINE__,                          \
-                       ncclGetErrorString(state));        \
+                       ncclGetErrorString(r));            \
                 exit(EXIT_FAILURE);                       \
               }                                           \
           }                                               \
@@ -70,7 +64,7 @@ namespace dftfe
       DeviceCCLWrapper();
 
       void
-      init(const MPI_Comm &mpiComm);
+      init(const MPI_Comm &mpiComm, const bool useDCCL);
 
       ~DeviceCCLWrapper();
 
