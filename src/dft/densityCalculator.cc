@@ -365,12 +365,14 @@ namespace dftfe
                       }     // cells block loop
                     if (dftParams.pawPseudoPotential)
                       {
-                        pawClassPtr->computeDij(true,
-                                                jvec,
-                                                currentBlockSize,
-                                                partialOccupVec.data(),
-                                                spinIndex,
-                                                kPoint);
+                        pawClassPtr->getNonLocalOperator()
+                          ->applyAllReduceOnCconjtransX(
+                            projectorKetTimesVector);
+                        pawClassPtr->getNonLocalOperator()
+                          ->copyBackFromDistributedVectorToLocalDataStructure(
+                            projectorKetTimesVector, partialOccupVec);
+                        pawClassPtr->computeDij(
+                          true, jvec, currentBlockSize, spinIndex, kPoint);
                         // Call computeDij
                       }
                   }

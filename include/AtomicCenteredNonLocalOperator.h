@@ -219,6 +219,18 @@ namespace dftfe
       dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
         &        sphericalFunctionKetTimesVectorParFlattened,
       const bool flagCopyResultsToMatrix = true);
+
+
+    /**
+     * @brief After AllReduce function is called this will copy to the nonLocalOperatorClassDatastructure.
+     */
+    void
+    copyBackFromDistributedVectorToLocalDataStructure(
+      dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
+        &sphericalFunctionKetTimesVectorParFlattened,
+      const dftfe::utils::MemoryStorage<double, memorySpace> &scalingVector);
+
+
     /**
      * @brief copies the results from internal member to sphericalFunctionKetTimesVectorParFlattened, on which ghost values are called.
      * crucial operation for completion of the full CconjtranX on all cells
@@ -244,6 +256,9 @@ namespace dftfe
     void
     applyCconjtransOnX(const ValueType *                           X,
                        const std::pair<unsigned int, unsigned int> cellRange);
+
+    const ValueType *
+    getCconjtansXLocalDataStructure(unsigned int atomId);
 
     /**
      * @brief completes the VCconjX on nodal vector src. The src vector must have all ghost nodes and contraint nodes updated.

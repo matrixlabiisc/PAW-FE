@@ -185,7 +185,6 @@ namespace dftfe
     computeDij(const bool         isDijOut,
                const unsigned int startVectorIndex,
                const unsigned int vectorBlockSize,
-               const double *     partialOccupancy,
                const unsigned int spinIndex,
                const unsigned int kpointIndex);
 
@@ -450,6 +449,8 @@ namespace dftfe
     std::map<unsigned int, std::vector<double>>
                                                 d_ProductOfQijShapeFnAtQuadPoints;
     std::map<unsigned int, std::vector<double>> D_ij;
+    std::map<std::pair<unsigned int, unsigned int>, std::vector<ValueType>>
+                                                D_ijKDependent;
     std::map<unsigned int, std::vector<double>> d_multipole, d_multipoleInverse;
     std::vector<double> d_deltaInverseMatrix, d_deltaMatrix;
     std::map<unsigned int, std::vector<double>> d_gLValuesQuadPoints;

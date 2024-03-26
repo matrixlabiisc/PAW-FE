@@ -571,11 +571,45 @@ namespace dftfe
     const bool         isDijOut,
     const unsigned int startVectorIndex,
     const unsigned int vectorBlockSize,
-    const double *     partialOccupancy,
     const unsigned int spinIndex,
     const unsigned int kpointIndex)
   {
-    
+    const std::vector<unsigned int> atomIdsInProcessor =
+      d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
+    std::vector<unsigned int> atomicNumber =
+      d_atomicProjectorFnsContainer->getAtomicNumbers();
+    char            transA = 'N';
+    char            transB = 'T';
+    const ValueType alpha = 1.0, beta = 1.0;
+
+    for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
+      {
+        const unsigned int atomId = atomIdsInProcessor[iAtom];
+        const unsigned int Znum   = atomicNumber[atomId];
+        const unsigned int numberSphericalFunctions =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        if (startVectorIndex == 0)
+          D_ijKDependent[std::make_pair(atomId, kpointIndex)] =
+            std::vector<ValueType>(numberSphericalFunctions *
+                                     numberSphericalFunctions,
+                                   0.0);
+
+        d_BLASWrapperHostPtr->xgemm(
+          transA,
+          transB,
+          numberSphericalFunctions,
+          numberSphericalFunctions,
+          vectorBlockSize,
+          &alpha,
+          d_nonLocalOperator->getCconjtansXLocalDataStructure(atomId),
+          numberSphericalFunctions,
+          d_nonLocalOperator->getCconjtansXLocalDataStructure(atomId),
+          numberSphericalFunctions,
+          &beta,
+          D_ijKDependent[std::make_pair(atomId, kpointIndex)].data(),
+          numberSphericalFunctions);
+      }
   }
 
 } // namespace dftfe

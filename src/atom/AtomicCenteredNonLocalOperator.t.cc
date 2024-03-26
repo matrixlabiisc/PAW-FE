@@ -1635,6 +1635,76 @@ namespace dftfe
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
+  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
+    copyBackFromDistributedVectorToLocalDataStructure(
+      dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
+        &sphericalFunctionKetTimesVectorParFlattened,
+      const dftfe::utils::MemoryStorage<double, memorySpace> &scalingVector)
+  {
+    AssertThrow(
+      scalingVector.size() == d_numberWaveFunctions,
+      dealii::ExcMessage(
+        "DFT-FE Error: Inconsistent size of scaling vector. Not same as number of WaveFunctions"));
+
+    if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+      {
+        const std::vector<unsigned int> &atomicNumber =
+          d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
+        const std::vector<unsigned int> atomIdsInProc =
+          d_atomCenteredSphericalFunctionContainer
+            ->getAtomIdsInCurrentProcess();
+        unsigned int       startIndex = 0;
+        const unsigned int inc        = 1;
+        for (int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
+          {
+            const unsigned int atomId = atomIdsInProc[iAtom];
+            const unsigned int Znum   = atomicNumber[atomId];
+            const unsigned int numberSphericalFunctions =
+              d_atomCenteredSphericalFunctionContainer
+                ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+
+
+            for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
+                 alpha++)
+              {
+                const unsigned int localId =
+                  sphericalFunctionKetTimesVectorParFlattened
+                    .getMPIPatternP2P()
+                    ->globalToLocal(
+                      d_sphericalFunctionIdsNumberingMapCurrentProcess
+                        .find(std::make_pair(atomId, alpha))
+                        ->second);
+                std::transform(
+                  sphericalFunctionKetTimesVectorParFlattened.begin() +
+                    localId * d_numberWaveFunctions,
+                  sphericalFunctionKetTimesVectorParFlattened.begin() +
+                    localId * d_numberWaveFunctions + d_numberWaveFunctions,
+                  scalingVector.begin(),
+                  d_sphericalFnTimesWavefunMatrix[atomId].begin() +
+                    d_numberWaveFunctions * alpha,
+                  [&](auto &a, auto &b) { return sqrt(b) * a; });
+              }
+          }
+      }
+    else
+      {}
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  const ValueType *
+  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
+    getCconjtansXLocalDataStructure(unsigned int atomId)
+  {
+    if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+      {
+        return d_sphericalFnTimesWavefunMatrix[atomId].begin();
+      }
+    else
+      {}
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::applyVOnCconjtransX(
     const CouplingStructure                                    couplingtype,
     const dftfe::utils::MemoryStorage<ValueType, memorySpace> &couplingMatrix,
