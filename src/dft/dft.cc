@@ -2262,7 +2262,7 @@ namespace dftfe
       {
         computingTimerStandard.enter_subsection("Init Zero Potential PAW");
         initZeroPotential();
-        // Add the line to compute VzeroTimesJxw
+        kohnShamDFTEigenOperator.computeVEffExternalPotCorr(d_zeroPotential);
         computingTimerStandard.leave_subsection("Init Zero Potential PAW");
       }
 
