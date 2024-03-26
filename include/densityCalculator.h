@@ -21,7 +21,8 @@
 #include <headers.h>
 #include "dftParameters.h"
 #include "FEBasisOperations.h"
-
+#include "AtomicCenteredNonLocalOperator.h"
+#include "pawClass.h"
 namespace dftfe
 {
   template <typename NumberType, dftfe::utils::MemorySpace memorySpace>
@@ -54,7 +55,9 @@ namespace dftfe
     const MPI_Comm &     interpoolcomm,
     const MPI_Comm &     interBandGroupComm,
     const dftParameters &dftParams,
-    const bool           spectrumSplit);
+    const bool           spectrumSplit,
+    const std::shared_ptr<dftfe::pawClass<NumberType, memorySpace>>
+      pawClassPtr = NULL);
 
   template <typename NumberType>
   void

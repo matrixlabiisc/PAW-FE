@@ -96,8 +96,7 @@ namespace dftfe
           d_gradDensityOutQuadValues[iComp].resize(3 * nQuadsPerCell * nCells);
 
 
-#ifdef DFTFE_WITH_DEVICE
-        if (d_dftParamsPtr->useDevice)
+        if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
           computeRhoFromPSI(&d_eigenVectorsFlattenedDevice,
                             &d_eigenVectorsRotFracFlattenedDevice,
                             d_numEigenValues,
@@ -120,9 +119,10 @@ namespace dftfe
                             interBandGroupComm,
                             *d_dftParamsPtr,
                             isConsiderSpectrumSplitting &&
-                              d_numEigenValues != d_numEigenValuesRR);
-#endif
-        if (!d_dftParamsPtr->useDevice)
+                              d_numEigenValues != d_numEigenValuesRR,
+                            d_dftParamsPtr->pawPseudoPotential ? d_pawClassPtr :
+                                                                 NULL);
+        else
           computeRhoFromPSI(&d_eigenVectorsFlattenedHost,
                             &d_eigenVectorsRotFracDensityFlattenedHost,
                             d_numEigenValues,
@@ -145,7 +145,9 @@ namespace dftfe
                             interBandGroupComm,
                             *d_dftParamsPtr,
                             isConsiderSpectrumSplitting &&
-                              d_numEigenValues != d_numEigenValuesRR);
+                              d_numEigenValues != d_numEigenValuesRR,
+                            d_dftParamsPtr->pawPseudoPotential ? d_pawClassPtr :
+                                                                 NULL);
         // normalizeRhoOutQuadValues();
 
         if (d_dftParamsPtr->computeEnergyEverySCF || isGroundState)
@@ -333,8 +335,8 @@ namespace dftfe
 
     // compute rho from wavefunctions at nodal locations of 2p DoFHandler
     // nodes in each cell
-#ifdef DFTFE_WITH_DEVICE
-    if (d_dftParamsPtr->useDevice)
+
+    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
       computeRhoFromPSI(&d_eigenVectorsFlattenedDevice,
                         &d_eigenVectorsRotFracFlattenedDevice,
                         d_numEigenValues,
@@ -356,9 +358,11 @@ namespace dftfe
                         interBandGroupComm,
                         *d_dftParamsPtr,
                         isConsiderSpectrumSplitting &&
-                          d_numEigenValues != d_numEigenValuesRR);
-#endif
-    if (!d_dftParamsPtr->useDevice)
+                          d_numEigenValues != d_numEigenValuesRR,
+                        d_dftParamsPtr->pawPseudoPotential ? d_pawClassPtr :
+                                                             NULL);
+
+    else
       computeRhoFromPSI(&d_eigenVectorsFlattenedHost,
                         &d_eigenVectorsRotFracDensityFlattenedHost,
                         d_numEigenValues,
@@ -380,7 +384,9 @@ namespace dftfe
                         interBandGroupComm,
                         *d_dftParamsPtr,
                         isConsiderSpectrumSplitting &&
-                          d_numEigenValues != d_numEigenValuesRR);
+                          d_numEigenValues != d_numEigenValuesRR,
+                        d_dftParamsPtr->pawPseudoPotential ? d_pawClassPtr :
+                                                             NULL);
 
     // copy Lobatto quadrature data to fill in 2p DoFHandler nodal data
     dealii::DoFHandler<3>::active_cell_iterator cellP = d_dofHandlerRhoNodal

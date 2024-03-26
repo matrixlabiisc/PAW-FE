@@ -565,5 +565,17 @@ namespace dftfe
     return d_couplingMatrixEntries[couplingtype];
   }
 
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::computeDij(
+    const bool         isDijOut,
+    const unsigned int startVectorIndex,
+    const unsigned int vectorBlockSize,
+    const double *     partialOccupancy,
+    const unsigned int spinIndex,
+    const unsigned int kpointIndex)
+  {
+    
+  }
 
 } // namespace dftfe

@@ -180,61 +180,14 @@ namespace dftfe
 
     void
     computeCompensationCharge();
-    // Utils Functions
-    double
-    gaunt(int l_i, int l_j, int l, int m_i, int m_j, int m);
-
-    double
-    simpsonIntegral(
-      unsigned int                                 startIndex,
-      unsigned int                                 EndIndex,
-      std::function<double(const unsigned int &)> &IntegrandValue);
-
-    // COmputes \int{f1(r)*f2(r)*f3(r)*r^2dr*J_r}
-    double
-    threeTermIntegrationOverAugmentationSphere(double *             f1,
-                                               double *             f2,
-                                               double *             f3,
-                                               std::vector<double> &radial,
-                                               std::vector<double> &rab,
-                                               const unsigned int   rminIndex,
-                                               const unsigned int   rmaxIndex);
-    // Computes the potential due to charge fun
-    void
-    oneTermPoissonPotential(const double *             fun,
-                            const unsigned int         l,
-                            const unsigned int         rminIndex,
-                            const unsigned int         rmaxIndex,
-                            const int                  powerofR,
-                            const std::vector<double> &radial,
-                            const std::vector<double> &rab,
-                            std::vector<double> &      Potential);
 
     void
-    twoTermPoissonPotential(const double *             fun1,
-                            const double *             fun2,
-                            const unsigned int         l,
-                            const unsigned int         rminIndex,
-                            const unsigned int         rmaxIndex,
-                            const int                  powerofR,
-                            const std::vector<double> &radial,
-                            const std::vector<double> &rab,
-                            std::vector<double> &      Potential);
-
-    double
-    integralOfProjectorsInAugmentationSphere(const double *       f1,
-                                             const double *       f2,
-                                             std::vector<double> &radial,
-                                             std::vector<double> &rab,
-                                             const unsigned int   rminIndex,
-                                             const unsigned int   rmaxIndex);
-
-    double
-    integralOfDensity(const double *       f1,
-                      std::vector<double> &radial,
-                      std::vector<double> &rab,
-                      const unsigned int   rminIndex,
-                      const unsigned int   rmaxIndex);
+    computeDij(const bool         isDijOut,
+               const unsigned int startVectorIndex,
+               const unsigned int vectorBlockSize,
+               const double *     partialOccupancy,
+               const unsigned int spinIndex,
+               const unsigned int kpointIndex);
 
     /**
      * @brief Initialises local potential
@@ -371,6 +324,61 @@ namespace dftfe
         }
       return (n == 1. || n == 0.) ? 1. : factorial(n - 1) * n;
     }
+    // Utils Functions
+    double
+    gaunt(int l_i, int l_j, int l, int m_i, int m_j, int m);
+
+    double
+    simpsonIntegral(
+      unsigned int                                 startIndex,
+      unsigned int                                 EndIndex,
+      std::function<double(const unsigned int &)> &IntegrandValue);
+
+    // COmputes \int{f1(r)*f2(r)*f3(r)*r^2dr*J_r}
+    double
+    threeTermIntegrationOverAugmentationSphere(double *             f1,
+                                               double *             f2,
+                                               double *             f3,
+                                               std::vector<double> &radial,
+                                               std::vector<double> &rab,
+                                               const unsigned int   rminIndex,
+                                               const unsigned int   rmaxIndex);
+    // Computes the potential due to charge fun
+    void
+    oneTermPoissonPotential(const double *             fun,
+                            const unsigned int         l,
+                            const unsigned int         rminIndex,
+                            const unsigned int         rmaxIndex,
+                            const int                  powerofR,
+                            const std::vector<double> &radial,
+                            const std::vector<double> &rab,
+                            std::vector<double> &      Potential);
+
+    void
+    twoTermPoissonPotential(const double *             fun1,
+                            const double *             fun2,
+                            const unsigned int         l,
+                            const unsigned int         rminIndex,
+                            const unsigned int         rmaxIndex,
+                            const int                  powerofR,
+                            const std::vector<double> &radial,
+                            const std::vector<double> &rab,
+                            std::vector<double> &      Potential);
+
+    double
+    integralOfProjectorsInAugmentationSphere(const double *       f1,
+                                             const double *       f2,
+                                             std::vector<double> &radial,
+                                             std::vector<double> &rab,
+                                             const unsigned int   rminIndex,
+                                             const unsigned int   rmaxIndex);
+
+    double
+    integralOfDensity(const double *       f1,
+                      std::vector<double> &radial,
+                      std::vector<double> &rab,
+                      const unsigned int   rminIndex,
+                      const unsigned int   rmaxIndex);
 
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>

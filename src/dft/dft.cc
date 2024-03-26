@@ -2262,10 +2262,8 @@ namespace dftfe
       {
         computingTimerStandard.enter_subsection("Init Zero Potential PAW");
         initZeroPotential();
-        //Add the line to compute VzeroTimesJxw
+        // Add the line to compute VzeroTimesJxw
         computingTimerStandard.leave_subsection("Init Zero Potential PAW");
-        
-
       }
 
     computingTimerStandard.enter_subsection("Total scf solve");

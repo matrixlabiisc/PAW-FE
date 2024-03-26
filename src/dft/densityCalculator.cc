@@ -64,7 +64,8 @@ namespace dftfe
     const MPI_Comm &     interpoolcomm,
     const MPI_Comm &     interBandGroupComm,
     const dftParameters &dftParams,
-    const bool           spectrumSplit)
+    const bool           spectrumSplit,
+    const std::shared_ptr<dftfe::pawClass<NumberType, memorySpace>> pawClassPtr)
   {
     int this_process;
     MPI_Comm_rank(mpiCommParent, &this_process);
@@ -90,6 +91,8 @@ namespace dftfe
 
     const unsigned int BVec =
       std::min(dftParams.chebyWfcBlockSize, bandGroupLowHighPlusOneIndices[1]);
+
+    dftfe::utils::MemoryStorage<NumberType, memorySpace> tempCellNodalData;
 
     const double spinPolarizedFactor =
       (dftParams.spinPolarized == 1) ? 1.0 : 2.0;
@@ -159,201 +162,97 @@ namespace dftfe
     dftfe::linearAlgebra::MultiVector<NumberType, memorySpace>
       *flattenedArrayBlock;
 
+    dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
+                 projectorKetTimesVector;
+    unsigned int previousSize = 0;
     for (unsigned int kPoint = 0; kPoint < kPointWeights.size(); ++kPoint)
-      for (unsigned int spinIndex = 0; spinIndex < numSpinComponents;
-           ++spinIndex)
-        {
-          wfcQuadPointData.setValue(zero);
-          gradWfcQuadPointData.setValue(zero);
-          rhoWfcContributions.setValue(0.0);
-          gradRhoWfcContributions.setValue(0.0);
-          for (unsigned int jvec = 0; jvec < totalNumWaveFunctions;
-               jvec += BVec)
-            {
-              const unsigned int currentBlockSize =
-                std::min(BVec, totalNumWaveFunctions - jvec);
-              flattenedArrayBlock =
-                &(basisOperationsPtr->getMultiVector(currentBlockSize, 0));
-
-              if ((jvec + currentBlockSize) <=
-                    bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId + 1] &&
-                  (jvec + currentBlockSize) >
-                    bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
-                {
-                  if (spectrumSplit)
-                    {
-                      partialOccupVecHost.setValue(kPointWeights[kPoint] *
-                                                   spinPolarizedFactor);
-                    }
-                  else
-                    {
-                      if (dftParams.constraintMagnetization)
-                        {
-                          const double fermiEnergyConstraintMag =
-                            spinIndex == 0 ? fermiEnergyUp : fermiEnergyDown;
-                          for (unsigned int iEigenVec = 0;
-                               iEigenVec < currentBlockSize;
-                               ++iEigenVec)
-                            {
-                              if (eigenValues[kPoint][totalNumWaveFunctions *
-                                                        spinIndex +
-                                                      jvec + iEigenVec] >
-                                  fermiEnergyConstraintMag)
-                                *(partialOccupVecHost.begin() + iEigenVec) = 0;
-                              else
-                                *(partialOccupVecHost.begin() + iEigenVec) =
-                                  kPointWeights[kPoint] * spinPolarizedFactor;
-                            }
-                        }
-                      else
-                        {
-                          for (unsigned int iEigenVec = 0;
-                               iEigenVec < currentBlockSize;
-                               ++iEigenVec)
-                            {
-                              *(partialOccupVecHost.begin() + iEigenVec) =
-                                dftUtils::getPartialOccupancy(
-                                  eigenValues[kPoint][totalNumWaveFunctions *
-                                                        spinIndex +
-                                                      jvec + iEigenVec],
-                                  fermiEnergy,
-                                  C_kb,
-                                  dftParams.TVal) *
-                                kPointWeights[kPoint] * spinPolarizedFactor;
-                            }
-                        }
-                    }
-#if defined(DFTFE_WITH_DEVICE)
-                  partialOccupVec.copyFrom(partialOccupVecHost);
-#endif
-                  if (memorySpace == dftfe::utils::MemorySpace::HOST)
-                    for (unsigned int iNode = 0; iNode < numLocalDofs; ++iNode)
-                      std::memcpy(flattenedArrayBlock->data() +
-                                    iNode * currentBlockSize,
-                                  X->data() +
-                                    numLocalDofs * totalNumWaveFunctions *
-                                      (numSpinComponents * kPoint + spinIndex) +
-                                    iNode * totalNumWaveFunctions + jvec,
-                                  currentBlockSize * sizeof(NumberType));
-#if defined(DFTFE_WITH_DEVICE)
-                  else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
-                    dftfe::utils::deviceKernelsGeneric::
-                      stridedCopyToBlockConstantStride(
-                        currentBlockSize,
-                        totalNumWaveFunctions,
-                        numLocalDofs,
-                        jvec,
-                        X->data() + numLocalDofs * totalNumWaveFunctions *
-                                      (numSpinComponents * kPoint + spinIndex),
-                        flattenedArrayBlock->data());
-#endif
-
-
-                  basisOperationsPtr->reinit(currentBlockSize,
-                                             cellsBlockSize,
-                                             quadratureIndex,
-                                             false);
-
-
-                  flattenedArrayBlock->updateGhostValues();
-                  basisOperationsPtr->distribute(*(flattenedArrayBlock));
-
-                  for (int iblock = 0; iblock < (numCellBlocks + 1); iblock++)
-                    {
-                      const unsigned int currentCellsBlockSize =
-                        (iblock == numCellBlocks) ? remCellBlockSize :
-                                                    cellsBlockSize;
-                      if (currentCellsBlockSize > 0)
-                        {
-                          const unsigned int startingCellId =
-                            iblock * cellsBlockSize;
-
-                          basisOperationsPtr->interpolateKernel(
-                            *(flattenedArrayBlock),
-                            wfcQuadPointData.data(),
-                            isEvaluateGradRho ? gradWfcQuadPointData.data() :
-                                                NULL,
-                            std::pair<unsigned int, unsigned int>(
-                              startingCellId,
-                              startingCellId + currentCellsBlockSize));
-
-                          computeRhoGradRhoFromInterpolatedValues(
-                            basisOperationsPtr,
-                            BLASWrapperPtr,
-                            std::pair<unsigned int, unsigned int>(
-                              startingCellId,
-                              startingCellId + currentCellsBlockSize),
-                            std::pair<unsigned int, unsigned int>(
-                              jvec, jvec + currentBlockSize),
-                            partialOccupVec.data(),
-                            wfcQuadPointData.data(),
-                            gradWfcQuadPointData.data(),
-                            rhoWfcContributions.data(),
-                            gradRhoWfcContributions.data(),
-                            rho.data() + spinIndex * totalLocallyOwnedCells *
-                                           numQuadPoints,
-                            gradRho.data() + spinIndex *
-                                               totalLocallyOwnedCells *
-                                               numQuadPoints * 3,
-                            isEvaluateGradRho);
-                        } // non-trivial cell block check
-                    }     // cells block loop
-                }
-            }
-
-          if (spectrumSplit)
-            for (unsigned int jvec = 0; jvec < Nfr; jvec += BVec)
+      {
+        for (unsigned int spinIndex = 0; spinIndex < numSpinComponents;
+             ++spinIndex)
+          {
+            wfcQuadPointData.setValue(zero);
+            gradWfcQuadPointData.setValue(zero);
+            rhoWfcContributions.setValue(0.0);
+            gradRhoWfcContributions.setValue(0.0);
+            if (dftParams.pawPseudoPotential)
+              {
+                pawClassPtr->getNonLocalOperator()->initialiseOperatorActionOnX(
+                  kPoint);
+              }
+            for (unsigned int jvec = 0; jvec < totalNumWaveFunctions;
+                 jvec += BVec)
               {
                 const unsigned int currentBlockSize =
-                  std::min(BVec, Nfr - jvec);
+                  std::min(BVec, totalNumWaveFunctions - jvec);
                 flattenedArrayBlock =
                   &(basisOperationsPtr->getMultiVector(currentBlockSize, 0));
-                if ((jvec + totalNumWaveFunctions - Nfr + currentBlockSize) <=
+                if (dftParams.pawPseudoPotential)
+                  {
+                    if constexpr (dftfe::utils::MemorySpace::DEVICE ==
+                                  memorySpace)
+                      {
+                        pawClassPtr->getNonLocalOperator()
+                          ->initialiseFlattenedDataStructure(
+                            currentBlockSize, projectorKetTimesVector);
+                        //  pawClassPtr->getNonLocalOperator()->initialiseCellWaveFunctionPointers(
+                        //   d_cellWaveFunctionMatrixSrc);
+                      }
+                    else
+                      pawClassPtr->getNonLocalOperator()
+                        ->initialiseFlattenedDataStructure(
+                          currentBlockSize, projectorKetTimesVector);
+                  }
+
+                if ((jvec + currentBlockSize) <=
                       bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId + 1] &&
-                    (jvec + totalNumWaveFunctions - Nfr + currentBlockSize) >
+                    (jvec + currentBlockSize) >
                       bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
                   {
-                    if (dftParams.constraintMagnetization)
+                    if (spectrumSplit)
                       {
-                        const double fermiEnergyConstraintMag =
-                          spinIndex == 0 ? fermiEnergyUp : fermiEnergyDown;
-                        for (unsigned int iEigenVec = 0;
-                             iEigenVec < currentBlockSize;
-                             ++iEigenVec)
-                          {
-                            if (eigenValues[kPoint]
-                                           [totalNumWaveFunctions * spinIndex +
-                                            (totalNumWaveFunctions - Nfr) +
-                                            jvec + iEigenVec] >
-                                fermiEnergyConstraintMag)
-                              *(partialOccupVecHost.begin() + iEigenVec) =
-                                -kPointWeights[kPoint] * spinPolarizedFactor;
-                            else
-                              *(partialOccupVecHost.begin() + iEigenVec) = 0;
-                          }
+                        partialOccupVecHost.setValue(kPointWeights[kPoint] *
+                                                     spinPolarizedFactor);
                       }
                     else
                       {
-                        for (unsigned int iEigenVec = 0;
-                             iEigenVec < currentBlockSize;
-                             ++iEigenVec)
+                        if (dftParams.constraintMagnetization)
                           {
-                            *(partialOccupVecHost.begin() + iEigenVec) =
-                              (dftUtils::getPartialOccupancy(
-                                 eigenValues[kPoint]
-                                            [totalNumWaveFunctions * spinIndex +
-                                             (totalNumWaveFunctions - Nfr) +
-                                             jvec + iEigenVec],
-                                 fermiEnergy,
-                                 C_kb,
-                                 dftParams.TVal) -
-                               1.0) *
-                              kPointWeights[kPoint] * spinPolarizedFactor;
+                            const double fermiEnergyConstraintMag =
+                              spinIndex == 0 ? fermiEnergyUp : fermiEnergyDown;
+                            for (unsigned int iEigenVec = 0;
+                                 iEigenVec < currentBlockSize;
+                                 ++iEigenVec)
+                              {
+                                if (eigenValues[kPoint][totalNumWaveFunctions *
+                                                          spinIndex +
+                                                        jvec + iEigenVec] >
+                                    fermiEnergyConstraintMag)
+                                  *(partialOccupVecHost.begin() + iEigenVec) =
+                                    0;
+                                else
+                                  *(partialOccupVecHost.begin() + iEigenVec) =
+                                    kPointWeights[kPoint] * spinPolarizedFactor;
+                              }
+                          }
+                        else
+                          {
+                            for (unsigned int iEigenVec = 0;
+                                 iEigenVec < currentBlockSize;
+                                 ++iEigenVec)
+                              {
+                                *(partialOccupVecHost.begin() + iEigenVec) =
+                                  dftUtils::getPartialOccupancy(
+                                    eigenValues[kPoint][totalNumWaveFunctions *
+                                                          spinIndex +
+                                                        jvec + iEigenVec],
+                                    fermiEnergy,
+                                    C_kb,
+                                    dftParams.TVal) *
+                                  kPointWeights[kPoint] * spinPolarizedFactor;
+                              }
                           }
                       }
-
 #if defined(DFTFE_WITH_DEVICE)
-                    partialOccupVec.resize(partialOccupVecHost.size());
                     partialOccupVec.copyFrom(partialOccupVecHost);
 #endif
                     if (memorySpace == dftfe::utils::MemorySpace::HOST)
@@ -361,25 +260,27 @@ namespace dftfe
                            ++iNode)
                         std::memcpy(flattenedArrayBlock->data() +
                                       iNode * currentBlockSize,
-                                    XFrac->data() +
-                                      numLocalDofs * Nfr *
+                                    X->data() +
+                                      numLocalDofs * totalNumWaveFunctions *
                                         (numSpinComponents * kPoint +
                                          spinIndex) +
-                                      iNode * Nfr + jvec,
+                                      iNode * totalNumWaveFunctions + jvec,
                                     currentBlockSize * sizeof(NumberType));
 #if defined(DFTFE_WITH_DEVICE)
                     else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
                       dftfe::utils::deviceKernelsGeneric::
                         stridedCopyToBlockConstantStride(
                           currentBlockSize,
-                          Nfr,
+                          totalNumWaveFunctions,
                           numLocalDofs,
                           jvec,
-                          XFrac->data() +
-                            numLocalDofs * Nfr *
+                          X->data() +
+                            numLocalDofs * totalNumWaveFunctions *
                               (numSpinComponents * kPoint + spinIndex),
                           flattenedArrayBlock->data());
 #endif
+
+
                     basisOperationsPtr->reinit(currentBlockSize,
                                                cellsBlockSize,
                                                quadratureIndex,
@@ -398,15 +299,49 @@ namespace dftfe
                           {
                             const unsigned int startingCellId =
                               iblock * cellsBlockSize;
-                            basisOperationsPtr->interpolateKernel(
+
+                            // basisOperationsPtr->interpolateKernel(
+                            //   *(flattenedArrayBlock),
+                            //   wfcQuadPointData.data(),
+                            //   isEvaluateGradRho ? gradWfcQuadPointData.data()
+                            //   :
+                            //                       NULL,
+                            //   std::pair<unsigned int, unsigned int>(
+                            //     startingCellId,
+                            //     startingCellId + currentCellsBlockSize));
+                            if (currentCellsBlockSize * currentBlockSize !=
+                                previousSize)
+                              {
+                                tempCellNodalData.resize(currentCellsBlockSize *
+                                                         currentBlockSize *
+                                                         numLocalDofs);
+                                previousSize =
+                                  currentCellsBlockSize * currentBlockSize;
+                              }
+                            basisOperationsPtr->extractToCellNodalDataKernel(
                               *(flattenedArrayBlock),
+                              tempCellNodalData.data(),
+                              std::pair<unsigned int, unsigned int>(
+                                startingCellId,
+                                startingCellId + currentCellsBlockSize));
+                            if (dftParams.pawPseudoPotential)
+                              {
+                                pawClassPtr->getNonLocalOperator()
+                                  ->applyCconjtransOnX(
+                                    tempCellNodalData.data(),
+                                    std::pair<unsigned int, unsigned int>(
+                                      startingCellId,
+                                      startingCellId + currentCellsBlockSize));
+                                // Call apply CconjTranspose
+                              }
+                            basisOperationsPtr->interpolateKernel(
+                              tempCellNodalData.data(),
                               wfcQuadPointData.data(),
                               isEvaluateGradRho ? gradWfcQuadPointData.data() :
                                                   NULL,
                               std::pair<unsigned int, unsigned int>(
                                 startingCellId,
                                 startingCellId + currentCellsBlockSize));
-
                             computeRhoGradRhoFromInterpolatedValues(
                               basisOperationsPtr,
                               BLASWrapperPtr,
@@ -426,11 +361,158 @@ namespace dftfe
                                                  totalLocallyOwnedCells *
                                                  numQuadPoints * 3,
                               isEvaluateGradRho);
-                          } // non-tivial cells block
+                          } // non-trivial cell block check
                       }     // cells block loop
+                    if (dftParams.pawPseudoPotential)
+                      {
+                        pawClassPtr->computeDij(true,
+                                                jvec,
+                                                currentBlockSize,
+                                                partialOccupVec.data(),
+                                                spinIndex,
+                                                kPoint);
+                        // Call computeDij
+                      }
                   }
-              } // spectrum split block
-        }
+              }
+
+            if (spectrumSplit)
+              for (unsigned int jvec = 0; jvec < Nfr; jvec += BVec)
+                {
+                  const unsigned int currentBlockSize =
+                    std::min(BVec, Nfr - jvec);
+                  flattenedArrayBlock =
+                    &(basisOperationsPtr->getMultiVector(currentBlockSize, 0));
+                  if ((jvec + totalNumWaveFunctions - Nfr + currentBlockSize) <=
+                        bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId +
+                                                       1] &&
+                      (jvec + totalNumWaveFunctions - Nfr + currentBlockSize) >
+                        bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
+                    {
+                      if (dftParams.constraintMagnetization)
+                        {
+                          const double fermiEnergyConstraintMag =
+                            spinIndex == 0 ? fermiEnergyUp : fermiEnergyDown;
+                          for (unsigned int iEigenVec = 0;
+                               iEigenVec < currentBlockSize;
+                               ++iEigenVec)
+                            {
+                              if (eigenValues[kPoint]
+                                             [totalNumWaveFunctions *
+                                                spinIndex +
+                                              (totalNumWaveFunctions - Nfr) +
+                                              jvec + iEigenVec] >
+                                  fermiEnergyConstraintMag)
+                                *(partialOccupVecHost.begin() + iEigenVec) =
+                                  -kPointWeights[kPoint] * spinPolarizedFactor;
+                              else
+                                *(partialOccupVecHost.begin() + iEigenVec) = 0;
+                            }
+                        }
+                      else
+                        {
+                          for (unsigned int iEigenVec = 0;
+                               iEigenVec < currentBlockSize;
+                               ++iEigenVec)
+                            {
+                              *(partialOccupVecHost.begin() + iEigenVec) =
+                                (dftUtils::getPartialOccupancy(
+                                   eigenValues[kPoint]
+                                              [totalNumWaveFunctions *
+                                                 spinIndex +
+                                               (totalNumWaveFunctions - Nfr) +
+                                               jvec + iEigenVec],
+                                   fermiEnergy,
+                                   C_kb,
+                                   dftParams.TVal) -
+                                 1.0) *
+                                kPointWeights[kPoint] * spinPolarizedFactor;
+                            }
+                        }
+
+#if defined(DFTFE_WITH_DEVICE)
+                      partialOccupVec.resize(partialOccupVecHost.size());
+                      partialOccupVec.copyFrom(partialOccupVecHost);
+#endif
+                      if (memorySpace == dftfe::utils::MemorySpace::HOST)
+                        for (unsigned int iNode = 0; iNode < numLocalDofs;
+                             ++iNode)
+                          std::memcpy(flattenedArrayBlock->data() +
+                                        iNode * currentBlockSize,
+                                      XFrac->data() +
+                                        numLocalDofs * Nfr *
+                                          (numSpinComponents * kPoint +
+                                           spinIndex) +
+                                        iNode * Nfr + jvec,
+                                      currentBlockSize * sizeof(NumberType));
+#if defined(DFTFE_WITH_DEVICE)
+                      else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
+                        dftfe::utils::deviceKernelsGeneric::
+                          stridedCopyToBlockConstantStride(
+                            currentBlockSize,
+                            Nfr,
+                            numLocalDofs,
+                            jvec,
+                            XFrac->data() +
+                              numLocalDofs * Nfr *
+                                (numSpinComponents * kPoint + spinIndex),
+                            flattenedArrayBlock->data());
+#endif
+                      basisOperationsPtr->reinit(currentBlockSize,
+                                                 cellsBlockSize,
+                                                 quadratureIndex,
+                                                 false);
+
+
+                      flattenedArrayBlock->updateGhostValues();
+                      basisOperationsPtr->distribute(*(flattenedArrayBlock));
+
+                      for (int iblock = 0; iblock < (numCellBlocks + 1);
+                           iblock++)
+                        {
+                          const unsigned int currentCellsBlockSize =
+                            (iblock == numCellBlocks) ? remCellBlockSize :
+                                                        cellsBlockSize;
+                          if (currentCellsBlockSize > 0)
+                            {
+                              const unsigned int startingCellId =
+                                iblock * cellsBlockSize;
+                              basisOperationsPtr->interpolateKernel(
+                                *(flattenedArrayBlock),
+                                wfcQuadPointData.data(),
+                                isEvaluateGradRho ?
+                                  gradWfcQuadPointData.data() :
+                                  NULL,
+                                std::pair<unsigned int, unsigned int>(
+                                  startingCellId,
+                                  startingCellId + currentCellsBlockSize));
+
+                              computeRhoGradRhoFromInterpolatedValues(
+                                basisOperationsPtr,
+                                BLASWrapperPtr,
+                                std::pair<unsigned int, unsigned int>(
+                                  startingCellId,
+                                  startingCellId + currentCellsBlockSize),
+                                std::pair<unsigned int, unsigned int>(
+                                  jvec, jvec + currentBlockSize),
+                                partialOccupVec.data(),
+                                wfcQuadPointData.data(),
+                                gradWfcQuadPointData.data(),
+                                rhoWfcContributions.data(),
+                                gradRhoWfcContributions.data(),
+                                rho.data() + spinIndex *
+                                               totalLocallyOwnedCells *
+                                               numQuadPoints,
+                                gradRho.data() + spinIndex *
+                                                   totalLocallyOwnedCells *
+                                                   numQuadPoints * 3,
+                                isEvaluateGradRho);
+                            } // non-tivial cells block
+                        }     // cells block loop
+                    }
+                } // spectrum split block
+          }
+      }
 #if defined(DFTFE_WITH_DEVICE)
     rhoHost.resize(rho.size());
 
@@ -644,7 +726,10 @@ namespace dftfe
     const MPI_Comm &     interpoolcomm,
     const MPI_Comm &     interBandGroupComm,
     const dftParameters &dftParams,
-    const bool           spectrumSplit);
+    const bool           spectrumSplit,
+    const std::shared_ptr<
+      dftfe::pawClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>>
+      pawClassPtr);
 #endif
 
   template void
@@ -681,5 +766,8 @@ namespace dftfe
     const MPI_Comm &     interpoolcomm,
     const MPI_Comm &     interBandGroupComm,
     const dftParameters &dftParams,
-    const bool           spectrumSplit);
+    const bool           spectrumSplit,
+    const std::shared_ptr<
+      dftfe::pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>>
+      pawClassPtr);
 } // namespace dftfe

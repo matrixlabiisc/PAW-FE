@@ -18,7 +18,12 @@
 //
 #ifndef DFTFE_SPHERICALHARMONICUTILS_H
 #define DFTFE_SPHERICALHARMONICUTILS_H
-
+#include <headers.h>
+#include <mpi.h>
+#include <boost/math/distributions/normal.hpp>
+#include <boost/math/special_functions/spherical_harmonic.hpp>
+#include <boost/random/normal_distribution.hpp>
+#include <interpolation.h>
 namespace dftfe
 {
   namespace sphericalHarmonicUtils

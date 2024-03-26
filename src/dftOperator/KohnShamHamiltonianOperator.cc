@@ -727,11 +727,11 @@ namespace dftfe
         !onlyHPrimePartForFirstOrderDensityMatResponse)
       if (!d_isExternalPotCorrHamiltonianComputed)
         computeCellHamiltonianMatrixExtPotContribution();
-    const unsigned int nCells        = d_basisOperationsPtr->nCells();
-    const unsigned int nQuadsPerCell = d_basisOperationsPtr->nQuadsPerCell();
-    const unsigned int nDofsPerCell  = d_basisOperationsPtr->nDofsPerCell();
-    const double scalarCoeffAlpha = 1.0;
-    const double scalarCoeffHalf  = 0.5;
+    const unsigned int nCells           = d_basisOperationsPtr->nCells();
+    const unsigned int nQuadsPerCell    = d_basisOperationsPtr->nQuadsPerCell();
+    const unsigned int nDofsPerCell     = d_basisOperationsPtr->nDofsPerCell();
+    const double       scalarCoeffAlpha = 1.0;
+    const double       scalarCoeffHalf  = 0.5;
     d_basisOperationsPtr->reinit(0,
                                  d_cellsBlockSizeHamiltonianConstruction,
                                  d_densityQuadratureID,

@@ -1340,8 +1340,9 @@ namespace dftfe
   pawClass<ValueType,
            memorySpace>::initialiseExchangeCorrelationEnergyCorrection()
   {
-    // std::map<unsigned int, std::vector<std::vector<int>> projectorDetailsOfAtomFull;
-    // for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+    // std::map<unsigned int, std::vector<std::vector<int>>
+    // projectorDetailsOfAtomFull; for (std::set<unsigned int>::iterator it =
+    // d_atomTypes.begin();
     //      it != d_atomTypes.end();
     //      ++it)
     //   {
@@ -1369,7 +1370,8 @@ namespace dftfe
     //         const int lQuantumNo    = sphFn->getQuantumNumberl();
     //         mapOfRadProjLval[iProj] = lQuantumNo;
     //         std::vector<int> temp(3, 0);
-    //         for (int mQuantumNumber = -lQuantumNo; mQuantumNumber <= lQuantumNo;
+    //         for (int mQuantumNumber = -lQuantumNo; mQuantumNumber <=
+    //         lQuantumNo;
     //              mQuantumNumber++)
     //           {
     //             temp[0] = iProj;
@@ -1380,11 +1382,11 @@ namespace dftfe
     //       }
 
     //     pcout << "DEBUG check number of entries are matching? "
-    //           << numberOfProjectors << " " << temp_projectorDetailsOfAtom.size()
+    //           << numberOfProjectors << " " <<
+    //           temp_projectorDetailsOfAtom.size()
     //           << std::endl;
-    //     projectorDetailsOfAtomFull[*it] = temp_projectorDetailsOfAtom;      
+    //     projectorDetailsOfAtomFull[*it] = temp_projectorDetailsOfAtom;
     //   } //*it
-      
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
