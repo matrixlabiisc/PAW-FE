@@ -170,6 +170,16 @@ namespace dftfe
       const unsigned int cutOffType = 0);
 
 
+    void
+    computeFEEvaluationMaps(
+      std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+        &                basisOperationsPtr,
+      const unsigned int quadratureIndex,
+      const unsigned int dofHandlerId);
+
+
     std::vector<std::vector<unsigned int>> d_elementIndexesInAtomCompactSupport;
     void
     setImageCoordinates(const std::vector<int> &                imageIds,
@@ -195,6 +205,8 @@ namespace dftfe
         &                              elementIndexesInAtomCompactSupport,
       const std::vector<unsigned int> &atomIdsInCurrentProcess,
       unsigned int                     numberElements);
+
+    std::set<unsigned int> d_feEvaluationMap;
 
   private:
     // A flattened vector that stores the coordinates of the atoms of interest
@@ -228,6 +240,7 @@ namespace dftfe
     // atom and its images in the unitcell domain.
     std::map<unsigned int, std::vector<int>> d_sparsityPattern;
     //
+
     std::vector<std::vector<dealii::CellId>> d_elementIdsInAtomCompactSupport;
     // std::vector<std::vector<unsigned int>>
     // d_elementIndexesInAtomCompactSupport;

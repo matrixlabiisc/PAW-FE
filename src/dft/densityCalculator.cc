@@ -515,6 +515,7 @@ namespace dftfe
                 } // spectrum split block
           }
       }
+
 #if defined(DFTFE_WITH_DEVICE)
     rhoHost.resize(rho.size());
 

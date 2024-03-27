@@ -284,9 +284,9 @@ namespace dftfe
                                         numberQuadraturePoints * numProjSq,
                                       0.0);
 
-        std::vector<double> gLValues(numberElementsInAtomCompactSupport *
-                                     numberQuadraturePoints *
-                                     NumTotalSphericalFunctions);
+        // std::vector<double> gLValues(numberElementsInAtomCompactSupport *
+        //                              numberQuadraturePoints *
+        //                              NumTotalSphericalFunctions);
 
 
         for (int iElemComp = 0; iElemComp < numberElementsInAtomCompactSupport;
@@ -294,7 +294,10 @@ namespace dftfe
           {
             const unsigned int elementIndex =
               elementIndexesInAtomCompactSupport[iElemComp];
-            unsigned int Lindex = 0;
+            unsigned int        Lindex = 0;
+            std::vector<double> gLValuesQuadPoints(numberQuadraturePoints *
+                                                     NumTotalSphericalFunctions,
+                                                   0.0);
             for (unsigned int alpha = 0; alpha < NumRadialSphericalFunctions;
                  ++alpha)
               {
@@ -435,7 +438,12 @@ namespace dftfe
                                     numberElementsInAtomCompactSupport +
                                   iElemComp * numberQuadraturePoints +
                                   iQuadPoint;
-                                gLValues[index] +=
+                                // gLValues[index] +=
+                                //   JxwVector[elementIndex *
+                                //               numberQuadraturePoints +
+                                //             iQuadPoint] *
+                                //   sphericalFunctionValue;
+                                gLValuesQuadPoints[Lindex * iQuadPoint] +=
                                   JxwVector[elementIndex *
                                               numberQuadraturePoints +
                                             iQuadPoint] *
@@ -452,10 +460,12 @@ namespace dftfe
                     Lindex++;
                   } // mQuantumNumber
               }     // alpha
-          }         // iElemComp
+            d_gLValuesQuadPoints[std::make_pair(atomId, elementIndex)] =
+              gLValuesQuadPoints;
+          } // iElemComp
 
         d_ProductOfQijShapeFnAtQuadPoints[iAtom] = tempCoeff;
-        d_gLValuesQuadPoints[iAtom]              = gLValues;
+
 
       } // iAtom
   }
@@ -580,7 +590,8 @@ namespace dftfe
       d_atomicProjectorFnsContainer->getAtomicNumbers();
     char            transA = 'N';
     char            transB = 'T';
-    const ValueType alpha = 1.0, beta = 1.0;
+    const ValueType beta   = 1.0;
+    const ValueType alpha  = 1.0;
 
     for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
       {
@@ -590,10 +601,8 @@ namespace dftfe
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
         if (startVectorIndex == 0)
-          D_ijKDependent[std::make_pair(atomId, kpointIndex)] =
-            std::vector<ValueType>(numberSphericalFunctions *
-                                     numberSphericalFunctions,
-                                   0.0);
+          D_ij[std::make_pair(atomId, spinIndex)] = std::vector<ValueType>(
+            numberSphericalFunctions * numberSphericalFunctions, 0.0);
 
         d_BLASWrapperHostPtr->xgemm(
           transA,
@@ -607,7 +616,7 @@ namespace dftfe
           d_nonLocalOperator->getCconjtansXLocalDataStructure(atomId),
           numberSphericalFunctions,
           &beta,
-          D_ijKDependent[std::make_pair(atomId, kpointIndex)].data(),
+          D_ij[std::make_pair(atomId, spinIndex)].data(),
           numberSphericalFunctions);
       }
   }

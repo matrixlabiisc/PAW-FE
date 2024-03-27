@@ -551,4 +551,47 @@ namespace dftfe
     return (d_AtomIdsInElement[iElem].size() > 0 ? true : false);
   }
 
+  void
+  AtomCenteredSphericalFunctionContainer::computeFEEvaluationMaps(
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+      &                basisOperationsPtr,
+    const unsigned int quadratureIndex,
+    const unsigned int dofHandlerId)
+  {
+    basisOperationsPtr->reinit(0, 0, quadratureIndex);
+    const unsigned int numberNodesPerElement =
+      basisOperationsPtr->nDofsPerCell();
+    const unsigned int numberQuadraturePoints =
+      basisOperationsPtr->nQuadsPerCell();
+    dealii::FEEvaluation<3, -1> feEvalObj(basisOperationsPtr->matrixFreeData(),
+                                          dofHandlerId,
+                                          quadratureIndex);
+    std::vector<double> phiValuesQuadPoints(numberQuadraturePoints, 0.0);
+
+    dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
+    for (unsigned int cell = 0;
+         cell < basisOperationsPtr->matrixFreeData().n_cell_batches();
+         ++cell)
+      {
+        feEvalObj.reinit(cell);
+        for (unsigned int iSubCell = 0;
+             iSubCell < basisOperationsPtr->matrixFreeData()
+                          .n_active_entries_per_cell_batch(cell);
+             ++iSubCell)
+          {
+            subCellPtr = basisOperationsPtr->matrixFreeData().get_cell_iterator(
+              cell, iSubCell, dofHandlerId);
+            dealii::CellId subCellId = subCellPtr->id();
+            unsigned int   cellIndex = basisOperationsPtr->cellIndex(subCellId);
+
+            if (atomSupportInElement(cellIndex))
+              {
+                d_feEvaluationMap.insert(cell);
+              }
+          }
+      }
+  }
+
 } // end of namespace dftfe

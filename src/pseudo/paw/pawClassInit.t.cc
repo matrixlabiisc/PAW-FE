@@ -205,7 +205,8 @@ namespace dftfe
     const std::vector<std::vector<double>> &periodicCoords,
     const std::vector<double> &             kPointWeights,
     const std::vector<double> &             kPointCoordinates,
-    const bool                              updateNonlocalSparsity)
+    const bool                              updateNonlocalSparsity,
+    const unsigned int                      dofHanderId)
   {
     std::vector<unsigned int> atomicNumbers;
     std::vector<double>       atomCoords;
@@ -237,6 +238,10 @@ namespace dftfe
           d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
         d_atomicShapeFnsContainer->computeSparseStructure(
           d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
+        d_atomicShapeFnsContainer->computeFEEvaluationMaps(
+          d_BasisOperatorElectroHostPtr,
+          d_sparsityPatternQuadratureId,
+          dofHanderId);
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
         if (d_verbosity >= 2)

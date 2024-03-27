@@ -151,7 +151,8 @@ namespace dftfe
       const std::vector<std::vector<double>> &periodicCoords,
       const std::vector<double> &             kPointWeights,
       const std::vector<double> &             kPointCoordinates,
-      const bool                              updateNonlocalSparsity);
+      const bool                              updateNonlocalSparsity,
+      const unsigned int                      dofHanderId);
 
 
     void
@@ -244,6 +245,11 @@ namespace dftfe
       AtomicCenteredNonLocalOperator<ValueType, memorySpace>>
     getNonLocalOperator();
 
+    void
+    evaluateNonLocalHamiltonianElectrostaticsValue(
+      const distributedCPUVec<double> &phiTotNodalValues,
+      const unsigned int               dofHandlerId);
+
   private:
     void
     initialiseDataonRadialMesh();
@@ -275,7 +281,8 @@ namespace dftfe
     std::map<unsigned int, double>              d_coreKE, d_deltaC, d_coreXC,
       d_deltaValenceC;
     std::map<unsigned int, std::vector<double>> d_deltaCij, d_deltaCijkl;
-
+    std::map<unsigned int, std::vector<double>>
+      d_nonLocalHamiltonianElectrostaticValue;
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
      * @param[in] atomLocations atomic Coordinates
@@ -447,14 +454,14 @@ namespace dftfe
       d_BasisOperatorElectroDevicePtr;
 #endif
     std::map<unsigned int, std::vector<double>>
-                                                d_ProductOfQijShapeFnAtQuadPoints;
-    std::map<unsigned int, std::vector<double>> D_ij;
+      d_ProductOfQijShapeFnAtQuadPoints;
     std::map<std::pair<unsigned int, unsigned int>, std::vector<ValueType>>
-                                                D_ijKDependent;
+                                                D_ij;
     std::map<unsigned int, std::vector<double>> d_multipole, d_multipoleInverse;
     std::vector<double> d_deltaInverseMatrix, d_deltaMatrix;
-    std::map<unsigned int, std::vector<double>> d_gLValuesQuadPoints;
-    std::map<unsigned int, double>              d_DeltaL0coeff, d_NtildeCore;
+    std::map<std::pair<unsigned int, unsigned int>, std::vector<double>>
+                                         d_gLValuesQuadPoints;
+    std::map<unsigned int, double>       d_DeltaL0coeff, d_NtildeCore;
     std::map<unsigned int, double>       d_RmaxAug, d_RminAug, d_RmaxComp;
     std::map<unsigned int, unsigned int> d_RmaxAugIndex;
 

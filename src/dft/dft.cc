@@ -917,7 +917,8 @@ namespace dftfe
               d_imagePositionsTrunc,
               d_kPointWeights,     // accounts for interpool
               d_kPointCoordinates, // accounts for interpool
-              updateNonlocalSparsity);
+              updateNonlocalSparsity,
+              d_phiTotDofHandlerIndexElectro);
           }
       }
   }
