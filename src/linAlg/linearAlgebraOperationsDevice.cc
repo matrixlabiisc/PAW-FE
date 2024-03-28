@@ -3710,6 +3710,7 @@ namespace dftfe
       const unsigned int                                   M,
       const unsigned int                                   N,
       const std::vector<double> &                          eigenValues,
+      const MPI_Comm &                                     mpiCommParent,
       const MPI_Comm &                                     mpiCommDomain,
       const MPI_Comm &                                     interBandGroupComm,
       dftfe::utils::deviceBlasHandle_t &                   handle,
@@ -3916,8 +3917,24 @@ namespace dftfe
                       interBandGroupComm);
 
 
+      if (dftParams.verbosity >= 4)
+        {
+          if (dealii::Utilities::MPI::this_mpi_process(mpiCommParent) == 0)
+            std::cout << "L-2 Norm of residue   :" << std::endl;
+        }
       for (unsigned int iWave = 0; iWave < N; ++iWave)
         residualNorm[iWave] = std::sqrt(residualNorm[iWave]);
+
+      if (dftParams.verbosity >= 4 &&
+          dealii::Utilities::MPI::this_mpi_process(mpiCommParent) == 0)
+        for (unsigned int iWave = 0; iWave < N; ++iWave)
+          std::cout << "eigen vector " << iWave << ": " << residualNorm[iWave]
+                    << std::endl;
+
+      if (dftParams.verbosity >= 4)
+        if (dealii::Utilities::MPI::this_mpi_process(mpiCommParent) == 0)
+          std::cout << std::endl;
+
     }
 
     // X^{T}*HConj*XConj
