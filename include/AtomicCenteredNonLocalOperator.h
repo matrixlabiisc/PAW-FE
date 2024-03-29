@@ -196,6 +196,17 @@ namespace dftfe
     const std::vector<unsigned int> &
     getSphericalFnTimesVectorFlattenedVectorLocalIds() const;
 
+    void
+    computeCconjtransCMatrix(
+      const unsigned int atomId,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+        BLASWrapperPtr,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &Dinverse,
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
+        PconjtransposePmatrix);
+
 
     // Calls for both device and host
     /**

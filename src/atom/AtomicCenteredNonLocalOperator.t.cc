@@ -2341,4 +2341,94 @@ namespace dftfe
     return (d_flattenedNonLocalCellDofIndexToProcessDofIndexMap);
   }
 
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
+    computeCconjtransCMatrix(
+      const unsigned int atomId,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+        BLASWrapperPtr,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &Dinverse,
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
+        PconjtransposePmatrix)
+  {
+    char transA = 'T';
+    char transB = 'N';
+
+    const std::vector<unsigned int> &atomicNumber =
+      d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
+    const unsigned int Znum = atomicNumber[atomId];
+    const unsigned int numberSphericalFunctions =
+      d_atomCenteredSphericalFunctionContainer
+        ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+    PconjtransposePmatrix.clear();
+    PconjtransposePmatrix.resize(numberSphericalFunctions *
+                                   numberSphericalFunctions,
+                                 0.0);
+
+    std::vector<unsigned int> elementIndexesInAtomCompactSupport =
+      d_atomCenteredSphericalFunctionContainer
+        ->d_elementIndexesInAtomCompactSupport[atomId];
+    const unsigned int numberElementsInAtomCompactSupport =
+      elementIndexesInAtomCompactSupport.size();
+    std::vector<ValueType> CtransponseEntries(d_numberNodesPerElement *
+                                                numberSphericalFunctions,
+                                              0.0);
+    for (unsigned int kPointIndex = 0; kPointIndex < d_kPointWeights.size();
+         kPointIndex)
+      {
+        const ValueType alpha = d_kPointWeights[kPointIndex];
+        const ValueType beta  = 1.0;
+
+        for (int iElem = 0; iElem < numberElementsInAtomCompactSupport; iElem++)
+          {
+            const unsigned int cellIndex =
+              elementIndexesInAtomCompactSupport[iElem];
+            // std::transform(d_CMatrixEntriesTranspose[atomId][iElem].data() +
+            //                  kPointIndex * d_numberNodesPerElement *
+            //                    numberSphericalFunctions, );
+            
+            //             BLASWrapperPtr->stridedBlockScaleCopy(
+            // numberSphericalFunctions,
+            // numDoFsPerCell * (cellRange.second - cellRange.first),
+            // 1.0,
+            // d_basisOperationsPtr->cellInverseSqrtMassVectorBasisData().data()
+            // +
+            //   cellIndex * d_numberNodesPerElement,
+            // src.data(),
+            // d_cellWaveFunctionMatrixSrc.data() +
+            //   cellRange.first * numDoFsPerCell * numberWavefunctions,
+            // d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
+            //     .data() +
+            //   cellRange.first * numDoFsPerCell);
+
+
+            // BLASWrapperPtr->xgemm(&transB,
+            //     &transA,
+            //     &n,
+            //     &n,
+            //     &m,
+            //     &alpha,
+            //     CtransponseEntries.begin(),
+            //     &n,
+            //     CtransponseEntries.begin(),
+            //     &n,
+            //     &beta,
+            //     PconjtransposePmatrix.data(),
+            //     &n);
+            // std::transform(
+            // d_CMatrixEntriesTranspose[atomId][iElem]
+            //                          [kPointIndex * d_numberNodesPerElement *
+            //                           numberSphericalFunctions],
+            //                           ,
+            // CtransponseEntries.data(),
+            //                           );
+
+
+          } // iElem
+      }     // kPoint
+  }
+
 } // namespace dftfe

@@ -123,54 +123,12 @@ namespace dftfe
               }
           }
       }
-
-
-    // for (unsigned int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
-    //      iAtom++)
-    //   {
-    //     const unsigned int        atomId = atomIdsInCurrentProcess[iAtom];
-    //     const unsigned int        Znum   = atomicNumber[atomId];
-    //     std::vector<unsigned int> elementIndexesInAtomCompactSupport =
-    //       d_atomicShapeFnsContainer
-    //         ->d_elementIndexesInAtomCompactSupport[atomId];
-    //     int numberElementsInAtomCompactSupport =
-    //       elementIndexesInAtomCompactSupport.size();
-    //     std::vector<double> phiValues(numberElementsInAtomCompactSupport *
-    //                                     numberQuadraturePoints,
-    //                                   0.0);
-    //     const unsigned int  NumTotalSphericalFunctions =
-    //       d_atomicShapeFnsContainer->getTotalNumberOfSphericalFunctionsPerAtom(
-    //         Znum);
-    //     d_nonLocalHamiltonianElectrostaticValue[iAtom] =
-    //       std::vector<double>(NumTotalSphericalFunctions, 0.0);
-    //     for (int iElem = 0; iElem < numberElementsInAtomCompactSupport;
-    //     iElem++)
-    //       {
-    //         unsigned int elementIndex =
-    //           elementIndexesInAtomCompactSupport[iElem];
-    //         d_BasisOperatorElectroHostPtr->interpolateKernel(
-    //           phiTotNodalValues,
-    //           &phiValues[numberQuadraturePoints * iElem],
-    //           NULL,
-    //           std::make_pair(elementIndex, elementIndex + 1));
-    //       }
-    //     std::vector<double> gLValues = d_gLValuesQuadPoints[iAtom];
-    //     if (numberElementsInAtomCompactSupport > 0)
-    //       d_BLASWrapperHostPtr->xgemm(
-    //         'N',
-    //         'N',
-    //         1,
-    //         NumTotalSphericalFunctions,
-    //         numberElementsInAtomCompactSupport * numberQuadraturePoints,
-    //         &alpha,
-    //         &phiValues[0],
-    //         1,
-    //         &gLValues[0],
-    //         numberElementsInAtomCompactSupport * numberQuadraturePoints,
-    //         &beta,
-    //         d_nonLocalHamiltonianElectrostaticValue[iAtom].data(),
-    //         1);
-    //   }
   }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::computeNonLocalHamiltonianEntries(
+    const bool flagEnergy)
+  {}
 
 } // namespace dftfe

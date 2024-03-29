@@ -250,6 +250,9 @@ namespace dftfe
       const distributedCPUVec<double> &phiTotNodalValues,
       const unsigned int               dofHandlerId);
 
+    void
+    computeNonLocalHamiltonianEntries(const bool flagEnergy);
+
   private:
     void
     initialiseDataonRadialMesh();
