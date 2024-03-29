@@ -51,9 +51,10 @@ namespace dftfe
 
       prm.declare_entry(
         "MEM OPT MODE",
-        "true",
+        "false",
         dealii::Patterns::Bool(),
-        "[Adavanced] Uses algorithms which have lower peak memory but with a marginal performance degradation. Default: true.");
+        "[Adavanced] Uses algorithms which have lower peak memory but with a marginal performance degradation. Default: true.",
+        true);
 
 
       prm.enter_subsection("GPU");
@@ -91,16 +92,16 @@ namespace dftfe
           R"([Adavanced] Use GPUDIRECT MPI\_Allreduce. This route will only work if DFT-FE is either compiled with NVIDIA NCCL library or withGPUAwareMPI=ON. Both these routes require GPU Aware MPI library to be available as well relevant hardware. If both NVIDIA NCCL library and withGPUAwareMPI modes are toggled on, the NCCL mode takes precedence. Also note that one MPI rank per GPU can be used when using this option. Default: false.)");
 
         prm.declare_entry(
+          "USE DCCL",
+          "false",
+          dealii::Patterns::Bool(),
+          R"([Adavanced] Use NCCL/RCCL for GPUDIRECT communications. Default: false.)");
+
+        prm.declare_entry(
           "USE ELPA GPU KERNEL",
           "false",
           dealii::Patterns::Bool(),
           "[Advanced] If DFT-FE is linked to ELPA eigensolver library configured to run on GPUs, this parameter toggles the use of ELPA GPU kernels for dense symmetric matrix diagonalization calls in DFT-FE. ELPA version>=2020.11.001 is required for this feature. Default: false.");
-
-        prm.declare_entry(
-          "GPU MEM OPT MODE",
-          "true",
-          dealii::Patterns::Bool(),
-          "[Adavanced] Uses algorithms which have lower peak memory on GPUs but with a marginal performance degradation. Recommended when using more than 100k degrees of freedom per GPU. Default: true.");
       }
       prm.leave_subsection();
 
@@ -776,6 +777,12 @@ namespace dftfe
           "[Standard] Mixing parameter to be used in density mixing schemes. For default value of 0.0, it is heuristically set for different mixing schemes (0.2 for Anderson, and 0.5 for Kerker and LRD.");
 
         prm.declare_entry(
+          "SPIN MIXING ENHANCEMENT FACTOR",
+          "4.0",
+          dealii::Patterns::Double(-1e-12, 1.0),
+          "[Standard] Scales the mixing parameter for the spin densities as SPIN MIXING ENHANCEMENT FACTOR times MIXING PARAMETER. This parameter is not used for LOW\_RANK\_DIELECM\_PRECOND mixing method.");
+
+        prm.declare_entry(
           "ADAPT ANDERSON MIXING PARAMETER",
           "false",
           dealii::Patterns::Bool(),
@@ -919,13 +926,6 @@ namespace dftfe
             "[Advanced] Parameter specifying the accuracy of the occupied eigenvectors close to the Fermi-energy computed using Chebyshev filtering subspace iteration procedure. For default value of 0.0, we heuristically set the value between 1e-3 and 5e-2 depending on the MIXING METHOD used.");
 
           prm.declare_entry(
-            "ENABLE HAMILTONIAN TIMES VECTOR OPTIM",
-            "false",
-            dealii::Patterns::Bool(),
-            "[Advanced] Turns on optimization for hamiltonian times vector multiplication. Operations involving data movement from global vector to finite-element cell level and vice versa are done by employing different data structures for interior nodes and surfaces nodes of a given cell and this allows reduction of memory access costs");
-
-
-          prm.declare_entry(
             "ORTHOGONALIZATION TYPE",
             "Auto",
             dealii::Patterns::Selection("GS|CGS|Auto"),
@@ -960,6 +960,12 @@ namespace dftfe
             "0",
             dealii::Patterns::Integer(0, 300),
             "[Advanced] ScaLAPACK process grid block size. Also sets the block size for ELPA if linked to ELPA. Default value of zero sets a heuristic block size. Note that if ELPA GPU KERNEL is set to true and ELPA is configured to run on GPUs, the SCALAPACK BLOCK SIZE is set to a power of 2.");
+
+          prm.declare_entry(
+            "USE DIAGONAL MASS MATRIX IN RR_ORTHO",
+            "true",
+            dealii::Patterns::Bool(),
+            "[Standard] Use diagonal approximation of FEM overlap matrix in RR step and Orthogonalization");
 
           prm.declare_entry(
             "USE ELPA",
@@ -1076,6 +1082,11 @@ namespace dftfe
                           "false",
                           dealii::Patterns::Bool(),
                           "[Advanced] Toggle GPU MODE in Poisson solve.");
+
+        prm.declare_entry("VSELF GPU MODE",
+                          "false",
+                          dealii::Patterns::Bool(),
+                          "[Advanced] Toggle GPU MODE in vself Poisson solve.");
       }
       prm.leave_subsection();
 
@@ -1190,6 +1201,7 @@ namespace dftfe
 
     radiusAtomBall                    = 0.0;
     mixingParameter                   = 0.5;
+    spinMixingEnhancementFactor       = 4.0;
     absLinearSolverTolerance          = 1e-10;
     selfConsistentSolverTolerance     = 1e-10;
     TVal                              = 500;
@@ -1314,7 +1326,6 @@ namespace dftfe
     reuseLanczosUpperBoundFromFirstCall            = false;
     allowMultipleFilteringPassesAfterFirstScf      = true;
     useELPADeviceKernel                            = false;
-    deviceMemOptMode                               = false;
     // New Paramters for moleculardyynamics class
     startingTempBOMD           = 300;
     thermostatTimeConstantBOMD = 100;
@@ -1376,7 +1387,11 @@ namespace dftfe
     reproducible_output = prm.get_bool("REPRODUCIBLE OUTPUT");
     keepScratchFolder   = prm.get_bool("KEEP SCRATCH FOLDER");
     restartFolder       = restartFilesPath;
-    memOptMode          = prm.get_bool("MEM OPT MODE");
+    auto entriesNotSet  = prm.get_entries_wrongly_not_set();
+    if (auto memOptSet = entriesNotSet.find("MEM_20OPT_20MODE");
+        memOptSet != entriesNotSet.end())
+      prm.set("MEM OPT MODE", solverMode == "NSCF");
+    memOptMode = prm.get_bool("MEM OPT MODE");
     writeStructreEnergyForcesFileForPostProcess =
       prm.get_bool("WRITE STRUCTURE ENERGY FORCES DATA POST PROCESS");
 
@@ -1390,8 +1405,8 @@ namespace dftfe
       autoDeviceBlockSizes = useDevice && prm.get_bool("AUTO GPU BLOCK SIZES");
       useDeviceDirectAllReduce =
         useDevice && prm.get_bool("USE GPUDIRECT MPI ALL REDUCE");
+      useDCCL             = useDevice && prm.get_bool("USE DCCL");
       useELPADeviceKernel = useDevice && prm.get_bool("USE ELPA GPU KERNEL");
-      deviceMemOptMode    = prm.get_bool("GPU MEM OPT MODE");
     }
     prm.leave_subsection();
 
@@ -1584,6 +1599,8 @@ namespace dftfe
       selfConsistentSolverTolerance = prm.get_double("TOLERANCE");
       mixingHistory                 = prm.get_integer("MIXING HISTORY");
       mixingParameter               = prm.get_double("MIXING PARAMETER");
+      spinMixingEnhancementFactor =
+        prm.get_double("SPIN MIXING ENHANCEMENT FACTOR");
       adaptAndersonMixingParameter =
         prm.get_bool("ADAPT ANDERSON MIXING PARAMETER");
       kerkerParameter         = prm.get_double("KERKER MIXING PARAMETER");
@@ -1616,8 +1633,10 @@ namespace dftfe
         numCoreWfcXtHX = prm.get_integer("XTHX CORE EIGENSTATES");
         spectrumSplitStartingScfIter =
           prm.get_integer("SPECTRUM SPLIT STARTING SCF ITER");
-        chebyshevOrder     = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
-        useELPA            = prm.get_bool("USE ELPA");
+        chebyshevOrder = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
+        useELPA        = prm.get_bool("USE ELPA");
+        diagonalMassMatrix =
+          prm.get_bool("USE DIAGONAL MASS MATRIX IN RR_ORTHO");
         orthogType         = prm.get("ORTHOGONALIZATION TYPE");
         chebyshevTolerance = prm.get_double("CHEBYSHEV FILTER TOLERANCE");
         wfcBlockSize       = prm.get_integer("WFC BLOCK SIZE");
@@ -1661,6 +1680,7 @@ namespace dftfe
       maxLinearSolverIterations = prm.get_integer("MAXIMUM ITERATIONS");
       absLinearSolverTolerance  = prm.get_double("TOLERANCE");
       poissonGPU                = prm.get_bool("GPU MODE");
+      vselfGPU                  = prm.get_bool("VSELF GPU MODE");
     }
     prm.leave_subsection();
 
@@ -1981,8 +2001,12 @@ namespace dftfe
           scalapackBlockSize = 32;
       }
 
-#if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+#if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL) && \
+  !defined(DFTFE_WITH_DEVICE_AWARE_MPI)
     useDeviceDirectAllReduce = false;
+#endif
+#if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL)
+    useDCCL = false;
 #endif
 
     if (useMixedPrecCheby)
@@ -2016,6 +2040,11 @@ namespace dftfe
           mixingParameter = 0.5;
         else
           mixingParameter = 0.2;
+      }
+
+    if (reproducible_output)
+      {
+        spinMixingEnhancementFactor = 1.0;
       }
   }
 

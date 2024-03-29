@@ -196,8 +196,10 @@ namespace dftfe
 
 #if defined(DFTFE_WITH_DEVICE)
     d_devicecclMpiCommDomainPtr = new utils::DeviceCCLWrapper;
-    if (d_dftParamsPtr->useDeviceDirectAllReduce)
-      d_devicecclMpiCommDomainPtr->init(mpi_comm_domain);
+    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+
+      d_devicecclMpiCommDomainPtr->init(mpi_comm_domain,
+                                        d_dftParamsPtr->useDCCL);
 #endif
     d_pspCutOff =
       d_dftParamsPtr->reproducible_output ?
@@ -817,7 +819,6 @@ namespace dftfe
     nlccFlag = pspFlags[0];
     pawFlag  = pspFlags[1];
     nlccFlag = dealii::Utilities::MPI::sum(nlccFlag, d_mpiCommParent);
-    pawFlag  = dealii::Utilities::MPI::sum(pawFlag, d_mpiCommParent);
     if (nlccFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
       d_dftParamsPtr->nonLinearCoreCorrection = true;
     if (pawFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
@@ -1928,6 +1929,7 @@ namespace dftfe
     if (d_kohnShamDFTOperatorsInitialized)
       finalizeKohnShamDFTOperator();
 
+#ifdef DFTFE_WITH_DEVICE
     if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
       d_kohnShamDFTOperatorPtr = new KohnShamHamiltonianOperator<memorySpace>(
         d_BLASWrapperPtr,
@@ -1942,6 +1944,7 @@ namespace dftfe
         d_mpiCommParent,
         mpi_communicator);
     else
+#endif
       d_kohnShamDFTOperatorPtr = new KohnShamHamiltonianOperator<memorySpace>(
         d_BLASWrapperPtrHost,
         d_basisOperationsPtrHost,
@@ -1956,10 +1959,11 @@ namespace dftfe
         mpi_communicator);
 
 
+
     KohnShamHamiltonianOperator<memorySpace> &kohnShamDFTEigenOperator =
       *d_kohnShamDFTOperatorPtr;
 
-    kohnShamDFTEigenOperator.reinit(d_kPointCoordinates, d_kPointWeights);
+    kohnShamDFTEigenOperator.init(d_kPointCoordinates, d_kPointWeights);
 
 #ifdef DFTFE_WITH_DEVICE
     if (d_dftParamsPtr->useDevice)
@@ -2045,15 +2049,6 @@ namespace dftfe
     reInitializeKohnShamDFTOperator()
   {
     d_kohnShamDFTOperatorPtr->resetExtPotHamFlag();
-
-#ifdef DFTFE_WITH_DEVICE
-    if (d_dftParamsPtr->useDevice)
-      {
-        // d_kohnShamDFTOperatorPtr->reinit(
-        //   std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues),
-        //   true);
-      }
-#endif
   }
 
   //
@@ -2168,7 +2163,7 @@ namespace dftfe
         computing_timer.enter_subsection("Nuclear self-potential solve");
         computingTimerStandard.enter_subsection("Nuclear self-potential solve");
 #ifdef DFTFE_WITH_DEVICE
-        if (d_dftParamsPtr->useDevice)
+        if (d_dftParamsPtr->useDevice and d_dftParamsPtr->vselfGPU)
           d_vselfBinsManager.solveVselfInBinsDevice(
             d_basisOperationsPtrElectroHost,
             d_baseDofHandlerIndexElectro,
@@ -2312,7 +2307,8 @@ namespace dftfe
             mixingVariable::magZ,
             rhoNodalMassVec,
             true, // call MPI REDUCE while computing dot products
-            d_dftParamsPtr->mixingParameter,
+            d_dftParamsPtr->mixingParameter *
+              d_dftParamsPtr->spinMixingEnhancementFactor,
             d_dftParamsPtr->adaptAndersonMixingParameter);
       }
     else if (d_dftParamsPtr->mixingMethod == "ANDERSON")
@@ -2332,7 +2328,8 @@ namespace dftfe
             mixingVariable::magZ,
             d_basisOperationsPtrElectroHost->JxWBasisData(),
             true, // call MPI REDUCE while computing dot products
-            d_dftParamsPtr->mixingParameter,
+            d_dftParamsPtr->mixingParameter *
+              d_dftParamsPtr->spinMixingEnhancementFactor,
             d_dftParamsPtr->adaptAndersonMixingParameter);
         if (d_excManagerPtr->getDensityBasedFamilyType() ==
             densityFamilyType::GGA)
@@ -2352,7 +2349,8 @@ namespace dftfe
                 mixingVariable::gradMagZ,
                 gradRhoJxW,
                 false, // call MPI REDUCE while computing dot products
-                d_dftParamsPtr->mixingParameter,
+                d_dftParamsPtr->mixingParameter *
+                  d_dftParamsPtr->spinMixingEnhancementFactor,
                 d_dftParamsPtr->adaptAndersonMixingParameter);
           }
       }
@@ -2954,7 +2952,6 @@ namespace dftfe
                               pcout << "Beginning Chebyshev filter pass "
                                     << 1 + count << " for spin " << s + 1
                                     << std::endl;
-                            ;
 
                             kohnShamDFTEigenOperator.reinitkPointSpinIndex(
                               kPoint, s);
@@ -3202,7 +3199,8 @@ namespace dftfe
 
                         kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint,
                                                                        0);
-                        if (d_dftParamsPtr->memOptMode)
+                        if (d_dftParamsPtr->memOptMode &&
+                            d_kPointWeights.size() > 0)
                           {
                             computing_timer.enter_subsection(
                               "Hamiltonian Matrix Computation");

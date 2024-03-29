@@ -44,10 +44,12 @@ namespace dftfe
       maxLinearSolverIterationsHelmholtz;
 
     bool        poissonGPU;
+    bool        vselfGPU;
     std::string modelXCInputFile;
 
-    double radiusAtomBall, mixingParameter;
+    double radiusAtomBall, mixingParameter, spinMixingEnhancementFactor;
     bool   adaptAndersonMixingParameter;
+    bool   diagonalMassMatrix;
     double absLinearSolverTolerance, selfConsistentSolverTolerance, TVal,
       start_magnetization, absLinearSolverToleranceHelmholtz;
 
@@ -56,7 +58,6 @@ namespace dftfe
       writeLdosFile, writeBandsFile, writeLocalizationLengths, pinnedNodeForPBC,
       writePdosFile;
     bool pawPseudoPotential = false;
-
 
     /** parameters for LRD preconditioner **/
 
@@ -161,12 +162,12 @@ namespace dftfe
     unsigned int maxLineSearchIterCGPRP;
     std::string  atomicMassesFile;
     bool         useDeviceDirectAllReduce;
+    bool         useDCCL;
     double       pspCutoffImageCharges;
     bool         reuseLanczosUpperBoundFromFirstCall;
     bool         allowMultipleFilteringPassesAfterFirstScf;
     unsigned int highestStateOfInterestForChebFiltering;
     bool         useELPADeviceKernel;
-    bool         deviceMemOptMode;
     bool         memOptMode;
 
 

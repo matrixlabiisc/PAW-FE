@@ -645,12 +645,16 @@ namespace dftfe
       const ValueType2   beta,
       ValueType1 *       y) const
     {
-      hipLaunchKernelGGL(axpbyDeviceKernel,n / dftfe::utils::DEVICE_BLOCK_SIZE) +
-          1,dftfe::utils::DEVICE_BLOCK_SIZE,0,0,n,
-                      dftfe::utils::makeDataTypeDeviceCompatible(x),
-                      dftfe::utils::makeDataTypeDeviceCompatible(y),
-                      alpha,
-                      beta);
+      hipLaunchKernelGGL(axpbyDeviceKernel,
+                         n / dftfe::utils::DEVICE_BLOCK_SIZE + 1,
+                         dftfe::utils::DEVICE_BLOCK_SIZE,
+                         0,
+                         0,
+                         n,
+                         dftfe::utils::makeDataTypeDeviceCompatible(x),
+                         dftfe::utils::makeDataTypeDeviceCompatible(y),
+                         alpha,
+                         beta);
     }
 
 
@@ -675,6 +679,32 @@ namespace dftfe
                          dftfe::utils::makeDataTypeDeviceCompatible(addFromVec),
                          dftfe::utils::makeDataTypeDeviceCompatible(addToVec),
                          addToVecStartingContiguousBlockIds);
+    }
+
+    template <typename ValueType>
+    void
+    BLASWrapper<dftfe::utils::MemorySpace::DEVICE>::stridedBlockAxpy(
+      const dftfe::size_type contiguousBlockSize,
+      const dftfe::size_type numContiguousBlocks,
+      const ValueType *      addFromVec,
+      const ValueType *      scalingVector,
+      const ValueType        a,
+      ValueType *            addToVec) const
+    {
+      hipLaunchKernelGGL(stridedBlockAxpyDeviceKernel,
+                         (contiguousBlockSize * numContiguousBlocks) /
+                             dftfe::utils::DEVICE_BLOCK_SIZE +
+                           1,
+                         dftfe::utils::DEVICE_BLOCK_SIZE,
+                         0,
+                         0,
+                         contiguousBlockSize,
+                         numContiguousBlocks,
+                         dftfe::utils::makeDataTypeDeviceCompatible(a),
+                         dftfe::utils::makeDataTypeDeviceCompatible(
+                           scalingVector),
+                         dftfe::utils::makeDataTypeDeviceCompatible(addFromVec),
+                         dftfe::utils::makeDataTypeDeviceCompatible(addToVec));
     }
 
     template <typename ValueType1, typename ValueType2>
@@ -1858,6 +1888,25 @@ namespace dftfe
       const double *         realArr,
       const double *         imagArr,
       std::complex<double> * complexArr);
+
+
+    template void
+    BLASWrapper<dftfe::utils::MemorySpace::DEVICE>::stridedBlockAxpy(
+      const dftfe::size_type contiguousBlockSize,
+      const dftfe::size_type numContiguousBlocks,
+      const double *         addFromVec,
+      const double *         scalingVector,
+      const double           a,
+      double *               addToVec) const;
+
+    template void
+    BLASWrapper<dftfe::utils::MemorySpace::DEVICE>::stridedBlockAxpy(
+      const dftfe::size_type      contiguousBlockSize,
+      const dftfe::size_type      numContiguousBlocks,
+      const std::complex<double> *addFromVec,
+      const std::complex<double> *scalingVector,
+      const std::complex<double>  a,
+      std::complex<double> *      addToVec) const;
 
   } // End of namespace linearAlgebra
 } // End of namespace dftfe

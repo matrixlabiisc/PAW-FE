@@ -25,31 +25,31 @@ namespace dftfe
 {
   namespace internal
   {
-    void
-    pointWiseScaleWithDiagonal(const double *     diagonal,
-                               const unsigned int numberFields,
-                               const unsigned int numberDofs,
-                               dataTypes::number *fieldsArrayFlattened)
-    {
-      const unsigned int inc = 1;
+    //     void
+    //     pointWiseScaleWithDiagonal(const double *     diagonal,
+    //                                const unsigned int numberFields,
+    //                                const unsigned int numberDofs,
+    //                                dataTypes::number *fieldsArrayFlattened)
+    //     {
+    //       const unsigned int inc = 1;
 
-      for (unsigned int i = 0; i < numberDofs; ++i)
-        {
-#ifdef USE_COMPLEX
-          double scalingCoeff = diagonal[i];
-          zdscal_(&numberFields,
-                  &scalingCoeff,
-                  &fieldsArrayFlattened[i * numberFields],
-                  &inc);
-#else
-          double scalingCoeff = diagonal[i];
-          dscal_(&numberFields,
-                 &scalingCoeff,
-                 &fieldsArrayFlattened[i * numberFields],
-                 &inc);
-#endif
-        }
-    }
+    //       for (unsigned int i = 0; i < numberDofs; ++i)
+    //         {
+    // #ifdef USE_COMPLEX
+    //           double scalingCoeff = diagonal[i];
+    //           zdscal_(&numberFields,
+    //                   &scalingCoeff,
+    //                   &fieldsArrayFlattened[i * numberFields],
+    //                   &inc);
+    // #else
+    //           double scalingCoeff = diagonal[i];
+    //           dscal_(&numberFields,
+    //                  &scalingCoeff,
+    //                  &fieldsArrayFlattened[i * numberFields],
+    //                  &inc);
+    // #endif
+    //         }
+    //     }
   } // namespace internal
 
   //
@@ -335,19 +335,6 @@ namespace dftfe
           pcout << "spin: " << spinType + 1 << std::endl;
       }
 
-    //
-    // scale the eigenVectors (initial guess of single atom wavefunctions or
-    // previous guess) to convert into Lowden Orthonormalized FE basis multiply
-    // by M^{1/2}
-    internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.getSqrtMassVector().data(),
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      d_eigenVectorsFlattenedHost.data() +
-        ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-          d_numEigenValues *
-          matrix_free_data.get_vector_partitioner()->locally_owned_size());
-
     std::vector<double> eigenValuesTemp(isSpectrumSplit ? d_numEigenValuesRR :
                                                           d_numEigenValues,
                                         0.0);
@@ -358,13 +345,14 @@ namespace dftfe
       {
         computing_timer.enter_subsection("Lanczos k-step Upper Bound");
 
-        std::pair<double, double> bounds =
-          linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+        std::pair<double, double> bounds = linearAlgebraOperations::
+          generalisedLanczosLowerUpperBoundEigenSpectrum(
             d_BLASWrapperPtrHost,
             kohnShamDFTEigenOperator,
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0),
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 1),
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 2),
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 3),
             *d_dftParamsPtr);
 
         const double upperBoundUnwantedSpectrum = bounds.second;
@@ -395,13 +383,14 @@ namespace dftfe
           {
             computing_timer.enter_subsection("Lanczos k-step Upper Bound");
 
-            std::pair<double, double> bounds =
-              linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+            std::pair<double, double> bounds = linearAlgebraOperations::
+              generalisedLanczosLowerUpperBoundEigenSpectrum(
                 d_BLASWrapperPtrHost,
                 kohnShamDFTEigenOperator,
                 kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0),
                 kohnShamDFTEigenOperator.getScratchFEMultivector(1, 1),
                 kohnShamDFTEigenOperator.getScratchFEMultivector(1, 2),
+                kohnShamDFTEigenOperator.getScratchFEMultivector(1, 3),
                 *d_dftParamsPtr);
             d_upperBoundUnwantedSpectrumValues
               [(1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType] =
@@ -436,31 +425,6 @@ namespace dftfe
       computeResidual,
       useMixedPrec,
       isFirstScf);
-
-    //
-    // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
-    // the usual FE basis
-    //
-    internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.getInverseSqrtMassVector().data(),
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      d_eigenVectorsFlattenedHost.data() +
-        ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-          d_numEigenValues *
-          matrix_free_data.get_vector_partitioner()->locally_owned_size());
-
-    if (isSpectrumSplit && d_numEigenValuesRR != d_numEigenValues)
-      {
-        internal::pointWiseScaleWithDiagonal(
-          kohnShamDFTEigenOperator.getInverseSqrtMassVector().data(),
-          d_numEigenValuesRR,
-          matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-          d_eigenVectorsRotFracDensityFlattenedHost.data() +
-            ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-              d_numEigenValuesRR *
-              matrix_free_data.get_vector_partitioner()->locally_owned_size());
-      }
 
     //
     // copy the eigenValues and corresponding residual norms back to data
@@ -708,17 +672,6 @@ namespace dftfe
       }
 
 
-    //
-    // scale the eigenVectors to convert into Lowden Orthonormalized FE basis
-    // multiply by M^{1/2}
-    internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.getSqrtMassVector().data(),
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      d_eigenVectorsDensityMatrixPrimeHost.data() +
-        ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-          d_numEigenValues *
-          matrix_free_data.get_vector_partitioner()->locally_owned_size());
 
     std::vector<double> eigenValuesTemp(d_numEigenValues, 0.0);
     for (unsigned int i = 0; i < d_numEigenValues; i++)
@@ -746,20 +699,6 @@ namespace dftfe
                                  spinType],
       elpaScala,
       *d_dftParamsPtr);
-
-
-    //
-    // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
-    // the usual FE basis
-    //
-    internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.getInverseSqrtMassVector().data(),
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      d_eigenVectorsDensityMatrixPrimeHost.data() +
-        ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-          d_numEigenValues *
-          matrix_free_data.get_vector_partitioner()->locally_owned_size());
   }
 
 #ifdef DFTFE_WITH_DEVICE
@@ -835,19 +774,6 @@ namespace dftfe
         pcout << "spin: " << spinType + 1 << std::endl;
       }
 
-    //
-    // scale the eigenVectors (initial guess of single atom wavefunctions or
-    // previous guess) to convert into Lowden Orthonormalized FE basis multiply
-    // by M^{1/2}
-    if (ipass == 1)
-      internal::pointWiseScaleWithDiagonal(
-        kohnShamDFTEigenOperator.getInverseSqrtMassVector().data(),
-        d_numEigenValues,
-        matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-        d_eigenVectorsFlattenedHost.data() +
-          ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-            d_numEigenValues *
-            matrix_free_data.get_vector_partitioner()->locally_owned_size());
 
 
     std::vector<double> eigenValuesTemp(d_numEigenValues, 0.0);
@@ -858,13 +784,14 @@ namespace dftfe
       {
         computing_timer.enter_subsection("Lanczos k-step Upper Bound");
 
-        std::pair<double, double> bounds =
-          linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+        std::pair<double, double> bounds = linearAlgebraOperations::
+          generalisedLanczosLowerUpperBoundEigenSpectrum(
             d_BLASWrapperPtrHost,
             kohnShamDFTEigenOperator,
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0),
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 1),
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 2),
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 3),
             *d_dftParamsPtr);
         const double upperBoundUnwantedSpectrum = bounds.second;
         const double lowerBoundWantedSpectrum   = bounds.first;
@@ -886,13 +813,15 @@ namespace dftfe
       {
         computing_timer.enter_subsection("Lanczos k-step Upper Bound");
 
-        std::pair<double, double> bounds =
-          linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+        std::pair<double, double> bounds = linearAlgebraOperations::
+          generalisedLanczosLowerUpperBoundEigenSpectrum(
             d_BLASWrapperPtrHost,
             kohnShamDFTEigenOperator,
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0),
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 1),
             kohnShamDFTEigenOperator.getScratchFEMultivector(1, 2),
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 3),
+
             *d_dftParamsPtr);
         const double upperBoundUnwantedSpectrum = bounds.second;
         computing_timer.leave_subsection("Lanczos k-step Upper Bound");

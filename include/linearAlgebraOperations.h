@@ -596,6 +596,26 @@ namespace dftfe
       const dftParameters &                              dftParams);
 
 
+    /** @brief Calculates an estimate of lower and upper bounds of a matrix using
+     *  k-step Lanczos method.
+     *
+     *  @param  operatorMatrix An object which has access to the given matrix
+     *  @param  vect A dummy vector
+     *  @return std::pair<double,double> An estimate of the lower and upper bound of the given matrix
+     */
+    template <typename T, dftfe::utils::MemorySpace memorySpace>
+    std::pair<double, double>
+    generalisedLanczosLowerUpperBoundEigenSpectrum(
+      const std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
+        &                                                BLASWrapperPtr,
+      operatorDFTClass<memorySpace> &                    operatorMatrix,
+      dftfe::linearAlgebra::MultiVector<T, memorySpace> &X,
+      dftfe::linearAlgebra::MultiVector<T, memorySpace> &Y,
+      dftfe::linearAlgebra::MultiVector<T, memorySpace> &Z,
+      dftfe::linearAlgebra::MultiVector<T, memorySpace> &tempVec,
+      const dftParameters &                              dftParams);
+
+
     /** @brief Apply Chebyshev filter to a given subspace
      *
      *  @param[in] operatorMatrix An object which has access to the given matrix
@@ -665,15 +685,17 @@ namespace dftfe
      */
     template <typename T>
     unsigned int
-    pseudoGramSchmidtOrthogonalization(elpaScalaManager &   elpaScala,
-                                       T *                  X,
-                                       const unsigned int   numberComponents,
-                                       const unsigned int   numberDofs,
-                                       const MPI_Comm &     mpiCommParent,
-                                       const MPI_Comm &     interBandGroupComm,
-                                       const MPI_Comm &     mpiCommDomain,
-                                       const bool           useMixedPrec,
-                                       const dftParameters &dftParams);
+    pseudoGramSchmidtOrthogonalization(
+      elpaScalaManager &                                 elpaScala,
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      T *                                                X,
+      const unsigned int                                 numberComponents,
+      const unsigned int                                 numberDofs,
+      const MPI_Comm &                                   mpiCommParent,
+      const MPI_Comm &                                   interBandGroupComm,
+      const MPI_Comm &                                   mpiCommDomain,
+      const bool                                         useMixedPrec,
+      const dftParameters &                              dftParams);
 
 
     /** @brief Compute Rayleigh-Ritz projection
@@ -863,6 +885,23 @@ namespace dftfe
      *
      * @param X Vector of Vectors containing multi-wavefunction fields
      * @param numberComponents number of wavefunctions associated with a given node
+     * @param ProjMatrix projected small matrix
+     */
+    void
+    XtOX(operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+         const dataTypes::number *                          X,
+         const unsigned int                                 numberComponents,
+         const unsigned int                                 numberLocalDofs,
+         const MPI_Comm &                                   mpiCommDomain,
+         const MPI_Comm &                                   interBandGroupComm,
+         const dftParameters &                              dftParams,
+         std::vector<dataTypes::number> &                   ProjOverlap);
+
+    /**
+     * @brief Compute projection of the operator into a subspace spanned by a given orthogonal basis HProjConj=X^{T}*HConj*XConj
+     *
+     * @param X Vector of Vectors containing multi-wavefunction fields
+     * @param numberComponents number of wavefunctions associated with a given node
      * @param processGrid two-dimensional processor grid corresponding to the parallel projHamPar
      * @param projHamPar parallel ScaLAPACKMatrix which stores the computed projection
      * of the operation into the given subspace
@@ -878,6 +917,26 @@ namespace dftfe
          const dftParameters &                              dftParams,
          dftfe::ScaLAPACKMatrix<dataTypes::number> &        projHamPar,
          const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
+    /**
+     * @brief Compute projection of the operator into a subspace spanned by a given orthogonal basis HProjConj=X^{T}*HConj*XConj
+     *
+     * @param X Vector of Vectors containing multi-wavefunction fields
+     * @param numberComponents number of wavefunctions associated with a given node
+     * @param processGrid two-dimensional processor grid corresponding to the parallel projHamPar
+     * @param projHamPar parallel ScaLAPACKMatrix which stores the computed projection
+     * of the operation into the given subspace
+     */
+    void
+    XtOX(operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+         const dataTypes::number *                          X,
+         const unsigned int                                 numberComponents,
+         const unsigned int                                 numberLocalDofs,
+         const std::shared_ptr<const dftfe::ProcessGrid> &  processGrid,
+         const MPI_Comm &                                   mpiCommDomain,
+         const MPI_Comm &                                   interBandGroupComm,
+         const dftParameters &                              dftParams,
+         dftfe::ScaLAPACKMatrix<dataTypes::number> &        projOverlapPar);
 
 
     /**
@@ -906,6 +965,33 @@ namespace dftfe
       const dftParameters &                              dftParams,
       dftfe::ScaLAPACKMatrix<dataTypes::number> &        projHamPar,
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
+
+    /**
+     * @brief Compute projection of the operator into a subspace spanned by a given orthogonal basis HProjConj=X^{T}*HConj*XConj
+     *
+     * @param X Vector of Vectors containing multi-wavefunction fields
+     * @param totalNumberComponents number of wavefunctions associated with a given node
+     * @param singlePrecComponents number of wavecfuntions starting from the first for
+     * which the project Hamiltionian block will be computed in single
+     * procession. However the cross blocks will still be computed in double
+     * precision.
+     * @param processGrid two-dimensional processor grid corresponding to the parallel projHamPar
+     * @param projHamPar parallel ScaLAPACKMatrix which stores the computed projection
+     * of the operation into the given subspace
+     */
+    void
+    XtOXMixedPrec(
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      const dataTypes::number *                          X,
+      const unsigned int                                 totalNumberComponents,
+      const unsigned int                                 singlePrecComponents,
+      const unsigned int                                 numberLocalDofs,
+      const std::shared_ptr<const dftfe::ProcessGrid> &  processGrid,
+      const MPI_Comm &                                   mpiCommDomain,
+      const MPI_Comm &                                   interBandGroupComm,
+      const dftParameters &                              dftParams,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &        projOverlapPar);
 
   } // namespace linearAlgebraOperations
 

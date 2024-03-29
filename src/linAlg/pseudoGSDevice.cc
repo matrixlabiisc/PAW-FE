@@ -80,12 +80,15 @@ namespace dftfe
 
     void
     pseudoGramSchmidtOrthogonalization(
-      elpaScalaManager &                elpaScala,
-      dataTypes::number *               X,
-      const unsigned int                M,
-      const unsigned int                N,
-      const MPI_Comm &                  mpiCommParent,
-      const MPI_Comm &                  mpiCommDomain,
+      elpaScalaManager &                                   elpaScala,
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      dataTypes::number *                                  X,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::number> &            OXb,
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const MPI_Comm &                                     mpiCommParent,
+      const MPI_Comm &                                     mpiCommDomain,
       utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
       const MPI_Comm &                  interBandGroupComm,
       dftfe::utils::deviceBlasHandle_t &handle,
@@ -111,10 +114,10 @@ namespace dftfe
       if (dftParams.deviceFineGrainedTimings)
         {
           dftfe::utils::deviceSynchronize();
-          if (dftParams.useMixedPrecCGS_O && useMixedPrecOverall)
-            computing_timer.enter_subsection("SConj=X^{T}XConj Mixed Prec");
+          if (useMixedPrecOverall)
+            computing_timer.enter_subsection("SConj=X^{T}OXConj Mixed Prec");
           else
-            computing_timer.enter_subsection("SConj=X^{T}XConj");
+            computing_timer.enter_subsection("SConj=X^{T}OXConj");
         }
 
 
@@ -130,86 +133,81 @@ namespace dftfe
 
       // SConj=X^{T}*XConj with X^{T} stored in the column
       // major format
-      if (dftParams.useMixedPrecCGS_O && useMixedPrecOverall)
+      if (useMixedPrecOverall && dftParams.useMixedPrecXTHXSpectrumSplit &&
+          false)
         {
-          if (dftParams.overlapComputeCommunOrthoRR)
-            {
-              if (dftParams.useMixedPrecCommunOnlyXTHXCGSO)
-                linearAlgebraOperationsDevice::
-                  fillParallelOverlapMatMixedPrecCommunScalapackAsyncComputeCommun(
-                    X,
-                    M,
-                    N,
-                    handle,
-                    mpiCommDomain,
-                    devicecclMpiCommDomain,
-                    interBandGroupComm,
-                    processGrid,
-                    overlapMatPar,
-                    dftParams);
-              else
-                linearAlgebraOperationsDevice::
-                  fillParallelOverlapMatMixedPrecScalapackAsyncComputeCommun(
-                    X,
-                    M,
-                    N,
-                    handle,
-                    mpiCommDomain,
-                    devicecclMpiCommDomain,
-                    interBandGroupComm,
-                    processGrid,
-                    overlapMatPar,
-                    dftParams);
-            }
+          if (dftParams.useMixedPrecCommunOnlyXTHXCGSO)
+            XtOXMixedPrecCommunOverlapComputeCommun(operatorMatrix,
+                                                    X,
+                                                    Xb,
+                                                    OXb,
+                                                    M,
+                                                    N,
+                                                    dftParams.numCoreWfcXtHX,
+                                                    handle,
+                                                    processGrid,
+                                                    overlapMatPar,
+                                                    devicecclMpiCommDomain,
+                                                    mpiCommDomain,
+                                                    interBandGroupComm,
+                                                    dftParams);
           else
-            linearAlgebraOperationsDevice::
-              fillParallelOverlapMatMixedPrecScalapack(X,
-                                                       M,
-                                                       N,
-                                                       handle,
-                                                       mpiCommDomain,
-                                                       devicecclMpiCommDomain,
-                                                       interBandGroupComm,
-                                                       processGrid,
-                                                       overlapMatPar,
-                                                       dftParams);
+            XtOXMixedPrecOverlapComputeCommun(operatorMatrix,
+                                              X,
+                                              Xb,
+                                              OXb,
+                                              M,
+                                              N,
+                                              dftParams.numCoreWfcXtHX,
+                                              handle,
+                                              processGrid,
+                                              overlapMatPar,
+                                              devicecclMpiCommDomain,
+                                              mpiCommDomain,
+                                              interBandGroupComm,
+                                              dftParams);
         }
       else
         {
           if (dftParams.overlapComputeCommunOrthoRR)
-            linearAlgebraOperationsDevice::
-              fillParallelOverlapMatScalapackAsyncComputeCommun(
-                X,
-                M,
-                N,
-                handle,
-                mpiCommDomain,
-                devicecclMpiCommDomain,
-                interBandGroupComm,
-                processGrid,
-                overlapMatPar,
-                dftParams);
+            XtOXOverlapComputeCommun(operatorMatrix,
+                                     X,
+                                     Xb,
+                                     OXb,
+                                     M,
+                                     N,
+                                     handle,
+                                     processGrid,
+                                     overlapMatPar,
+                                     devicecclMpiCommDomain,
+                                     mpiCommDomain,
+                                     interBandGroupComm,
+                                     dftParams);
           else
-            linearAlgebraOperationsDevice::fillParallelOverlapMatScalapack(
-              X,
-              M,
-              N,
-              handle,
-              mpiCommDomain,
-              devicecclMpiCommDomain,
-              interBandGroupComm,
-              processGrid,
-              overlapMatPar,
-              dftParams);
+            XtOX(operatorMatrix,
+                 X,
+                 Xb,
+                 OXb,
+                 M,
+                 N,
+                 handle,
+                 processGrid,
+                 overlapMatPar,
+                 devicecclMpiCommDomain,
+                 mpiCommDomain,
+                 interBandGroupComm,
+                 dftParams);
         }
+
+
 
       if (dftParams.deviceFineGrainedTimings)
         {
           dftfe::utils::deviceSynchronize();
-          if (dftParams.useMixedPrecCGS_O && useMixedPrecOverall)
-            computing_timer.leave_subsection("SConj=X^{T}XConj Mixed Prec");
+          if (useMixedPrecOverall)
+            computing_timer.leave_subsection("SConj=X^{T}OXConj Mixed Prec");
           else
-            computing_timer.leave_subsection("SConj=X^{T}XConj");
+            computing_timer.leave_subsection("SConj=X^{T}OXConj");
         }
 
       // SConj=LConj*L^{T}

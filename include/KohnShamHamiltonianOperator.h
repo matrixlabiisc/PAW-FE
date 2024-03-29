@@ -64,17 +64,11 @@ namespace dftfe
       const MPI_Comm &            mpi_comm_domain);
 
     void
-    init();
-
-    void
-    reinit(const std::vector<double> &kPointCoordinates,
-           const std::vector<double> &kPointWeights);
+    init(const std::vector<double> &kPointCoordinates,
+         const std::vector<double> &kPointWeights);
 
     void
     resetExtPotHamFlag();
-
-    dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &
-    getParallelProjectorKetTimesBlockVector();
 
     const MPI_Comm &
     getMPICommunicatorDomain();
@@ -173,13 +167,25 @@ namespace dftfe
        const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
+    overlapMatrixTimesX(
+      dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
+      const double scalarOX,
+      const double scalarY,
+      const double scalarX,
+      dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
+      const bool useApproximateMatrixEntries = true);
+
+    void
     HXCheby(
       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
       const double scalarHX,
       const double scalarY,
       const double scalarX,
       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
-      const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+      const bool onlyHPrimePartForFirstOrderDensityMatResponse = false,
+      const bool skip1                                         = false,
+      const bool skip2                                         = false,
+      const bool skip3                                         = false);
 
     void
     HXRR(
@@ -229,7 +235,10 @@ namespace dftfe
     std::vector<dftfe::utils::MemoryStorage<double, memorySpace>>
       d_invJacKPointTimesJxW;
     // Constraints scaled with inverse sqrt diagonal Mass Matrix
-    std::shared_ptr<constraintInfoClass> scaledConstraintsNoneDataInfoPtr;
+    std::shared_ptr<constraintInfoClass>
+      inverseMassVectorScaledConstraintsNoneDataInfoPtr;
+    std::shared_ptr<constraintInfoClass>
+      inverseSqrtMassVectorScaledConstraintsNoneDataInfoPtr;
     // kPoint cartesian coordinates
     std::vector<double> d_kPointCoordinates;
     // k point weights
