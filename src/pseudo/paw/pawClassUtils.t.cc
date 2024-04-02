@@ -420,5 +420,77 @@ namespace dftfe
     return (value);
   }
 
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::getSphericalQuadratureRule(
+    std::vector<double> &             quad_weights,
+    std::vector<std::vector<double>> &quad_points)
+  {
+    std::vector<std::vector<double>> quadratureData;
+    char                             quadratureFileName[256];
+    if (d_dftParamsPtr->sphericalQuadrature == 0)
+      sprintf(quadratureFileName,
+              "%s/data/quadratureRules/quadRule86.txt",
+              DFTFE_PATH);
+    else if (d_dftParamsPtr->sphericalQuadrature == 1)
+      sprintf(quadratureFileName,
+              "%s/data/quadratureRules/quadRule50.txt",
+              DFTFE_PATH);
+    else if (d_dftParamsPtr->sphericalQuadrature == 2)
+      sprintf(quadratureFileName,
+              "%s/data/quadratureRules/quadRule74.txt",
+              DFTFE_PATH);
+    else if (d_dftParamsPtr->sphericalQuadrature == 3)
+      sprintf(quadratureFileName,
+              "%s/data/quadratureRules/quadRule110.txt",
+              DFTFE_PATH);
+    dftUtils::readFile(3, quadratureData, quadratureFileName);
+    int numRows = quadratureData.size();
+    for (int i = 0; i < numRows; i++)
+      {
+        quad_weights.push_back(quadratureData[i][2]);
+        std::vector<double> temp(2, 0);
+        temp[1] = (quadratureData[i][0] + 180) / 180 * M_PI;
+        temp[0] = quadratureData[i][1] / 180 * M_PI;
+        quad_points.push_back(temp);
+      }
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  std::vector<double>
+  pawClass<ValueType, memorySpace>::derivativeOfRealSphericalHarmonic(
+    unsigned int lQuantumNo,
+    int          mQuantumNo,
+    double       theta,
+    double       phi)
+  {
+    std::vector<double> RSH(2, 0.0);
+    if (lQuantumNo == 0)
+      return (RSH);
+    double sphericalHarmonicValue, sphericalHarmonicValue1;
+    sphericalHarmonicUtils::getSphericalHarmonicVal(
+      theta, phi, lQuantumNo, -mQuantumNo, sphericalHarmonicValue);
+    // RSH[1] = -std::abs(m) * sphericalHarmonicValue;
+    RSH[1] = -mQuantumNo * sphericalHarmonicValue;
+
+    sphericalHarmonicUtils::getSphericalHarmonicVal(
+      theta, phi, lQuantumNo, mQuantumNo, sphericalHarmonicValue);
+    sphericalHarmonicUtils::getSphericalHarmonicVal(
+      theta, phi, lQuantumNo + 1, mQuantumNo, sphericalHarmonicValue1);
+    if (std::fabs(std::sin(theta)) > 1E-8)
+      RSH[0] = -double(lQuantumNo + 1) * std::cos(theta) / std::sin(theta) *
+                 sphericalHarmonicValue +
+               sqrt(double(2 * lQuantumNo + 1.0)) /
+                 sqrt(double(2 * lQuantumNo + 3.0)) *
+                 sqrt(double((lQuantumNo + 1) * (lQuantumNo + 1) -
+                             mQuantumNo * mQuantumNo)) *
+                 sphericalHarmonicValue1 / std::sin(theta);
+    else
+      RSH[0] = 0.0;
+
+
+    return (RSH);
+  }
+
 
 } // namespace dftfe

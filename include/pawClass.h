@@ -63,6 +63,7 @@ namespace dftfe
   public:
     pawClass(const MPI_Comm &                            mpi_comm_parent,
              const std::string &                         scratchFolderName,
+             dftParameters *                             dftParamsPtr,
              const std::set<unsigned int> &              atomTypes,
              const bool                                  floatingNuclearCharges,
              const unsigned int                          nOMPThreads,
@@ -255,6 +256,9 @@ namespace dftfe
 
   private:
     void
+    createAtomTypesList(const std::vector<std::vector<double>> &atomLocations);
+
+    void
     initialiseDataonRadialMesh();
 
     void
@@ -388,6 +392,15 @@ namespace dftfe
                       std::vector<double> &rab,
                       const unsigned int   rminIndex,
                       const unsigned int   rmaxIndex);
+    void
+    getSphericalQuadratureRule(std::vector<double> &             quad_weights,
+                               std::vector<std::vector<double>> &quad_points);
+
+    std::vector<double>
+    derivativeOfRealSphericalHarmonic(unsigned int lQuantumNo,
+                                      int          mQuantumNo,
+                                      double       theta,
+                                      double       phi);
 
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
@@ -424,6 +437,7 @@ namespace dftfe
     // parallel communication objects
     const MPI_Comm     d_mpiCommParent;
     const unsigned int d_this_mpi_process;
+    const unsigned int d_n_mpi_processes;
 
     // conditional stream object
     dealii::ConditionalOStream  pcout;
@@ -436,6 +450,7 @@ namespace dftfe
     unsigned int                d_sparsityPatternQuadratureId;
     unsigned int                d_nlpspQuadratureId;
     std::shared_ptr<excManager> d_excManagerPtr;
+    dftParameters *             d_dftParamsPtr;
     std::shared_ptr<
       dftfe::basis::
         FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
@@ -500,9 +515,9 @@ namespace dftfe
     std::map<unsigned int, bool>                      d_atomTypeCoreFlagMap;
     bool                                              d_floatingNuclearCharges;
     int                                               d_verbosity;
-    std::vector<std::vector<double>>                  d_atomLocations;
     std::set<unsigned int>                            d_atomTypes;
     std::map<unsigned int, std::vector<unsigned int>> d_atomTypesList;
+    std::vector<unsigned int>                         d_LocallyOwnedAtomId;
     std::string                                       d_dftfeScratchFolderName;
     std::vector<int>                                  d_imageIds;
     std::vector<std::vector<double>>                  d_imagePositions;

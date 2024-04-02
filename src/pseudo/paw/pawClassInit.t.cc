@@ -23,6 +23,7 @@ namespace dftfe
   pawClass<ValueType, memorySpace>::pawClass(
     const MPI_Comm &                            mpi_comm_parent,
     const std::string &                         scratchFolderName,
+    dftParameters *                             dftParamsPtr,
     const std::set<unsigned int> &              atomTypes,
     const bool                                  floatingNuclearCharges,
     const unsigned int                          nOMPThreads,
@@ -33,8 +34,11 @@ namespace dftfe
     : d_mpiCommParent(mpi_comm_parent)
     , d_this_mpi_process(
         dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent))
+    , d_n_mpi_processes(
+        dealii::Utilities::MPI::n_mpi_processes(mpi_comm_parent))
     , pcout(std::cout,
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
+    , d_dftParamsPtr(dftParamsPtr)
   {
     d_dftfeScratchFolderName = scratchFolderName;
     d_atomTypes              = atomTypes;
@@ -218,7 +222,7 @@ namespace dftfe
         for (int dim = 2; dim < 5; dim++)
           atomCoords.push_back(atomLocations[iAtom][dim]);
       }
-
+    createAtomTypesList(atomLocations);
 
     d_atomicProjectorFnsContainer->initaliseCoordinates(atomCoords,
                                                         periodicCoords,
@@ -1345,52 +1349,1123 @@ namespace dftfe
   pawClass<ValueType,
            memorySpace>::initialiseExchangeCorrelationEnergyCorrection()
   {
-    // std::map<unsigned int, std::vector<std::vector<int>>
-    // projectorDetailsOfAtomFull; for (std::set<unsigned int>::iterator it =
-    // d_atomTypes.begin();
+    const bool isGGA =
+      d_excManagerPtr->getDensityBasedFamilyType() == densityFamilyType::GGA;
+
+    std::vector<double>              quad_weights;
+    std::vector<std::vector<double>> quad_points;
+    getSphericalQuadratureRule(quad_weights, quad_points);
+    double DijCreation, LDAContribution, Part0Contribution, PartAContribution,
+      PartBContribution, PartCContribution, VxcCompute;
+    double       TimerStart, TimerEnd;
+    int          numberofSphericalValues = quad_weights.size();
+    unsigned int atomId                  = 0;
+    const std::map<std::pair<unsigned int, unsigned int>,
+                   std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+      sphericalFunction =
+        d_atomicProjectorFnsContainer->getSphericalFunctions();
+    pcout << "Initializing XC contribution: " << std::endl;
+    std::vector<unsigned int> atomicNumbers =
+      d_atomicProjectorFnsContainer->getAtomicNumbers();
+    if (d_LocallyOwnedAtomId.size() > 0)
+      {
+        for (int iAtomList = 0; iAtomList < d_LocallyOwnedAtomId.size();
+             iAtomList++)
+          {
+            atomId                         = d_LocallyOwnedAtomId[iAtomList];
+            std::vector<double> Dij        = D_ij[atomId];
+            unsigned int        Znum       = atomicNumbers[atomId];
+            std::vector<double> RadialMesh = d_radialMesh[Znum];
+            unsigned int        RmaxIndex  = d_RmaxAugIndex[Znum];
+
+            std::vector<double> rab            = d_radialJacobianData[Znum];
+            unsigned int        RadialMeshSize = RadialMesh.size();
+            const unsigned int  numberofValues =
+              std::min(RmaxIndex + 5, RadialMeshSize);
+            pcout << "Number of Values: " << numberofValues << std::endl;
+
+
+            const unsigned int numberOfProjectors =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+            const unsigned int numberOfRadialProjectors =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
+            std::vector<double> Delta_Excij(numberOfProjectors *
+                                              numberOfProjectors,
+                                            0.0);
+            std::vector<double> Delta_ExcijDensity(numberOfProjectors *
+                                                     numberOfProjectors,
+                                                   0.0);
+            std::vector<double> Delta_ExcijSigma(numberOfProjectors *
+                                                   numberOfProjectors,
+                                                 0.0);
+            const unsigned int  numberOfProjectorsSq =
+              numberOfProjectors * numberOfProjectors;
+            if (d_excManagerPtr->getExcDensityObj())
+              {
+                double Yi, Yj;
+                for (int qpoint = 0; qpoint < numberofSphericalValues; qpoint++)
+                  {
+                    std::vector<double> atomDensityAllelectron =
+                      d_atomTypeCoreFlagMap[Znum] ?
+                        d_atomCoreDensityAE[Znum] :
+                        std::vector<double>(numberofValues, 0.0);
+                    std::vector<double> atomDensitySmooth =
+                      d_atomTypeCoreFlagMap[Znum] ?
+                        d_atomCoreDensityPS[Znum] :
+                        std::vector<double>(numberofValues, 0.0);
+                    std::vector<double> SphericalHarmonics(numberOfProjectors *
+                                                             numberOfProjectors,
+                                                           0.0);
+                    // help me.. A better strategy to store this
+
+                    std::vector<double> productOfAEpartialWfc =
+                      d_productOfAEpartialWfc[Znum];
+                    std::vector<double> productOfPSpartialWfc =
+                      d_productOfPSpartialWfc[Znum];
+                    double              quadwt = quad_weights[qpoint];
+                    std::vector<double> DijYij(numberOfProjectors *
+                                                 numberOfProjectors,
+                                               0.0);
+
+                    int projIndexI = 0;
+                    for (int iProj = 0; iProj < numberOfRadialProjectors;
+                         iProj++)
+                      {
+                        std::shared_ptr<AtomCenteredSphericalFunctionBase>
+                          sphFn_i =
+                            sphericalFunction.find(std::make_pair(Znum, iProj))
+                              ->second;
+                        const int lQuantumNo_i = sphFn_i->getQuantumNumberl();
+                        for (int mQuantumNumber_i = -lQuantumNo_i;
+                             mQuantumNumber_i <= lQuantumNo_i;
+                             mQuantumNumber_i++)
+                          {
+                            sphericalHarmonicUtils::getSphericalHarmonicVal(
+                              quad_points[qpoint][0],
+                              quad_points[qpoint][1],
+                              lQuantumNo_i,
+                              mQuantumNumber_i,
+                              Yi);
+
+                            int projIndexJ = 0;
+                            for (int jProj = 0;
+                                 jProj < numberOfRadialProjectors;
+                                 jProj++)
+                              {
+                                std::shared_ptr<
+                                  AtomCenteredSphericalFunctionBase>
+                                  sphFn_j = sphericalFunction
+                                              .find(std::make_pair(Znum, jProj))
+                                              ->second;
+                                const int lQuantumNo_j =
+                                  sphFn_j->getQuantumNumberl();
+                                for (int mQuantumNumber_j = -lQuantumNo_j;
+                                     mQuantumNumber_j <= lQuantumNo_j;
+                                     mQuantumNumber_j++)
+                                  {
+                                    sphericalHarmonicUtils::
+                                      getSphericalHarmonicVal(
+                                        quad_points[qpoint][0],
+                                        quad_points[qpoint][1],
+                                        lQuantumNo_j,
+                                        mQuantumNumber_j,
+                                        Yi);
+
+                                    SphericalHarmonics[projIndexI *
+                                                         numberOfProjectors +
+                                                       projIndexJ] = Yi * Yj;
+                                    SphericalHarmonics[projIndexJ *
+                                                         numberOfProjectors +
+                                                       projIndexI] = Yi * Yj;
+                                    DijYij[projIndexI * numberOfProjectors +
+                                           projIndexJ] =
+                                      Yi * Yj *
+                                      Dij[projIndexI * numberOfProjectors +
+                                          projIndexJ];
+                                    DijYij[projIndexJ * numberOfProjectors +
+                                           projIndexI] =
+                                      Yi * Yj *
+                                      Dij[projIndexJ * numberOfProjectors +
+                                          projIndexI];
+
+                                    projIndexJ++;
+                                  } // mQuantumNumber_j
+
+                              } // jProj
+                            projIndexI++;
+                          } // mQuantumNumber_i
+
+
+
+                      } // iProj
+
+
+
+                    const char         transA = 'N', transB = 'N';
+                    const double       Alpha = 1, Beta = 0.0;
+                    const unsigned int inc   = 1;
+                    const double       Beta2 = 1.0;
+
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alpha,
+                           &DijYij[0],
+                           &inc,
+                           &productOfAEpartialWfc[0],
+                           &numberOfProjectorsSq,
+                           &Beta2,
+                           &atomDensityAllelectron[0],
+                           &inc);
+                    // pcout<<"Line 2678"<<std::endl;
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alpha,
+                           &DijYij[0],
+                           &inc,
+                           &productOfPSpartialWfc[0],
+                           &numberOfProjectorsSq,
+                           &Beta2,
+                           &atomDensitySmooth[0],
+                           &inc);
+                    std::vector<double> exchangePotentialValAE(numberofValues);
+                    std::vector<double> corrPotentialValAE(numberofValues);
+                    std::vector<double> exchangePotentialValPS(numberofValues);
+                    std::vector<double> corrPotentialValPS(numberofValues);
+                    std::map<rhoDataAttributes, const std::vector<double> *>
+                      rhoDataAE, rhoDataPS;
+
+                    std::map<VeffOutputDataAttributes, std::vector<double> *>
+                      outputDerExchangeEnergyAE, outputDerExchangeEnergyPS;
+                    std::map<VeffOutputDataAttributes, std::vector<double> *>
+                      outputDerCorrEnergyAE, outputDerCorrEnergyPS;
+
+                    rhoDataAE[rhoDataAttributes::values] =
+                      &atomDensityAllelectron;
+                    rhoDataPS[rhoDataAttributes::values] = &atomDensitySmooth;
+
+                    outputDerExchangeEnergyAE
+                      [VeffOutputDataAttributes::derEnergyWithDensity] =
+                        &exchangePotentialValAE;
+
+                    outputDerCorrEnergyAE
+                      [VeffOutputDataAttributes::derEnergyWithDensity] =
+                        &corrPotentialValAE;
+                    outputDerExchangeEnergyPS
+                      [VeffOutputDataAttributes::derEnergyWithDensity] =
+                        &exchangePotentialValPS;
+
+                    outputDerCorrEnergyPS
+                      [VeffOutputDataAttributes::derEnergyWithDensity] =
+                        &corrPotentialValPS;
+                    d_excManagerPtr->getExcDensityObj()->computeDensityBasedVxc(
+                      numberofValues,
+                      rhoDataAE,
+                      outputDerExchangeEnergyAE,
+                      outputDerCorrEnergyAE);
+                    d_excManagerPtr->getExcDensityObj()->computeDensityBasedVxc(
+                      numberofValues,
+                      rhoDataPS,
+                      outputDerExchangeEnergyPS,
+                      outputDerCorrEnergyPS);
+
+                    // pcout<<"Line 2733"<<std::endl;
+
+                    for (int i = 0; i < numberOfProjectors; i++)
+                      {
+                        // Proj J
+                        for (int j = 0; j <= i; j++)
+                          {
+                            // Radial Integration
+                            std::function<double(const unsigned int &)>
+                              Integral = [&](const unsigned int &rpoint) {
+                                unsigned int index =
+                                  rpoint * numberOfProjectorsSq +
+                                  i * numberOfProjectors + j;
+                                double Val1 = productOfAEpartialWfc[index] *
+                                              (exchangePotentialValAE[rpoint] +
+                                               corrPotentialValAE[rpoint]);
+                                double Val2 = productOfPSpartialWfc[index] *
+                                              (exchangePotentialValPS[rpoint] +
+                                               corrPotentialValPS[rpoint]);
+                                double Value = rab[rpoint] * (Val1 - Val2) *
+                                               pow(RadialMesh[rpoint], 2);
+                                // pcout<<i<<" "<<Value<<std::endl;
+                                return (std::fabs(RadialMesh[rpoint]) > 1E-8 ?
+                                          Value :
+                                          0.0);
+                              };
+
+                            double RadialIntegral =
+                              simpsonIntegral(0, RmaxIndex + 1, Integral);
+                            Delta_Excij[i * numberOfProjectors + j] +=
+                              RadialIntegral * quadwt * 4.0 * M_PI *
+                              SphericalHarmonics[i * numberOfProjectors + j];
+                          } // Proj J
+                      }     // Proj I
+
+
+
+                    exchangePotentialValAE.resize(0);
+                    exchangePotentialValPS.resize(0);
+                    corrPotentialValAE.resize(0);
+                    corrPotentialValPS.resize(0);
+                    atomDensityAllelectron.resize(0);
+                    atomDensitySmooth.resize(0);
+
+                    exchangePotentialValAE.clear();
+                    exchangePotentialValPS.clear();
+                    corrPotentialValAE.clear();
+                    corrPotentialValPS.clear();
+                    atomDensityAllelectron.clear();
+                    atomDensitySmooth.clear();
+
+
+
+                  } // qpoint
+              }     // LDA case
+
+            else
+              {
+                double Yi, Yj;
+                pcout << "Starting GGA Delta XC: " << std::endl;
+                // double timerLDAContribution, timerGGAContribution;
+                // timerLDAContribution                       = 0.0;
+                // timerGGAContribution                       = 0.0;
+                // double               timerGGA0Contribution = 0.0;
+                // double               timerGGAAContribution = 0.0;
+                // double               timerGGABContribution = 0.0;
+                // double               timerGGACContribution = 0.0;
+                const std::vector<double> &productOfAEpartialWfc =
+                  d_productOfAEpartialWfc[Znum];
+                const std::vector<double> &productOfPSpartialWfc =
+                  d_productOfPSpartialWfc[Znum];
+                const std::vector<double> &productDerCoreDensityWfcDerWfcAE =
+                  d_productDerCoreDensityWfcDerWfcAE[Znum];
+                const std::vector<double> &productDerCoreDensityWfcDerWfcPS =
+                  d_productDerCoreDensityWfcDerWfcPS[Znum];
+
+
+
+                const std::vector<double> &TensorWfcAE = d_tensorWfcAE[Znum];
+                const std::vector<double> &TensorWfcPS = d_tensorWfcPS[Znum];
+                const std::vector<double> &TensorWfcDerAE =
+                  d_tensorWfcDerAE[Znum];
+                const std::vector<double> &TensorWfcDerPS =
+                  d_tensorWfcDerPS[Znum];
+                std::vector<double> productOfPSpartialWfcDer =
+                  d_productOfPSpartialWfcDer[Znum];
+                std::vector<double> productOfAEpartialWfcDer =
+                  d_productOfAEpartialWfcDer[Znum];
+                std::vector<double> productOfPSpartialWfcVals =
+                  d_productOfPSpartialWfcValue[Znum];
+                std::vector<double> productOfAEpartialWfcVals =
+                  d_productOfAEpartialWfcValue[Znum];
+
+
+
+                for (int qpoint = 0; qpoint < numberofSphericalValues; qpoint++)
+                  {
+                    std::vector<double> atomDensityAllelectron =
+                      d_atomTypeCoreFlagMap[Znum] ?
+                        d_atomCoreDensityAE[Znum] :
+                        std::vector<double>(numberofValues, 0.0);
+                    std::vector<double> atomDensitySmooth =
+                      d_atomTypeCoreFlagMap[Znum] ?
+                        d_atomCoreDensityPS[Znum] :
+                        std::vector<double>(numberofValues, 0.0);
+                    std::vector<double> sigmaAllElectron =
+                      d_atomTypeCoreFlagMap[Znum] ?
+                        d_gradCoreSqAE[Znum] :
+                        std::vector<double>(numberofValues, 0.0);
+                    std::vector<double> sigmaSmooth =
+                      d_atomTypeCoreFlagMap[Znum] ?
+                        d_gradCoreSqPS[Znum] :
+                        std::vector<double>(numberofValues, 0.0);
+                    std::vector<double> SphericalHarmonics(numberOfProjectors *
+                                                             numberOfProjectors,
+                                                           0.0);
+                    std::vector<double> GradThetaSphericalHarmonics(
+                      numberOfProjectors * numberOfProjectors, 0.0);
+                    std::vector<double> GradPhiSphericalHarmonics(
+                      numberOfProjectors * numberOfProjectors, 0.0);
+                    // help me.. A better strategy to store this
+
+
+
+                    double quadwt = quad_weights[qpoint];
+                    // pcout << "Storing the Dij and its variants: " <<
+                    // std::endl;
+                    std::vector<double> DijYij(numberOfProjectors *
+                                                 numberOfProjectors,
+                                               0.0);
+                    std::vector<double> DijGradThetaYij(numberOfProjectors *
+                                                          numberOfProjectors,
+                                                        0.0);
+                    std::vector<double> DijGradPhiYij(numberOfProjectors *
+                                                        numberOfProjectors,
+                                                      0.0);
+                    // pcout << "Dij and its other Values: " << std::endl;
+                    int projIndexI = 0;
+                    for (int iProj = 0; iProj < numberOfRadialProjectors;
+                         iProj++)
+                      {
+                        std::shared_ptr<AtomCenteredSphericalFunctionBase>
+                          sphFn_i =
+                            sphericalFunction.find(std::make_pair(Znum, iProj))
+                              ->second;
+                        const int lQuantumNo_i = sphFn_i->getQuantumNumberl();
+                        for (int mQuantumNumber_i = -lQuantumNo_i;
+                             mQuantumNumber_i <= lQuantumNo_i;
+                             mQuantumNumber_i++)
+                          {
+                            sphericalHarmonicUtils::getSphericalHarmonicVal(
+                              quad_points[qpoint][0],
+                              quad_points[qpoint][1],
+                              lQuantumNo_i,
+                              mQuantumNumber_i,
+                              Yi);
+
+                            int projIndexJ = 0;
+                            for (int jProj = 0;
+                                 jProj < numberOfRadialProjectors;
+                                 jProj++)
+                              {
+                                std::shared_ptr<
+                                  AtomCenteredSphericalFunctionBase>
+                                  sphFn_j = sphericalFunction
+                                              .find(std::make_pair(Znum, jProj))
+                                              ->second;
+                                const int lQuantumNo_j =
+                                  sphFn_j->getQuantumNumberl();
+                                for (int mQuantumNumber_j = -lQuantumNo_j;
+                                     mQuantumNumber_j <= lQuantumNo_j;
+                                     mQuantumNumber_j++)
+                                  {
+                                    sphericalHarmonicUtils::
+                                      getSphericalHarmonicVal(
+                                        quad_points[qpoint][0],
+                                        quad_points[qpoint][1],
+                                        lQuantumNo_j,
+                                        mQuantumNumber_j,
+                                        Yi);
+
+                                    std::vector<double> gradYj =
+                                      derivativeOfRealSphericalHarmonic(
+                                        lQuantumNo_j,
+                                        lQuantumNo_j,
+                                        quad_points[qpoint][0],
+                                        quad_points[qpoint][1]);
+                                    SphericalHarmonics[projIndexI *
+                                                         numberOfProjectors +
+                                                       projIndexJ] = Yi * Yj;
+                                    DijYij[projIndexI * numberOfProjectors +
+                                           projIndexJ] =
+                                      Yi * Yj *
+                                      Dij[projIndexI * numberOfProjectors +
+                                          projIndexJ];
+
+                                    GradThetaSphericalHarmonics
+                                      [projIndexI * numberOfProjectors +
+                                       projIndexJ] = Yi * gradYj[0];
+                                    double temp =
+                                      std::abs(std::sin(
+                                        quad_points[qpoint][0])) <= 1E-8 ?
+                                        0.0 :
+                                        Yi * gradYj[1] /
+                                          std::sin(quad_points[qpoint][0]);
+                                    GradPhiSphericalHarmonics
+                                      [projIndexI * numberOfProjectors +
+                                       projIndexJ] = temp;
+
+                                    DijGradThetaYij[projIndexI *
+                                                      numberOfProjectors +
+                                                    projIndexJ] =
+                                      Dij[projIndexI * numberOfProjectors +
+                                          projIndexJ] *
+                                      Yi * gradYj[0];
+                                    DijGradPhiYij[projIndexI *
+                                                    numberOfProjectors +
+                                                  projIndexJ] =
+                                      Dij[projIndexI * numberOfProjectors +
+                                          projIndexJ] *
+                                      temp;
+
+                                    projIndexJ++;
+                                  } // mQuantumNumber_j
+
+                              } // jProj
+                            projIndexI++;
+                          } // mQuantumNumber_i
+
+
+
+                      } // iProj
+
+                    const char         transA = 'N', transB = 'N';
+                    const double       Alpha = 1, Beta = 0.0;
+                    const double       Alphasigma1 = 4.0;
+                    const unsigned int inc         = 1;
+                    const double       Beta2       = 1.0;
+                    // Computing Density for Libxc
+                    // MPI_Barrier(d_mpiCommParent);
+                    // double TimerLDAStart = MPI_Wtime();
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alpha,
+                           &DijYij[0],
+                           &inc,
+                           &productOfAEpartialWfc[0],
+                           &numberOfProjectorsSq,
+                           &Beta2,
+                           &atomDensityAllelectron[0],
+                           &inc);
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alpha,
+                           &DijYij[0],
+                           &inc,
+                           &productOfPSpartialWfc[0],
+                           &numberOfProjectorsSq,
+                           &Beta2,
+                           &atomDensitySmooth[0],
+                           &inc);
+                    // MPI_Barrier(d_mpiCommParent);
+                    // timerLDAContribution += (MPI_Wtime() - TimerLDAStart);
+
+                    // MPI_Barrier(d_mpiCommParent);
+                    // double TimerGGAStart = MPI_Wtime();
+
+                    // MPI_Barrier(d_mpiCommParent);
+                    // double TimerGGA0Start = MPI_Wtime();
+                    if (d_atomTypeCoreFlagMap[Znum])
+                      {
+                        // pcout << "Starting Sigma Contribution part0" <<
+                        // std::endl;
+                        dgemm_(&transA,
+                               &transB,
+                               &inc,
+                               &numberofValues,
+                               &numberOfProjectorsSq,
+                               &Alphasigma1,
+                               &DijYij[0],
+                               &inc,
+                               &productDerCoreDensityWfcDerWfcAE[0],
+                               &numberOfProjectorsSq,
+                               &Beta2,
+                               &sigmaAllElectron[0],
+                               &inc);
+                        dgemm_(&transA,
+                               &transB,
+                               &inc,
+                               &numberofValues,
+                               &numberOfProjectorsSq,
+                               &Alphasigma1,
+                               &DijYij[0],
+                               &inc,
+                               &productDerCoreDensityWfcDerWfcPS[0],
+                               &numberOfProjectorsSq,
+                               &Beta2,
+                               &sigmaSmooth[0],
+                               &inc);
+
+                        // pcout << "Finished Sigma Contribution part0" <<
+                        // std::endl;
+                      }
+                    // MPI_Barrier(d_mpiCommParent);
+                    // timerGGA0Contribution += MPI_Wtime() - TimerGGA0Start;
+
+
+                    std::vector<double> tempAEcontributionA(
+                      numberOfProjectorsSq * numberofValues, 0.0);
+                    std::vector<double> tempPScontributionA(
+                      numberOfProjectorsSq * numberofValues, 0.0);
+                    const unsigned int numValsTimesnpjsq =
+                      numberofValues * numberOfProjectorsSq;
+                    // Part1 of Tensor Contraction for A
+                    std::vector<double> tempAETrialA(numberofValues, 0.0);
+                    std::vector<double> tempPSTrialA(numberofValues, 0.0);
+                    // MPI_Barrier(d_mpiCommParent);
+                    // double TimerGGAAStart = MPI_Wtime();
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alpha,
+                           &DijYij[0],
+                           &inc,
+                           &productOfAEpartialWfcDer[0],
+                           &numberOfProjectorsSq,
+                           &Beta,
+                           &tempAETrialA[0],
+                           &inc);
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alpha,
+                           &DijYij[0],
+                           &inc,
+                           &productOfPSpartialWfcDer[0],
+                           &numberOfProjectorsSq,
+                           &Beta,
+                           &tempPSTrialA[0],
+                           &inc);
+                    for (int iRad = 0; iRad < numberofValues; iRad++)
+                      {
+                        const double scaleAE = tempAETrialA[iRad];
+                        const double scalePS = tempPSTrialA[iRad];
+                        unsigned int index   = iRad * numberOfProjectorsSq;
+                        daxpy_(&numberOfProjectorsSq,
+                               &scaleAE,
+                               &productOfAEpartialWfcDer[index],
+                               &inc,
+                               &tempAEcontributionA[index],
+                               &inc);
+                        daxpy_(&numberOfProjectorsSq,
+                               &scalePS,
+                               &productOfPSpartialWfcDer[index],
+                               &inc,
+                               &tempPScontributionA[index],
+                               &inc);
+                      }
+
+                    // Part2 of TensorContraction  for A
+
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alphasigma1,
+                           &DijYij[0],
+                           &inc,
+                           &tempAEcontributionA[0],
+                           &numberOfProjectorsSq,
+                           &Beta2,
+                           &sigmaAllElectron[0],
+                           &inc);
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alphasigma1,
+                           &DijYij[0],
+                           &inc,
+                           &tempPScontributionA[0],
+                           &numberOfProjectorsSq,
+                           &Beta2,
+                           &sigmaSmooth[0],
+                           &inc);
+                    // pcout << "Finished Sigma Contribution part1 B" <<
+                    // std::endl;
+                    // MPI_Barrier(d_mpiCommParent);
+                    // timerGGAAContribution += (MPI_Wtime() -
+                    // TimerGGAAStart);
+
+
+                    std::vector<double> tempAEcontributionB(
+                      numberOfProjectorsSq * numberofValues, 0.0);
+                    std::vector<double> tempPScontributionB(
+                      numberOfProjectorsSq * numberofValues, 0.0);
+                    std::vector<double> tempAETrialB(numberofValues, 0.0);
+                    std::vector<double> tempPSTrialB(numberofValues, 0.0);
+                    // Part1 of Tensor Contraction for B
+                    // MPI_Barrier(d_mpiCommParent);
+                    // double TimerGGABStart = MPI_Wtime();
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alpha,
+                           &DijGradThetaYij[0],
+                           &inc,
+                           &productOfAEpartialWfcVals[0],
+                           &numberOfProjectorsSq,
+                           &Beta,
+                           &tempAETrialB[0],
+                           &inc);
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alpha,
+                           &DijGradThetaYij[0],
+                           &inc,
+                           &productOfPSpartialWfcVals[0],
+                           &numberOfProjectorsSq,
+                           &Beta,
+                           &tempPSTrialB[0],
+                           &inc);
+                    for (int iRad = 0; iRad < numberofValues; iRad++)
+                      {
+                        const double scaleAE =
+                          tempAETrialB[iRad] * pow(RadialMesh[iRad], 2);
+                        const double scalePS =
+                          tempPSTrialB[iRad] * pow(RadialMesh[iRad], 2);
+                        unsigned int index = iRad * numberOfProjectorsSq;
+                        daxpy_(&numberOfProjectorsSq,
+                               &scaleAE,
+                               &productOfAEpartialWfcVals[index],
+                               &inc,
+                               &tempAEcontributionB[index],
+                               &inc);
+                        daxpy_(&numberOfProjectorsSq,
+                               &scalePS,
+                               &productOfPSpartialWfcVals[index],
+                               &inc,
+                               &tempPScontributionB[index],
+                               &inc);
+                      }
+
+                    // Part2 of TensorContraction  for B
+
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alphasigma1,
+                           &DijGradThetaYij[0],
+                           &inc,
+                           &tempAEcontributionB[0],
+                           &numberOfProjectorsSq,
+                           &Beta2,
+                           &sigmaAllElectron[0],
+                           &inc);
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alphasigma1,
+                           &DijGradThetaYij[0],
+                           &inc,
+                           &tempPScontributionB[0],
+                           &numberOfProjectorsSq,
+                           &Beta2,
+                           &sigmaSmooth[0],
+                           &inc);
+                    // MPI_Barrier(d_mpiCommParent);
+                    // timerGGABContribution += (MPI_Wtime() -
+                    // TimerGGABStart);
+                    // pcout << "Finished Sigma Contribution part2 B" <<
+                    // std::endl;
+
+                    std::vector<double> tempAEcontributionC(
+                      numberOfProjectorsSq * numberofValues, 0.0);
+                    std::vector<double> tempPScontributionC(
+                      numberOfProjectorsSq * numberofValues, 0.0);
+
+                    std::vector<double> tempAETrialC(numberofValues, 0.0);
+                    std::vector<double> tempPSTrialC(numberofValues, 0.0);
+
+                    // Part1 of Tensor Contraction for C
+                    // MPI_Barrier(d_mpiCommParent);
+                    // double TimerGGACStart = MPI_Wtime();
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alpha,
+                           &DijGradPhiYij[0],
+                           &inc,
+                           &productOfAEpartialWfcVals[0],
+                           &numberOfProjectorsSq,
+                           &Beta2,
+                           &tempAETrialC[0],
+                           &inc);
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alpha,
+                           &DijGradPhiYij[0],
+                           &inc,
+                           &productOfPSpartialWfcVals[0],
+                           &numberOfProjectorsSq,
+                           &Beta2,
+                           &tempPSTrialC[0],
+                           &inc);
+                    for (int iRad = 0; iRad < numberofValues; iRad++)
+                      {
+                        const double scaleAE =
+                          tempAETrialC[iRad] * pow(RadialMesh[iRad], 2);
+                        const double scalePS =
+                          tempPSTrialC[iRad] * pow(RadialMesh[iRad], 2);
+                        unsigned int index = iRad * numberOfProjectorsSq;
+                        daxpy_(&numberOfProjectorsSq,
+                               &scaleAE,
+                               &productOfAEpartialWfcVals[index],
+                               &inc,
+                               &tempAEcontributionC[index],
+                               &inc);
+                        daxpy_(&numberOfProjectorsSq,
+                               &scalePS,
+                               &productOfPSpartialWfcVals[index],
+                               &inc,
+                               &tempPScontributionC[index],
+                               &inc);
+                      }
+
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alphasigma1,
+                           &DijGradPhiYij[0],
+                           &inc,
+                           &tempAEcontributionC[0],
+                           &numberOfProjectorsSq,
+                           &Beta2,
+                           &sigmaAllElectron[0],
+                           &inc);
+                    dgemm_(&transA,
+                           &transB,
+                           &inc,
+                           &numberofValues,
+                           &numberOfProjectorsSq,
+                           &Alphasigma1,
+                           &DijGradPhiYij[0],
+                           &inc,
+                           &tempPScontributionC[0],
+                           &numberOfProjectorsSq,
+                           &Beta2,
+                           &sigmaSmooth[0],
+                           &inc);
+                    // MPI_Barrier(d_mpiCommParent);
+                    // timerGGAContribution += MPI_Wtime() - TimerGGAStart;
+                    // timerGGACContribution += MPI_Wtime() - TimerGGACStart;
+                    std::vector<double> exchangePotentialValAE(numberofValues);
+                    std::vector<double> corrPotentialValAE(numberofValues);
+                    std::vector<double> exchangePotentialValPS(numberofValues);
+                    std::vector<double> corrPotentialValPS(numberofValues);
+
+                    std::vector<double> exchangePotentialValAEfromSigma(
+                      numberofValues);
+                    std::vector<double> corrPotentialValAEfromSigma(
+                      numberofValues);
+                    std::vector<double> exchangePotentialValPSfromSigma(
+                      numberofValues);
+                    std::vector<double> corrPotentialValPSfromSigma(
+                      numberofValues);
+
+                    std::map<rhoDataAttributes, const std::vector<double> *>
+                      rhoDataAE, rhoDataPS;
+
+                    std::map<VeffOutputDataAttributes, std::vector<double> *>
+                      outputDerExchangeEnergyAE, outputDerExchangeEnergyPS;
+                    std::map<VeffOutputDataAttributes, std::vector<double> *>
+                      outputDerCorrEnergyAE, outputDerCorrEnergyPS;
+
+
+
+                    std::map<VeffOutputDataAttributes, std::vector<double> *>
+                      outputDerExchangeEnergyAEfromSigma,
+                      outputDerExchangeEnergyPSfromSigma;
+                    std::map<VeffOutputDataAttributes, std::vector<double> *>
+                      outputDerCorrEnergyAEfromSigma,
+                      outputDerCorrEnergyPSfromSigma;
+
+                    rhoDataAE[rhoDataAttributes::values] =
+                      &atomDensityAllelectron;
+                    rhoDataPS[rhoDataAttributes::values] = &atomDensitySmooth;
+                    rhoDataAE[rhoDataAttributes::sigmaGradValue] =
+                      &sigmaAllElectron;
+                    rhoDataPS[rhoDataAttributes::sigmaGradValue] = &sigmaSmooth;
+
+
+                    outputDerExchangeEnergyAE
+                      [VeffOutputDataAttributes::derEnergyWithDensity] =
+                        &exchangePotentialValAE;
+                    outputDerCorrEnergyAE
+                      [VeffOutputDataAttributes::derEnergyWithDensity] =
+                        &corrPotentialValAE;
+                    outputDerExchangeEnergyPS
+                      [VeffOutputDataAttributes::derEnergyWithDensity] =
+                        &exchangePotentialValPS;
+                    outputDerCorrEnergyPS
+                      [VeffOutputDataAttributes::derEnergyWithDensity] =
+                        &corrPotentialValPS;
+
+                    outputDerExchangeEnergyAE[VeffOutputDataAttributes::
+                                                derEnergyWithSigmaGradDensity] =
+                      &exchangePotentialValAEfromSigma;
+                    outputDerCorrEnergyAE[VeffOutputDataAttributes::
+                                            derEnergyWithSigmaGradDensity] =
+                      &corrPotentialValAEfromSigma;
+                    outputDerExchangeEnergyPS[VeffOutputDataAttributes::
+                                                derEnergyWithSigmaGradDensity] =
+                      &exchangePotentialValPSfromSigma;
+                    outputDerCorrEnergyPS[VeffOutputDataAttributes::
+                                            derEnergyWithSigmaGradDensity] =
+                      &corrPotentialValPSfromSigma;
+
+
+                    d_excManagerPtr->getExcDensityObj()->computeDensityBasedVxc(
+                      numberofValues,
+                      rhoDataAE,
+                      outputDerExchangeEnergyAE,
+                      outputDerCorrEnergyAE);
+                    d_excManagerPtr->getExcDensityObj()->computeDensityBasedVxc(
+                      numberofValues,
+                      rhoDataPS,
+                      outputDerExchangeEnergyPS,
+                      outputDerCorrEnergyPS);
+
+
+                    for (int i = 0; i < numberOfProjectors; i++)
+                      {
+                        // Proj J
+                        for (int j = 0; j <= i; j++)
+                          {
+                            // Radial Integration
+                            std::function<double(const unsigned int &)>
+                              IntegralLDA = [&](const unsigned int &rpoint) {
+                                unsigned int index =
+                                  rpoint * numberOfProjectorsSq +
+                                  i * numberOfProjectors + j;
+                                double Val1 =
+                                  productOfAEpartialWfc[index] *
+                                  (exchangePotentialValAE[rpoint] +
+                                   corrPotentialValAE[rpoint]) *
+                                  SphericalHarmonics[i * numberOfProjectors +
+                                                     j];
+                                double Val2 =
+                                  productOfPSpartialWfc[index] *
+                                  (exchangePotentialValPS[rpoint] +
+                                   corrPotentialValPS[rpoint]) *
+                                  SphericalHarmonics[i * numberOfProjectors +
+                                                     j];
+                                double Value = rab[rpoint] * (Val1 - Val2) *
+                                               pow(RadialMesh[rpoint], 2);
+                                // pcout<<i<<" "<<Value<<std::endl;
+                                return (std::fabs(RadialMesh[rpoint]) > 1E-8 ?
+                                          Value :
+                                          0.0);
+                              };
+
+                            double RadialIntegralLDA =
+                              simpsonIntegral(0, RmaxIndex + 1, IntegralLDA);
+                            Delta_ExcijDensity[i * numberOfProjectors + j] +=
+                              RadialIntegralLDA * quadwt * 4.0 * M_PI;
+                          } // Proj J
+                      }     // Proj I
+                    for (int i = 0; i < numberOfProjectors; i++)
+                      {
+                        // Proj J
+                        for (int j = 0; j < numberOfProjectors; j++)
+                          {
+                            // Radial Integration
+                            std::function<double(const unsigned int &)>
+                              IntegralGGA = [&](const unsigned int &rpoint) {
+                                unsigned int index =
+                                  rpoint * numberOfProjectorsSq +
+                                  i * numberOfProjectors + j;
+                                double Val1 = 0.0;
+                                double Val2 = 0.0;
+                                Val1 +=
+                                  (exchangePotentialValAEfromSigma[rpoint] +
+                                   corrPotentialValAEfromSigma[rpoint]) *
+                                  (productDerCoreDensityWfcDerWfcAE[index] *
+                                     SphericalHarmonics[i * numberOfProjectors +
+                                                        j] +
+                                   2 * tempAEcontributionA[index] *
+                                     SphericalHarmonics[i * numberOfProjectors +
+                                                        j] +
+                                   2 * tempAEcontributionB[index] *
+                                     GradThetaSphericalHarmonics
+                                       [i * numberOfProjectors + j] +
+                                   2 * tempAEcontributionC[index] *
+                                     GradPhiSphericalHarmonics
+                                       [i * numberOfProjectors + j]);
+                                Val2 +=
+                                  (exchangePotentialValPSfromSigma[rpoint] +
+                                   corrPotentialValPSfromSigma[rpoint]) *
+                                  (productDerCoreDensityWfcDerWfcPS[index] *
+                                     SphericalHarmonics[i * numberOfProjectors +
+                                                        j] +
+                                   2 * tempPScontributionA[index] *
+                                     SphericalHarmonics[i * numberOfProjectors +
+                                                        j] +
+                                   2 * tempPScontributionB[index] *
+                                     GradThetaSphericalHarmonics
+                                       [i * numberOfProjectors + j] +
+                                   2 * tempPScontributionC[index] *
+                                     GradPhiSphericalHarmonics
+                                       [i * numberOfProjectors + j]);
+                                double Value = RadialMesh[rpoint] *
+                                               (Val1 - Val2) *
+                                               pow(rab[rpoint], 2);
+                                return (std::fabs(RadialMesh[rpoint]) > 1E-8 ?
+                                          Value :
+                                          0.0);
+                              };
+
+                            double RadialIntegralGGA =
+                              simpsonIntegral(0, RmaxIndex + 1, IntegralGGA);
+                            Delta_ExcijSigma[i * numberOfProjectors + j] +=
+                              RadialIntegralGGA * quadwt * 4.0 * M_PI;
+                          } // Proj J
+                      }     // Proj I
+
+
+                    exchangePotentialValAE.resize(0);
+                    exchangePotentialValPS.resize(0);
+                    corrPotentialValAE.resize(0);
+                    corrPotentialValPS.resize(0);
+                    atomDensityAllelectron.resize(0);
+                    atomDensitySmooth.resize(0);
+                    exchangePotentialValAEfromSigma.resize(0);
+                    exchangePotentialValPSfromSigma.resize(0);
+                    corrPotentialValAEfromSigma.resize(0);
+                    corrPotentialValPSfromSigma.resize(0);
+                    sigmaAllElectron.resize(0);
+                    sigmaSmooth.resize(0);
+
+
+                    exchangePotentialValAE.clear();
+                    exchangePotentialValPS.clear();
+                    corrPotentialValAE.clear();
+                    corrPotentialValPS.clear();
+                    atomDensityAllelectron.clear();
+                    atomDensitySmooth.clear();
+                    exchangePotentialValAEfromSigma.clear();
+                    exchangePotentialValPSfromSigma.clear();
+                    corrPotentialValAEfromSigma.clear();
+                    corrPotentialValPSfromSigma.clear();
+                    sigmaAllElectron.clear();
+                    sigmaSmooth.clear();
+
+
+
+                  } // qpoint
+                    //     // pcout << "Timer LLDA COntribution: " <<
+                    //     timerLDAContribution
+                    //     //       << std::endl;
+                    //     // pcout << "Timer GGA Contribution: " <<
+                    //     timerGGAContribution
+                    //     //       << std::endl;
+                //     // pcout << "Timer GGA part 0: " << timerGGA0Contribution
+                //     //       << std::endl;
+                //     // pcout << "Timer GGA part A: " << timerGGAAContribution
+                //     //       << std::endl;
+                //     // pcout << "Timer GGA part B: " << timerGGABContribution
+                //     //       << std::endl;
+                //     // pcout << "Timer GGA part C: " << timerGGACContribution
+                //     //       << std::endl;
+
+              } // GGA case
+
+            pcout << "Delta XC term " << std::endl;
+            for (int i = 0; i < numberOfProjectors; i++)
+              {
+                for (int j = 0; j <= i; j++)
+                  {
+                    if (!isGGA)
+                      Delta_Excij[j * numberOfProjectors + i] =
+                        Delta_Excij[i * numberOfProjectors + j];
+                    else
+                      {
+                        double temp =
+                          Delta_ExcijDensity[i * numberOfProjectors + j]
+                          + 2 * Delta_ExcijSigma[i * numberOfProjectors +
+                          j] + 2 * Delta_ExcijSigma[j *
+                          numberOfProjectors + i];
+                        Delta_Excij[j * numberOfProjectors + i] = temp;
+                        Delta_Excij[i * numberOfProjectors + j] = temp;
+                        // pcout
+                        //   << Delta_ExcijDensity[i * numberOfProjectors +
+                        //   j]
+                        //   << " "
+                        //   << 2 * Delta_ExcijSigma[i * numberOfProjectors
+                        //   + j]
+                        //   << " "
+                        //   << 2 * Delta_ExcijSigma[j * numberOfProjectors
+                        //   + i]
+                        //   << std::endl;
+                      }//else
+                  }//jProj
+              }//iProj
+
+            d_ExchangeCorrelationEnergyCorrectionTerm[atomId] = Delta_Excij;
+
+
+          } // iAtom
+      }//locallyOwned atomSet
+
+    // MPI_Barrier(d_mpiCommParent);
+    // // Moved to nonLocalHamiltonian
+    // for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
     //      it != d_atomTypes.end();
     //      ++it)
     //   {
-    //     unsigned int atomicNumber = *it;
-
-    //     const unsigned int numberOfProjectors =
-    //       d_atomicProjectorFnsContainer
-    //         ->getTotalNumberOfSphericalFunctionsPerAtom(atomicNumber);
-    //     const unsigned int numberOfRadialProjectors =
-    //       d_atomicProjectorFnsContainer
-    //         ->getTotalNumberOfRadialSphericalFunctionsPerAtom(atomicNumber);
-    //     const std::map<std::pair<unsigned int, unsigned int>,
-    //                    std::shared_ptr<AtomCenteredSphericalFunctionBase>>
-    //       sphericalFunction =
-    //         d_atomicProjectorFnsContainer->getSphericalFunctions();
-
-
-
-    //     std::vector<std::vector<int>> temp_projectorDetailsOfAtom;
-    //     for (int iProj = 0; iProj < numberOfRadialProjectors; iProj++)
+    //     unsigned int                  atomType  = *it;
+    //     std::vector<unsigned int>     atomLists =
+    //     d_atomTypesList[atomType]; std::vector<std::vector<int>>
+    //     projectorDetailsOfAtom =
+    //       d_atomicNumberToWaveFunctionIdDetails[atomType];
+    //     unsigned int numberOfProjectorsSq =
+    //       projectorDetailsOfAtom.size() * projectorDetailsOfAtom.size();
+    //     std::vector<double> DeltaXCAtom(numberOfProjectorsSq *
+    //     atomLists.size(),
+    //                                     0.0);
+    //     for (int i = 0; i < atomLists.size(); i++)
     //       {
-    //         const std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
-    //           sphericalFunction.find(std::make_pair(atomicNumber, iProj))
-    //             ->second;
-    //         const int lQuantumNo    = sphFn->getQuantumNumberl();
-    //         mapOfRadProjLval[iProj] = lQuantumNo;
-    //         std::vector<int> temp(3, 0);
-    //         for (int mQuantumNumber = -lQuantumNo; mQuantumNumber <=
-    //         lQuantumNo;
-    //              mQuantumNumber++)
+    //         for (int iAtomList = 0; iAtomList <
+    //         d_LocallyOwnedAtomId.size();
+    //              iAtomList++)
     //           {
-    //             temp[0] = iProj;
-    //             temp[1] = lQuantumNo;
-    //             temp[2] = mQuantumNumber;
-    //             temp_projectorDetailsOfAtom.push_back(temp);
+    //             iAtom = d_LocallyOwnedAtomId[iAtomList];
+    //             if (atomLists[i] == iAtom)
+    //               {
+    //                 std::copy(
+    //                   &(d_ExchangeCorrelationEnergyCorrectionTerm[iAtom][0]),
+    //                   &(d_ExchangeCorrelationEnergyCorrectionTerm[iAtom][0])
+    //                   +
+    //                     numberOfProjectorsSq,
+    //                   &(DeltaXCAtom[i * numberOfProjectorsSq]));
+    //               }
     //           }
     //       }
-
-    //     pcout << "DEBUG check number of entries are matching? "
-    //           << numberOfProjectors << " " <<
-    //           temp_projectorDetailsOfAtom.size()
-    //           << std::endl;
-    //     projectorDetailsOfAtomFull[*it] = temp_projectorDetailsOfAtom;
+    //     // Moved to nonLocalHamiltonian
+    //     // MPI_Allreduce(MPI_IN_PLACE,
+    //     //               &DeltaXCAtom[0],
+    //     //               numberOfProjectorsSq * atomLists.size(),
+    //     //               MPI_DOUBLE,
+    //     //               MPI_SUM,
+    //     //               d_mpiCommParent);
+    //     for (int i = 0; i < atomLists.size(); i++)
+    //       {
+    //         std::vector<double> ValueAtom(numberOfProjectorsSq, 0.0);
+    //         std::copy(&(DeltaXCAtom[i * numberOfProjectorsSq]),
+    //                   &(DeltaXCAtom[i * numberOfProjectorsSq]) +
+    //                     numberOfProjectorsSq,
+    //                   &(ValueAtom[0]));
+    //         d_ExchangeCorrelationEnergyCorrectionTerm[atomLists[i]] =
+    //         ValueAtom;
+    //       }
     //   } //*it
   }
 
@@ -1512,6 +2587,47 @@ namespace dftfe
         //     pcout << std::endl;
         //   }
       } //*it
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::createAtomTypesList(
+    const std::vector<std::vector<double>> &atomLocations)
+  {
+    pcout << "Creating Atom Type List " << std::endl;
+    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+         it != d_atomTypes.end();
+         ++it)
+      {
+        unsigned                  atomType = *it;
+        std::vector<unsigned int> atomLocation;
+        for (int iAtom = 0; iAtom < atomLocations.size(); iAtom++)
+          {
+            if (atomLocations[iAtom][0] == atomType)
+              atomLocation.push_back(iAtom);
+          }
+        d_atomTypesList[atomType] = atomLocation;
+      }
+    if (d_n_mpi_processes > atomLocations.size())
+      {
+        if (d_this_mpi_process >= atomLocations.size())
+          {
+          }
+        else
+          d_LocallyOwnedAtomId.push_back(d_this_mpi_process);
+      }
+    else
+      {
+        int no_atoms       = atomLocations.size() / d_n_mpi_processes;
+        int remainderAtoms = atomLocations.size() % d_n_mpi_processes;
+        for (int i = 0; i < no_atoms; i++)
+          {
+            d_LocallyOwnedAtomId.push_back(d_this_mpi_process * no_atoms + i);
+          }
+        if (d_this_mpi_process < remainderAtoms)
+          d_LocallyOwnedAtomId.push_back(d_n_mpi_processes * no_atoms +
+                                         d_this_mpi_process);
+      }
   }
 
 

@@ -2385,11 +2385,11 @@ namespace dftfe
 
         for (int iElem = 0; iElem < numberElementsInAtomCompactSupport; iElem++)
           {
-            const unsigned int cellIndex =
-              elementIndexesInAtomCompactSupport[iElem];
+            // const unsigned int cellIndex =
+            //   elementIndexesInAtomCompactSupport[iElem];
             // std::transform(d_CMatrixEntriesTranspose[atomId][iElem].data() +
             //                  kPointIndex * d_numberNodesPerElement *
-            //                    numberSphericalFunctions, );
+            //                    numberSphericalFunctions,  );
 
             //             BLASWrapperPtr->stridedBlockScaleCopy(
             // numberSphericalFunctions,

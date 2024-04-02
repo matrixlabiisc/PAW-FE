@@ -847,6 +847,7 @@ namespace dftfe
           std::make_shared<dftfe::pawClass<dataTypes::number, memorySpace>>(
             mpi_communicator, // domain decomposition communicator
             d_dftfeScratchFolderName,
+            d_dftParamsPtr,
             atomTypes,
             d_dftParamsPtr->floatingNuclearCharges,
             d_nOMPThreads,
