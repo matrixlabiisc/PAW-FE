@@ -254,6 +254,9 @@ namespace dftfe
     void
     computeNonLocalHamiltonianEntries(const bool flagEnergy);
 
+    double
+    computeDeltaExchangeCorrelationEnergy(double &DeltaExchangeCorrelationVal);
+
   private:
     void
     createAtomTypesList(const std::vector<std::vector<double>> &atomLocations);
@@ -395,6 +398,9 @@ namespace dftfe
     void
     getSphericalQuadratureRule(std::vector<double> &             quad_weights,
                                std::vector<std::vector<double>> &quad_points);
+
+    void
+    computeCoreDeltaExchangeCorrelationEnergy();
 
     std::vector<double>
     derivativeOfRealSphericalHarmonic(unsigned int lQuantumNo,

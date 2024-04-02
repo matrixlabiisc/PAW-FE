@@ -1402,7 +1402,7 @@ namespace dftfe
                                                  0.0);
             const unsigned int  numberOfProjectorsSq =
               numberOfProjectors * numberOfProjectors;
-            if (d_excManagerPtr->getExcDensityObj())
+            if (!isGGA)
               {
                 double Yi, Yj;
                 for (int qpoint = 0; qpoint < numberofSphericalValues; qpoint++)
@@ -2389,10 +2389,9 @@ namespace dftfe
                     else
                       {
                         double temp =
-                          Delta_ExcijDensity[i * numberOfProjectors + j]
-                          + 2 * Delta_ExcijSigma[i * numberOfProjectors +
-                          j] + 2 * Delta_ExcijSigma[j *
-                          numberOfProjectors + i];
+                          Delta_ExcijDensity[i * numberOfProjectors + j] +
+                          2 * Delta_ExcijSigma[i * numberOfProjectors + j] +
+                          2 * Delta_ExcijSigma[j * numberOfProjectors + i];
                         Delta_Excij[j * numberOfProjectors + i] = temp;
                         Delta_Excij[i * numberOfProjectors + j] = temp;
                         // pcout
@@ -2405,15 +2404,15 @@ namespace dftfe
                         //   << 2 * Delta_ExcijSigma[j * numberOfProjectors
                         //   + i]
                         //   << std::endl;
-                      }//else
-                  }//jProj
-              }//iProj
+                      } // else
+                  }     // jProj
+              }         // iProj
 
             d_ExchangeCorrelationEnergyCorrectionTerm[atomId] = Delta_Excij;
 
 
           } // iAtom
-      }//locallyOwned atomSet
+      }     // locallyOwned atomSet
 
     // MPI_Barrier(d_mpiCommParent);
     // // Moved to nonLocalHamiltonian
