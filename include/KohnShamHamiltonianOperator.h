@@ -26,6 +26,7 @@
 #include <BLASWrapper.h>
 #include <FEBasisOperations.h>
 #include <oncvClass.h>
+#include <pawClass.h>
 
 namespace dftfe
 {
@@ -54,7 +55,9 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::HOST>>
         basisOperationsPtrHost,
       std::shared_ptr<dftfe::oncvClass<dataTypes::number, memorySpace>>
-                                  oncvClassPtr,
+        oncvClassPtr,
+      std::shared_ptr<dftfe::pawClass<dataTypes::number, memorySpace>>
+                                  pawClassPtr,
       std::shared_ptr<excManager> excManagerPtr,
       dftParameters *             dftParamsPtr,
       const unsigned int          densityQuadratureID,
@@ -197,7 +200,7 @@ namespace dftfe
   private:
     std::shared_ptr<
       AtomicCenteredNonLocalOperator<dataTypes::number, memorySpace>>
-      d_ONCVnonLocalOperator;
+      d_pseudopotentialNonLocalOperator;
 
     std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
       d_BLASWrapperPtr;
@@ -210,7 +213,9 @@ namespace dftfe
                                       dftfe::utils::MemorySpace::HOST>>
       d_basisOperationsPtrHost;
     std::shared_ptr<dftfe::oncvClass<dataTypes::number, memorySpace>>
-                                d_oncvClassPtr;
+      d_oncvClassPtr;
+    std::shared_ptr<dftfe::pawClass<dataTypes::number, memorySpace>>
+                                d_pawClassPtr;
     std::shared_ptr<excManager> d_excManagerPtr;
     dftParameters *             d_dftParamsPtr;
 
@@ -226,7 +231,9 @@ namespace dftfe
       d_cellWaveFunctionMatrixDst;
 
     dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
-                                                     d_ONCVNonLocalProjectorTimesVectorBlock;
+      d_pseudopotentialNonLocalProjectorTimesVectorBlock;
+    dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
+                                                     d_tempBlockVectorPawSinvHX;
     dftfe::utils::MemoryStorage<double, memorySpace> d_VeffJxW;
     dftfe::utils::MemoryStorage<double, memorySpace> d_VeffExtPotJxW;
 

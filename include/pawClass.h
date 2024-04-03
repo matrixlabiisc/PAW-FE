@@ -257,6 +257,9 @@ namespace dftfe
     double
     computeDeltaExchangeCorrelationEnergy(double &DeltaExchangeCorrelationVal);
 
+    double
+    computeTotalDeltaEnergy();
+
   private:
     void
     createAtomTypesList(const std::vector<std::vector<double>> &atomLocations);

@@ -1035,6 +1035,9 @@ namespace dftfe
         pcout << "Core contribution: " << d_coreXC[*it] << std::endl;
       } // *it
   }
-
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  double
+  pawClass<ValueType, memorySpace>::computeTotalDeltaEnergy()
+  {}
 
 } // namespace dftfe
