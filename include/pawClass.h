@@ -56,6 +56,13 @@ namespace dftfe
     inversePawOverlapEntries
   };
 
+  enum class TypeOfField
+  {
+    In,
+    Out,
+    Residual
+  };
+
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   class pawClass
@@ -175,7 +182,7 @@ namespace dftfe
 
 
     void
-    computeCompensationCharge();
+    computeCompensationCharge(TypeOfField typeOfField);
 
     void
     computeDij(const bool         isDijOut,
@@ -263,6 +270,13 @@ namespace dftfe
     double
     computeTotalDeltaEnergy();
 
+    double
+    computeDijResidualNorm();
+
+    std::vector<double>
+    DijVectorForMixing(TypeOfField typeOfField);
+
+
 
   private:
     void
@@ -304,7 +318,8 @@ namespace dftfe
       d_deltaValenceC;
     std::map<unsigned int, std::vector<double>> d_deltaCij, d_deltaCijkl;
     std::map<unsigned int, std::vector<double>>
-      d_nonLocalHamiltonianElectrostaticValue;
+                 d_nonLocalHamiltonianElectrostaticValue;
+    unsigned int d_nProjPerTask, nProjTotal;
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
      * @param[in] atomLocations atomic Coordinates
@@ -489,8 +504,8 @@ namespace dftfe
       d_BasisOperatorElectroDevicePtr;
 #endif
     std::map<unsigned int, std::vector<double>>
-                                                d_ProductOfQijShapeFnAtQuadPoints;
-    std::map<unsigned int, std::vector<double>> D_ij;
+                                                                       d_ProductOfQijShapeFnAtQuadPoints;
+    std::map<TypeOfField, std::map<unsigned int, std::vector<double>>> D_ij;
     std::map<unsigned int, std::vector<double>> d_multipole, d_multipoleInverse;
     std::vector<double> d_deltaInverseMatrix, d_deltaMatrix;
     std::map<std::pair<unsigned int, unsigned int>, std::vector<double>>

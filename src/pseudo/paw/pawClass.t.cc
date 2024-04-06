@@ -140,7 +140,8 @@ namespace dftfe
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  pawClass<ValueType, memorySpace>::computeCompensationCharge()
+  pawClass<ValueType, memorySpace>::computeCompensationCharge(
+    TypeOfField typeOfField)
   {
     const unsigned int numberAtomsOfInterest =
       d_atomicShapeFnsContainer->getNumAtomCentersSize();
@@ -181,7 +182,7 @@ namespace dftfe
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
         unsigned int        npjsq = numberOfProjectors * numberOfProjectors;
         std::vector<double> Tij   = d_ProductOfQijShapeFnAtQuadPoints[atomId];
-        std::vector<double> Dij   = D_ij[atomId];
+        std::vector<double> Dij   = D_ij[typeOfField][atomId];
         std::vector<unsigned int> elementIndexesInAtomCompactSupport =
           d_atomicShapeFnsContainer
             ->d_elementIndexesInAtomCompactSupport[atomId];
@@ -600,9 +601,10 @@ namespace dftfe
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
         if (startVectorIndex == 0)
-          D_ij[atomId] = std::vector<double>(numberSphericalFunctions *
-                                               numberSphericalFunctions,
-                                             0.0);
+          D_ij[isDijOut ? TypeOfField::Out : TypeOfField::In][atomId] =
+            std::vector<double>(numberSphericalFunctions *
+                                  numberSphericalFunctions,
+                                0.0);
         std::vector<ValueType> tempDij(numberSphericalFunctions *
                                          numberSphericalFunctions,
                                        0.0);
@@ -620,14 +622,13 @@ namespace dftfe
           &beta,
           &tempDij[0],
           numberSphericalFunctions);
-        std::transform(D_ij[atomId].data(),
-                       D_ij[atomId].data() +
-                         numberSphericalFunctions * numberSphericalFunctions,
-                       tempDij.data(),
-                       D_ij[atomId].data(),
-                       [](auto &p, auto &q) {
-                         return p + dftfe::utils::realPart(q);
-                       });
+        std::transform(
+          D_ij[isDijOut ? TypeOfField::Out : TypeOfField::In][atomId].data(),
+          D_ij[isDijOut ? TypeOfField::Out : TypeOfField::In][atomId].data() +
+            numberSphericalFunctions * numberSphericalFunctions,
+          tempDij.data(),
+          D_ij[isDijOut ? TypeOfField::Out : TypeOfField::In][atomId].data(),
+          [](auto &p, auto &q) { return p + dftfe::utils::realPart(q); });
       }
   }
 

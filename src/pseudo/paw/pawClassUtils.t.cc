@@ -492,5 +492,80 @@ namespace dftfe
     return (RSH);
   }
 
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  double
+  pawClass<ValueType, memorySpace>::computeDijResidualNorm()
+  {
+    std::vector<double> DijResidual = DijVectorForMixing(TypeOfField::Residual);
+    double              normsq      = 0.0;
+    for (int index = 0; index < DijResidual.size(); index++)
+      normsq = DijResidual[index] * DijResidual[index];
+    MPI_Allreduce(
+      MPI_IN_PLACE, &normsq, 1, MPI_DOUBLE, MPI_SUM, d_mpiCommParent);
+    return (std::sqrt(normsq));
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  std::vector<double>
+  pawClass<ValueType, memorySpace>::DijVectorForMixing(TypeOfField typeOfField)
+  {
+    std::vector<double> DijVector(d_nProjPerTask * d_nProjPerTask, 0.0);
+    unsigned int        index = 0;
+    for (unsigned int i = 0; i < d_LocallyOwnedAtomId.size(); i++)
+      {
+        unsigned int              atomId = d_LocallyOwnedAtomId[i];
+        std::vector<unsigned int> atomicNumber =
+          d_atomicProjectorFnsContainer->getAtomicNumbers();
+        unsigned int Znum = atomicNumber[atomId];
+        unsigned int numProj =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        std::vector<double> multipoleTable = d_multipole[Znum];
+        std::vector<double> Dij_in         = D_ij[TypeOfField::In][atomId];
+        std::vector<double> Dij_out        = D_ij[TypeOfField::Out][atomId];
+        if (typeOfField == TypeOfField::In)
+          {
+            for (int iProj = 0; iProj < numProj; iProj++)
+              {
+                for (int jProj = 0; jProj < numProj; jProj++)
+                  {
+                    DijVector[index] = std::sqrt(4 * M_PI) *
+                                       multipoleTable[iProj * numProj + jProj] *
+                                       Dij_in[iProj * numProj + jProj];
+                    index++;
+                  }
+              }
+          }
+        else if (typeOfField == TypeOfField::Out)
+          {
+            for (int iProj = 0; iProj < numProj; iProj++)
+              {
+                for (int jProj = 0; jProj < numProj; jProj++)
+                  {
+                    DijVector[index] = std::sqrt(4 * M_PI) *
+                                       multipoleTable[iProj * numProj + jProj] *
+                                       Dij_out[iProj * numProj + jProj];
+                    index++;
+                  }
+              }
+          }
+        else
+          {
+            for (int iProj = 0; iProj < numProj; iProj++)
+              {
+                for (int jProj = 0; jProj < numProj; jProj++)
+                  {
+                    DijVector[index] = std::sqrt(4 * M_PI) *
+                                       multipoleTable[iProj * numProj + jProj] *
+                                       (Dij_out[iProj * numProj + jProj] -
+                                        Dij_in[iProj * numProj + jProj]);
+                    index++;
+                  }
+              }
+          }
+      }
+    return (DijVector);
+  }
+
 
 } // namespace dftfe

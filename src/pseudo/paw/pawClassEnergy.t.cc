@@ -159,7 +159,7 @@ namespace dftfe
              iAtomList++)
           {
             atomId                         = d_LocallyOwnedAtomId[iAtomList];
-            std::vector<double> Dij        = D_ij[atomId];
+            std::vector<double> Dij        = D_ij[TypeOfField::Out][atomId];
             const unsigned int  Znum       = atomicNumbers[atomId];
             const unsigned int  RmaxIndex  = d_RmaxAugIndex[Znum];
             std::vector<double> radialGrid = d_radialMesh[Znum];

@@ -1387,7 +1387,7 @@ namespace dftfe
              iAtomList++)
           {
             atomId                         = d_LocallyOwnedAtomId[iAtomList];
-            std::vector<double> Dij        = D_ij[atomId];
+            std::vector<double> Dij        = D_ij[TypeOfField::In][atomId];
             unsigned int        Znum       = atomicNumbers[atomId];
             std::vector<double> RadialMesh = d_radialMesh[Znum];
             unsigned int        RmaxIndex  = d_RmaxAugIndex[Znum];
@@ -2640,6 +2640,16 @@ namespace dftfe
         if (d_this_mpi_process < remainderAtoms)
           d_LocallyOwnedAtomId.push_back(d_n_mpi_processes * no_atoms +
                                          d_this_mpi_process);
+      }
+    const std::vector<unsigned int> &atomicNumber =
+      d_atomicShapeFnsContainer->getAtomicNumbers();
+
+    for (unsigned int i = 0; i < d_LocallyOwnedAtomId.size(); i++)
+      {
+        unsigned int atomId = d_LocallyOwnedAtomId[i];
+        unsigned int Znum   = atomicNumber[atomId];
+        d_nProjPerTask += d_atomicProjectorFnsContainer
+                            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
       }
   }
 

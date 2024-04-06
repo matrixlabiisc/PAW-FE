@@ -2313,6 +2313,19 @@ namespace dftfe
             d_dftParamsPtr->mixingParameter *
               d_dftParamsPtr->spinMixingEnhancementFactor,
             d_dftParamsPtr->adaptAndersonMixingParameter);
+        if (d_dftParamsPtr->pawPseudoPotential)
+          {
+            dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+              Dij_InVector;
+            Dij_InVector.resize(
+              d_pawClassPtr->DijVectorForMixing(TypeOfField::In).size(), 1.0);
+            d_mixingScheme.addMixingVariable(
+              mixingVariable::DijMatrix,
+              Dij_InVector,
+              true, // call MPI REDUCE while computing dot products
+              d_dftParamsPtr->mixingParameter,
+              d_dftParamsPtr->adaptAndersonMixingParameter);
+          }
       }
     else if (d_dftParamsPtr->mixingMethod == "ANDERSON")
       {
@@ -2334,6 +2347,19 @@ namespace dftfe
             d_dftParamsPtr->mixingParameter *
               d_dftParamsPtr->spinMixingEnhancementFactor,
             d_dftParamsPtr->adaptAndersonMixingParameter);
+        if (d_dftParamsPtr->pawPseudoPotential)
+          {
+            dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+              Dij_InVector;
+            Dij_InVector.resize(
+              d_pawClassPtr->DijVectorForMixing(TypeOfField::In).size(), 1.0);
+            d_mixingScheme.addMixingVariable(
+              mixingVariable::DijMatrix,
+              Dij_InVector,
+              true, // call MPI REDUCE while computing dot products
+              d_dftParamsPtr->mixingParameter,
+              d_dftParamsPtr->adaptAndersonMixingParameter);
+          }
         if (d_excManagerPtr->getDensityBasedFamilyType() ==
             densityFamilyType::GGA)
           {
@@ -2429,6 +2455,7 @@ namespace dftfe
                   mixingVariable::rho,
                   d_densityInNodalValues[0].begin(),
                   d_densityInNodalValues[0].locally_owned_size());
+
                 d_mixingScheme.addVariableToResidualHist(
                   mixingVariable::rho,
                   d_preCondTotalDensityResidualVector.begin(),
@@ -2444,16 +2471,38 @@ namespace dftfe
                       d_densityResidualNodalValues[1].begin(),
                       d_densityResidualNodalValues[1].locally_owned_size());
                   }
+                if (d_dftParamsPtr->pawPseudoPotential)
+                  {
+                    std::vector<double> Dij_in =
+                      d_pawClassPtr->DijVectorForMixing(TypeOfField::In);
+                    std::vector<double> Dij_res =
+                      d_pawClassPtr->DijVectorForMixing(TypeOfField::Residual);
+                    d_mixingScheme.addVariableToInHist(
+                      mixingVariable::DijMatrix, Dij_in.data(), Dij_in.size());
+                    d_mixingScheme.addVariableToResidualHist(
+                      mixingVariable::DijMatrix,
+                      Dij_res.data(),
+                      Dij_res.size());
+                  }
                 // Delete old history if it exceeds a pre-described
                 // length
                 d_mixingScheme.popOldHistory(d_dftParamsPtr->mixingHistory);
 
                 // Compute the mixing coefficients
-                d_mixingScheme.computeAndersonMixingCoeff(
-                  d_dftParamsPtr->spinPolarized == 1 ?
-                    std::vector<mixingVariable>{mixingVariable::rho,
-                                                mixingVariable::magZ} :
-                    std::vector<mixingVariable>{mixingVariable::rho});
+                if (!d_dftParamsPtr->pawPseudoPotential)
+                  d_mixingScheme.computeAndersonMixingCoeff(
+                    d_dftParamsPtr->spinPolarized == 1 ?
+                      std::vector<mixingVariable>{mixingVariable::rho,
+                                                  mixingVariable::magZ} :
+                      std::vector<mixingVariable>{mixingVariable::rho});
+                else
+                  d_mixingScheme.computeAndersonMixingCoeff(
+                    d_dftParamsPtr->spinPolarized == 1 ?
+                      std::vector<mixingVariable>{mixingVariable::rho,
+                                                  mixingVariable::magZ,
+                                                  mixingVariable::DijMatrix} :
+                      std::vector<mixingVariable>{mixingVariable::rho,
+                                                  mixingVariable::DijMatrix});
                 for (unsigned int iComp = 0; iComp < norms.size(); ++iComp)
                   d_mixingScheme.mixVariable(
                     iComp == 0 ? mixingVariable::rho : mixingVariable::magZ,
@@ -2485,6 +2534,14 @@ namespace dftfe
                       d_gradDensityInQuadValues[iComp],
                       d_excManagerPtr->getDensityBasedFamilyType() ==
                         densityFamilyType::GGA);
+                  }
+                if (d_dftParamsPtr->pawPseudoPotential)
+                  {
+                    std::vector<double> Dij_in =
+                      d_pawClassPtr->DijVectorForMixing(TypeOfField::In);
+                    d_mixingScheme.mixVariable(mixingVariable::DijMatrix,
+                                               Dij_in.data(),
+                                               Dij_in.size());
                   }
               }
             else if (d_dftParamsPtr->mixingMethod == "ANDERSON")
@@ -2550,17 +2607,38 @@ namespace dftfe
                           d_gradDensityResidualQuadValues[iComp].size());
                       }
                   }
-
+                if (d_dftParamsPtr->pawPseudoPotential)
+                  {
+                    std::vector<double> Dij_in =
+                      d_pawClassPtr->DijVectorForMixing(TypeOfField::In);
+                    std::vector<double> Dij_res =
+                      d_pawClassPtr->DijVectorForMixing(TypeOfField::Residual);
+                    d_mixingScheme.addVariableToInHist(
+                      mixingVariable::DijMatrix, Dij_in.data(), Dij_in.size());
+                    d_mixingScheme.addVariableToResidualHist(
+                      mixingVariable::DijMatrix,
+                      Dij_res.data(),
+                      Dij_res.size());
+                  }
                 // Delete old history if it exceeds a pre-described
                 // length
                 d_mixingScheme.popOldHistory(d_dftParamsPtr->mixingHistory);
 
                 // Compute the mixing coefficients
-                d_mixingScheme.computeAndersonMixingCoeff(
-                  d_dftParamsPtr->spinPolarized == 1 ?
-                    std::vector<mixingVariable>{mixingVariable::rho,
-                                                mixingVariable::magZ} :
-                    std::vector<mixingVariable>{mixingVariable::rho});
+                if (!d_dftParamsPtr->pawPseudoPotential)
+                  d_mixingScheme.computeAndersonMixingCoeff(
+                    d_dftParamsPtr->spinPolarized == 1 ?
+                      std::vector<mixingVariable>{mixingVariable::rho,
+                                                  mixingVariable::magZ} :
+                      std::vector<mixingVariable>{mixingVariable::rho});
+                else
+                  d_mixingScheme.computeAndersonMixingCoeff(
+                    d_dftParamsPtr->spinPolarized == 1 ?
+                      std::vector<mixingVariable>{mixingVariable::rho,
+                                                  mixingVariable::magZ,
+                                                  mixingVariable::DijMatrix} :
+                      std::vector<mixingVariable>{mixingVariable::rho,
+                                                  mixingVariable::DijMatrix});
 
                 // update the mixing variables
                 for (unsigned int iComp = 0; iComp < norms.size(); ++iComp)
@@ -2581,6 +2659,14 @@ namespace dftfe
                                      mixingVariable::gradMagZ,
                         d_gradDensityInQuadValues[iComp].data(),
                         d_gradDensityInQuadValues[iComp].size());
+                  }
+                if (d_dftParamsPtr->pawPseudoPotential)
+                  {
+                    std::vector<double> Dij_in =
+                      d_pawClassPtr->DijVectorForMixing(TypeOfField::In);
+                    d_mixingScheme.mixVariable(mixingVariable::DijMatrix,
+                                               Dij_in.data(),
+                                               Dij_in.size());
                   }
                 if (d_dftParamsPtr->verbosity >= 1)
                   for (unsigned int iComp = 0; iComp < norms.size(); ++iComp)
@@ -2614,7 +2700,7 @@ namespace dftfe
             << "Poisson solve for total electrostatic potential (rhoIn+b): ";
         if (d_dftParamsPtr->isPseudopotential &&
             d_dftParamsPtr->pawPseudoPotential)
-          d_pawClassPtr->computeCompensationCharge();
+          d_pawClassPtr->computeCompensationCharge(TypeOfField::In);
         if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
             d_dftParamsPtr->floatingNuclearCharges and
             not d_dftParamsPtr->pinnedNodeForPBC)
@@ -3376,7 +3462,7 @@ namespace dftfe
             computing_timer.enter_subsection("phiTot solve");
             if (d_dftParamsPtr->isPseudopotential &&
                 d_dftParamsPtr->pawPseudoPotential)
-              d_pawClassPtr->computeCompensationCharge();
+              d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
             if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
                 d_dftParamsPtr->floatingNuclearCharges and
                 not d_dftParamsPtr->pinnedNodeForPBC)
@@ -3595,7 +3681,7 @@ namespace dftfe
         computing_timer.enter_subsection("phiTot solve");
         if (d_dftParamsPtr->isPseudopotential &&
             d_dftParamsPtr->pawPseudoPotential)
-          d_pawClassPtr->computeCompensationCharge();
+          d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
 
         if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
             d_dftParamsPtr->floatingNuclearCharges and
