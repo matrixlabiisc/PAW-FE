@@ -2612,7 +2612,9 @@ namespace dftfe
           pcout
             << std::endl
             << "Poisson solve for total electrostatic potential (rhoIn+b): ";
-
+        if (d_dftParamsPtr->isPseudopotential &&
+            d_dftParamsPtr->pawPseudoPotential)
+          d_pawClassPtr->computeCompensationCharge();
         if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
             d_dftParamsPtr->floatingNuclearCharges and
             not d_dftParamsPtr->pinnedNodeForPBC)
@@ -2795,6 +2797,31 @@ namespace dftfe
                                                      d_gradRhoCore,
                                                      s);
                 computing_timer.leave_subsection("VEff Computation");
+
+                if (d_dftParamsPtr->isPseudopotential &&
+                    d_dftParamsPtr->pawPseudoPotential)
+                  {
+                    computing_timer.enter_subsection(
+                      "Computing Non-Local Hamiltonian Entries");
+                    computing_timer.enter_subsection(
+                      "Computing Non-Local XC Term Entries");
+                    d_pawClassPtr
+                      ->initialiseExchangeCorrelationEnergyCorrection(s);
+                    computing_timer.leave_subsection(
+                      "Computing Non-Local XC Term Entries");
+                    computing_timer.enter_subsection(
+                      "Computing Non-Local Electrostatics Term Entries");
+                    if (s == 0)
+                      d_pawClassPtr
+                        ->evaluateNonLocalHamiltonianElectrostaticsValue(
+                          d_phiTotRhoIn, d_phiTotDofHandlerIndexElectro);
+                    computing_timer.leave_subsection(
+                      "Computing Non-Local Electrostatics Term Entries");
+                    d_pawClassPtr->computeNonlocalPseudoPotentialConstants(
+                      CouplingType::HamiltonianEntries, s);
+                    computing_timer.leave_subsection(
+                      "Computing Non-Local Hamiltonian Entries");
+                  }
 
 
                 for (unsigned int kPoint = 0; kPoint < d_kPointWeights.size();
@@ -3347,7 +3374,9 @@ namespace dftfe
                 << "Poisson solve for total electrostatic potential (rhoOut+b): ";
 
             computing_timer.enter_subsection("phiTot solve");
-
+            if (d_dftParamsPtr->isPseudopotential &&
+                d_dftParamsPtr->pawPseudoPotential)
+              d_pawClassPtr->computeCompensationCharge();
             if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
                 d_dftParamsPtr->floatingNuclearCharges and
                 not d_dftParamsPtr->pinnedNodeForPBC)
@@ -3564,6 +3593,9 @@ namespace dftfe
             << "Poisson solve for total electrostatic potential (rhoOut+b): ";
 
         computing_timer.enter_subsection("phiTot solve");
+        if (d_dftParamsPtr->isPseudopotential &&
+            d_dftParamsPtr->pawPseudoPotential)
+          d_pawClassPtr->computeCompensationCharge();
 
         if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
             d_dftParamsPtr->floatingNuclearCharges and

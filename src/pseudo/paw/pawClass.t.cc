@@ -225,9 +225,8 @@ namespace dftfe
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       quadraturePointsVector = d_BasisOperatorElectroHostPtr->quadPoints();
 
-    const dftfe::utils::MemoryStorage<ValueType,
-                                      dftfe::utils::MemorySpace::HOST>
-      JxwVector = d_BasisOperatorElectroHostPtr->JxW();
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      JxwVector = d_BasisOperatorElectroHostPtr->JxWBasisData();
 
     const std::vector<unsigned int> &atomicNumber =
       d_atomicShapeFnsContainer->getAtomicNumbers();
@@ -590,7 +589,7 @@ namespace dftfe
       d_atomicProjectorFnsContainer->getAtomicNumbers();
     char            transA = 'N';
     char            transB = 'T';
-    const ValueType beta   = 1.0;
+    const ValueType beta   = 0.0;
     const ValueType alpha  = 1.0;
 
     for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
@@ -601,9 +600,12 @@ namespace dftfe
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
         if (startVectorIndex == 0)
-          D_ij[std::make_pair(atomId, spinIndex)] = std::vector<ValueType>(
-            numberSphericalFunctions * numberSphericalFunctions, 0.0);
-
+          D_ij[atomId] = std::vector<double>(numberSphericalFunctions *
+                                               numberSphericalFunctions,
+                                             0.0);
+        std::vector<ValueType> tempDij(numberSphericalFunctions *
+                                         numberSphericalFunctions,
+                                       0.0);
         d_BLASWrapperHostPtr->xgemm(
           transA,
           transB,
@@ -616,8 +618,16 @@ namespace dftfe
           d_nonLocalOperator->getCconjtansXLocalDataStructure(atomId),
           numberSphericalFunctions,
           &beta,
-          D_ij[std::make_pair(atomId, spinIndex)].data(),
+          &tempDij[0],
           numberSphericalFunctions);
+        std::transform(D_ij[atomId].data(),
+                       D_ij[atomId].data() +
+                         numberSphericalFunctions * numberSphericalFunctions,
+                       tempDij.data(),
+                       D_ij[atomId].data(),
+                       [](auto &p, auto &q) {
+                         return p + dftfe::utils::realPart(q);
+                       });
       }
   }
 

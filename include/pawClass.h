@@ -175,12 +175,6 @@ namespace dftfe
 
 
     void
-    computeCompensationChargeL0();
-
-    void
-    computeCompensationChargeCoeff();
-
-    void
     computeCompensationCharge();
 
     void
@@ -252,13 +246,23 @@ namespace dftfe
       const unsigned int               dofHandlerId);
 
     void
+    initialiseExchangeCorrelationEnergyCorrection(unsigned int s);
+
+    void
+    computeNonlocalPseudoPotentialConstants(CouplingType coulingtype,
+                                            unsigned int s = 0);
+
+    void
     computeNonLocalHamiltonianEntries(const bool flagEnergy);
 
     double
     computeDeltaExchangeCorrelationEnergy(double &DeltaExchangeCorrelationVal);
 
+
+
     double
     computeTotalDeltaEnergy();
+
 
   private:
     void
@@ -273,8 +277,7 @@ namespace dftfe
     void
     initialiseZeroPotential();
 
-    void
-    initialiseExchangeCorrelationEnergyCorrection();
+
 
     void
     initialiseKineticEnergyCorrection();
@@ -284,6 +287,12 @@ namespace dftfe
 
     void
     computeInverseOfMultipoleData();
+
+    void
+    computeCompensationChargeL0();
+
+    void
+    computeCompensationChargeCoeff();
 
     std::map<unsigned int, std::vector<double>> d_KineticEnergyCorrectionTerm;
     std::map<unsigned int, std::vector<double>> d_zeroPotentialij;
@@ -316,8 +325,7 @@ namespace dftfe
     void
     createAtomCenteredSphericalFunctionsForDensities();
 
-    void
-    computeNonlocalPseudoPotentialConstants();
+
     void
     createAtomCenteredSphericalFunctionsForProjectors();
     void
@@ -481,9 +489,8 @@ namespace dftfe
       d_BasisOperatorElectroDevicePtr;
 #endif
     std::map<unsigned int, std::vector<double>>
-      d_ProductOfQijShapeFnAtQuadPoints;
-    std::map<std::pair<unsigned int, unsigned int>, std::vector<ValueType>>
-                                                D_ij;
+                                                d_ProductOfQijShapeFnAtQuadPoints;
+    std::map<unsigned int, std::vector<double>> D_ij;
     std::map<unsigned int, std::vector<double>> d_multipole, d_multipoleInverse;
     std::vector<double> d_deltaInverseMatrix, d_deltaMatrix;
     std::map<std::pair<unsigned int, unsigned int>, std::vector<double>>

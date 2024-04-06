@@ -199,7 +199,10 @@ namespace dftfe
       }
 #endif
 
-    computeNonlocalPseudoPotentialConstants();
+    computeNonlocalPseudoPotentialConstants(CouplingType::pawOverlapEntries);
+    initialiseKineticEnergyCorrection();
+    initialiseColoumbicEnergyCorrection();
+    initialiseZeroPotential();
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
@@ -261,6 +264,10 @@ namespace dftfe
       kPointCoordinates,
       d_BasisOperatorHostPtr,
       d_nlpspQuadratureId);
+    pcout << "-----Compensation Charge---" << std::endl;
+    computeCompensationChargeCoeff();
+    computeCompensationChargeL0();
+
 
     MPI_Barrier(d_mpiCommParent);
     double TotalTime = MPI_Wtime() - InitTimeTotal;
@@ -344,7 +351,9 @@ namespace dftfe
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  pawClass<ValueType, memorySpace>::computeNonlocalPseudoPotentialConstants()
+  pawClass<ValueType, memorySpace>::computeNonlocalPseudoPotentialConstants(
+    CouplingType coulingtype,
+    unsigned int s)
   {
     for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
          it != d_atomTypes.end();
@@ -751,17 +760,19 @@ namespace dftfe
         std::vector<double> NcorePotential, tildeNCorePotential;
         if (d_atomTypeCoreFlagMap[*it])
           {
-            oneTermPoissonPotential(aeCoreDensity[0],
+            oneTermPoissonPotential(&aeCoreDensity[0],
                                     0,
                                     0,
                                     RmaxIndex,
+                                    2,
                                     radialMesh,
                                     rab,
                                     NcorePotential);
-            oneTermPoissonPotential(psCoreDensity[0],
+            oneTermPoissonPotential(&psCoreDensity[0],
                                     0,
                                     0,
                                     RmaxIndex,
+                                    2,
                                     radialMesh,
                                     rab,
                                     tildeNCorePotential);
@@ -770,10 +781,11 @@ namespace dftfe
         for (int lShapeFn = 0; lShapeFn < numRadialShapeFunctions; lShapeFn++)
           {
             std::vector<double> tempPotential;
-            oneTermPoissonPotential(shapeFnRadial[lShapeFn * meshSize],
+            oneTermPoissonPotential(&shapeFnRadial[lShapeFn * meshSize],
                                     0,
                                     0,
                                     RmaxIndex,
+                                    2,
                                     radialMesh,
                                     rab,
                                     tempPotential);
@@ -863,19 +875,21 @@ namespace dftfe
                 for (int lShapeFn = lmin; lShapeFn <= lmax; lShapeFn++)
                   {
                     std::vector<double> tempPotentialAE, tempPotentialPS;
-                    twoTermPoissonPotential(aePhi[iProj * meshSize],
-                                            aePhi[jProj * meshSize],
+                    twoTermPoissonPotential(&aePhi[iProj * meshSize],
+                                            &aePhi[jProj * meshSize],
                                             lShapeFn,
                                             0,
                                             RmaxIndex,
+                                            2,
                                             rab,
                                             radialMesh,
                                             tempPotentialAE);
-                    twoTermPoissonPotential(psPhi[iProj * meshSize],
-                                            psPhi[jProj * meshSize],
+                    twoTermPoissonPotential(&psPhi[iProj * meshSize],
+                                            &psPhi[jProj * meshSize],
                                             lShapeFn,
                                             0,
                                             RmaxIndex,
+                                            2,
                                             rab,
                                             radialMesh,
                                             tempPotentialPS);
@@ -926,8 +940,8 @@ namespace dftfe
 
                 integralAllElectronPhiIphiJContribution[index1] =
                   integralOfProjectorsInAugmentationSphere(
-                    aePhi[iProj * meshSize],
-                    aePhi[jProj * meshSize],
+                    &aePhi[iProj * meshSize],
+                    &aePhi[jProj * meshSize],
                     radialMesh,
                     rab,
                     0,
@@ -992,9 +1006,9 @@ namespace dftfe
         DeltaC += valueTemp;
         DeltaCValence += valueTemp;
 
-        valueTemp =
-          -sqrt(4 * M_PI) * (*it) *
-          integralOfDensity(aeCoreDensity, radialMesh, rab, 0, RmaxIndex + 1);
+        valueTemp = -sqrt(4 * M_PI) * (*it) *
+                    integralOfDensity(
+                      &aeCoreDensity[0], radialMesh, rab, 0, RmaxIndex + 1);
 
         pcout << " integral core/r: " << valueTemp << std::endl;
         DeltaC += valueTemp;
@@ -1284,9 +1298,9 @@ namespace dftfe
               {
                 radialIntegralData[i * numberOfRadialProjectors + j] =
                   threeTermIntegrationOverAugmentationSphere(
-                    radialPSWaveFunctionsData[i * radialMesh.size()],
-                    radialPSWaveFunctionsData[j * radialMesh.size()],
-                    zeroPotentialData[0],
+                    &radialPSWaveFunctionsData[i * radialMesh.size()],
+                    &radialPSWaveFunctionsData[j * radialMesh.size()],
+                    &zeroPotentialData[0],
                     radialMesh,
                     rab,
                     0,
@@ -1346,8 +1360,8 @@ namespace dftfe
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  pawClass<ValueType,
-           memorySpace>::initialiseExchangeCorrelationEnergyCorrection()
+  pawClass<ValueType, memorySpace>::
+    initialiseExchangeCorrelationEnergyCorrection(unsigned int s)
   {
     const bool isGGA =
       d_excManagerPtr->getDensityBasedFamilyType() == densityFamilyType::GGA;
