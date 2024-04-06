@@ -59,6 +59,8 @@ namespace dftfe
       writePdosFile;
     bool pawPseudoPotential = false;
 
+    double netCharge;
+
     /** parameters for LRD preconditioner **/
 
     double      startingNormLRDLargeDamping;
@@ -158,6 +160,7 @@ namespace dftfe
     double       xlbomdKernelRankUpdateFDParameter;
     bool         smearedNuclearCharges;
     bool         floatingNuclearCharges;
+    bool         multipoleBoundaryConditions;
     bool         nonLinearCoreCorrection;
     unsigned int maxLineSearchIterCGPRP;
     std::string  atomicMassesFile;
