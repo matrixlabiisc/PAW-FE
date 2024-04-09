@@ -615,4 +615,29 @@ namespace dftfe
     return (der);
   }
 
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  double
+  pawClass<ValueType, memorySpace>::multipoleIntegrationGrid(
+    double *             f1,
+    double *             f2,
+    std::vector<double> &radial,
+    std::vector<double> &rab,
+    const int            L,
+    const unsigned int   rminIndex,
+    const unsigned int   rmaxIndex)
+  {
+    std::function<double(const unsigned int &)> integrationValue =
+      [&](const unsigned int &i) {
+        double Value = rab[i] * f2[i] * f1[i];
+        Value *= pow(radial[i], L + 2);
+        return (Value);
+      };
+
+    double IntegralResult =
+      simpsonIntegral(rminIndex, rmaxIndex, integrationValue);
+
+
+    return (IntegralResult);
+  }
+
 } // namespace dftfe

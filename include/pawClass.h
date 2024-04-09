@@ -349,6 +349,10 @@ namespace dftfe
     void
     createAtomCenteredSphericalFunctionsForZeroPotential();
 
+    void
+    initializeRadialDataOnRadialMesh();
+
+
     std::complex<double>
     computeTransformationExtries(int l, int mu, int m);
     /**
@@ -372,7 +376,14 @@ namespace dftfe
     // Utils Functions
     double
     gaunt(int l_i, int l_j, int l, int m_i, int m_j, int m);
-
+    double
+    multipoleIntegrationGrid(double *             f1,
+                             double *             f2,
+                             std::vector<double> &radial,
+                             std::vector<double> &rab,
+                             const int            L,
+                             const unsigned int   rminIndex,
+                             const unsigned int   rmaxIndex);
     double
     simpsonIntegral(
       unsigned int                                 startIndex,
@@ -430,6 +441,8 @@ namespace dftfe
 
     void
     computeCoreDeltaExchangeCorrelationEnergy();
+
+
 
     std::vector<double>
     derivativeOfRealSphericalHarmonic(unsigned int lQuantumNo,
