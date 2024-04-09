@@ -566,6 +566,53 @@ namespace dftfe
       }
     return (DijVector);
   }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  std::vector<double>
+  pawClass<ValueType, memorySpace>::radialDerivativeOfMeshData(
+    const std::vector<double> &r,
+    const std::vector<double> &rab,
+    const std::vector<double> &functionValue)
+  {
+    alglib::real_1d_array       x, y;
+    alglib::spline1dinterpolant p1;
+    unsigned int                size = r.size();
+    x.setcontent(size, &r[0]);
+    y.setcontent(size, &functionValue[0]);
+    alglib::ae_int_t natural_bound_type = 1;
+    alglib::ae_int_t dir_bound_type     = 0;
+    alglib::spline1dbuildcubic(x,
+                               y,
+                               size,
+                               dir_bound_type,
+                               functionValue[0],
+                               natural_bound_type,
+                               0.0,
+                               p1);
+    std::vector<double> der(size, 0.0);
+    std::vector<double> coeff(5, 0.0);
+    coeff[0] = -25.0 / 12.0;
+    coeff[1] = 4.0;
+    coeff[2] = -3.0;
+    coeff[3] = 4.0 / 3.0;
+    coeff[4] = -1.0 / 4.0;
+    MPI_Barrier(d_mpiCommParent);
+    // pcout << "Checking Radial Derivative Values: " << std::endl;
+    for (unsigned int i = 0; i < size - 4; i++)
+      {
+        double Value, derivativeValue, radialDensitySecondDerivative;
+        der[i] =
+          (coeff[0] * functionValue[i] + coeff[1] * functionValue[i + 1] +
+           coeff[2] * functionValue[i + 2] + coeff[3] * functionValue[i + 3] +
+           coeff[4] * functionValue[i + 4]) /
+          rab[i];
+        alglib::spline1ddiff(
+          p1, r[i], Value, derivativeValue, radialDensitySecondDerivative);
+        // pcout << i << " " << r[i] << " " << Value << " " << derivativeValue
+        //       << " " << der[i] << std::endl;
+        // der[i] = derivativeValue;
+      }
 
+    return (der);
+  }
 
 } // namespace dftfe

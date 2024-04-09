@@ -31,7 +31,7 @@ namespace dftfe
     d_DataPresent = fileReadFlag;
     d_cutOff      = 0.0;
     d_rMin        = 0.0;
-    if (fileReadFlag)
+    if (fileReadFlag == 0)
       {
         unsigned int        numRows = radialFunctionData.size() - 1;
         std::vector<double> xData(numRows), yData(numRows);

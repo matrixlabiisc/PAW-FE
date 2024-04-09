@@ -1832,38 +1832,6 @@ namespace dftfe
 
       if (file.is_open())
         {
-          int isXML = 1;
-          file << isXML << std::endl;
-          // l count
-          file << ang_mom_list.size() << std::endl;
-          // Lead Number
-          file << out_proj_arr.size() << std::endl;
-          // RmaxAug
-          file << RmaxAug << std::endl;
-          // Projector data
-          int m = out_proj_arr.size();
-          int n = out_proj_arr[0].size();
-          for (int i = 0; i < m; i++)
-            {
-              for (int j = 0; j < n; j++)
-                file << out_proj_arr[i][j] << " ";
-              file << std::endl;
-            }
-          for (int i = 0; i < ang_mom_unique_list.size(); i++)
-            {
-              file << "proj_l" + std::to_string(ang_mom_unique_list[i]) + ".dat"
-                   << std::endl;
-              file << "allelectron_partial_l" +
-                        std::to_string(ang_mom_unique_list[i]) + ".dat"
-                   << std::endl;
-              file << "smooth_partial_l" +
-                        std::to_string(ang_mom_unique_list[i]) + ".dat"
-                   << std::endl;
-              file << ang_mom_multiplicity_list[i] << std::endl;
-            }
-          int LmaxAug = 2;
-          file << LmaxAug + 1 << std::endl;
-
           // nlcc Flag
           std::vector<std::string> header_tag_nlcc;
           std::vector<std::string> attr_type_nlcc;
@@ -1891,6 +1859,9 @@ namespace dftfe
               else
                 file << "F" << std::endl;
             }
+
+          // RmaxAug
+          file << RmaxAug << std::endl;
 
           // ke_core
           std::vector<std::string> header_tag_ke;
@@ -1973,8 +1944,68 @@ namespace dftfe
           else
             {
               file << "0" << std::endl;
+              file << rc << std::endl;
             }
         }
+
+      // l count
+      file << ang_mom_list.size() << std::endl;
+
+      for (int i = 0; i < ang_mom_unique_list.size(); i++)
+        {
+          file << ang_mom_multiplicity_list[i] << std::endl;
+        }
+
+      if (ang_mom_unique_list.size() != 4)
+        {
+          for (int s = 0; s < (4 - ang_mom_unique_list.size()); s++)
+            {
+              file << 0 << std::endl;
+            }
+        }
+      // // Projector data
+
+
+      // int m = out_proj_arr.size();
+      // int n = out_proj_arr[0].size();
+      // for (int i = 0; i < m; i++) {
+      //     for (int j = 0; j < n; j++)
+      //         file << out_proj_arr[i][j] << " ";
+      //     file << std::endl;
+      // }
+      // for(int i = 0; i < ang_mom_unique_list.size(); i++){
+      //     file <<
+      //     "proj_l"+std::to_string(ang_mom_unique_list[i])+".dat"<<std::endl;
+      //     file <<
+      //     "allelectron_partial_l"+std::to_string(ang_mom_unique_list[i])+".dat"<<std::endl;
+      //     file <<
+      //     "smooth_partial_l"+std::to_string(ang_mom_unique_list[i])+".dat"<<std::endl;
+      //     file << ang_mom_multiplicity_list[i]<< std::endl;
+      // }
+
+
+      // // nlcc Flag
+      // std::vector<std::string> header_tag_nlcc;
+      // std::vector<std::string> attr_type_nlcc;
+      // std::vector<std::string> attr_value_nlcc;
+      // header_tag_nlcc.push_back("atom");
+      // XmlTagReaderAttr(header_tag_nlcc,file_path_in,&attr_type_nlcc,&attr_value_nlcc);
+      // unsigned int index_2 = 0;
+      // std::string to_search_2 = "core";
+      // auto it_2 =
+      // std::find(attr_type_nlcc.begin(),attr_type_nlcc.end(),to_search_2); if
+      // (it_2 == attr_type_nlcc.end()) {   std::cout<<"core attribute not
+      // found";
+      //     return;
+      // }
+      // else
+      // {
+      //     index_2 = std::distance(attr_type_nlcc.begin(), it_2);
+      //     if(std::stod(attr_value_nlcc[index_2])>  1E-1)
+      //         file<<"T"<<std::endl;
+      //     else
+      //         file<<"F"<<std::endl;
+      // }
     }
     int
     pseudoPotentialToDftfeParser(const std::string file_path_in,
@@ -2059,8 +2090,6 @@ namespace dftfe
       else if (file_type == "xml")
         {
           xmltoZeroPotFile(file_path_in, file_path_out);
-          xmltoAllElecCoreDensityFile(file_path_in, file_path_out);
-          xmltoPseudoCoreDensityFile(file_path_in, file_path_out);
           xmltoKineticDifFile(file_path_in, file_path_out);
           xmltoPseudoValDensityFile(file_path_in, file_path_out);
           xmltoProjectorPAWFile(file_path_in, file_path_out);
@@ -2094,7 +2123,11 @@ namespace dftfe
             {
               index_2 = std::distance(attr_type_nlcc.begin(), it_2);
               if (std::stod(attr_value_nlcc[index_2]) > 1E-1)
-                nlccFlag = 1;
+                {
+                  nlccFlag = 1;
+                  xmltoAllElecCoreDensityFile(file_path_in, file_path_out);
+                  xmltoPseudoCoreDensityFile(file_path_in, file_path_out);
+                }
               else
                 nlccFlag = 0;
             }

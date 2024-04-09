@@ -340,6 +340,9 @@ namespace dftfe
     void
     createAtomCenteredSphericalFunctionsForDensities();
 
+    void
+    createAtomCenteredSphericalFunctionsForShapeFunctions();
+
 
     void
     createAtomCenteredSphericalFunctionsForProjectors();
@@ -433,6 +436,10 @@ namespace dftfe
                                       int          mQuantumNo,
                                       double       theta,
                                       double       phi);
+    std::vector<double>
+    radialDerivativeOfMeshData(const std::vector<double> &r,
+                               const std::vector<double> &rab,
+                               const std::vector<double> &functionValue);
 
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
@@ -461,7 +468,8 @@ namespace dftfe
 
     std::map<std::pair<unsigned int, unsigned int>,
              std::shared_ptr<AtomCenteredSphericalFunctionBase>>
-      d_atomicProjectorFnsMap;
+      d_atomicProjectorFnsMap, d_atomicAEPartialWaveFnsMap,
+      d_atomicPSPartialWaveFnsMap;
 
     std::map<std::pair<unsigned int, unsigned int>,
              std::shared_ptr<AtomCenteredSphericalFunctionBase>>

@@ -275,6 +275,10 @@ namespace dftfe
                           "false",
                           dealii::Patterns::Bool(),
                           "[Standard] ");
+        prm.declare_entry("NUMBER OF ATOM CENTERED SHAPE FUNCTIONS",
+                          "3",
+                          dealii::Patterns::Integer(0),
+                          "[Advanced] Number of shape functions per atom");
         prm.declare_entry(
           "DOMAIN VECTORS FILE",
           "",
@@ -1479,6 +1483,8 @@ namespace dftfe
         prm.get_integer("COMPENSATION CHARGE QUADRATURE COPY");
       DiagonalMassMatrix = prm.get_bool("USE DIAGONAL MASS MATRIX");
       ApproxDelta        = prm.get_bool("USE APPROX DELTA MATRIX");
+      noShapeFnsInPAW =
+        prm.get_integer("NUMBER OF ATOM CENTERED SHAPE FUNCTIONS");
       prm.enter_subsection("Optimization");
       {
         optimizationMode       = prm.get("OPTIMIZATION MODE");

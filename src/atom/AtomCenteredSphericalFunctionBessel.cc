@@ -46,18 +46,17 @@ namespace dftfe
         return 0.0;
       else
         {
-          // double alpha = -q1[d_lQuantumNumber] / q2[d_lQuantumNumber] *
-          //                (std::sph_bessel(d_lQuantumNumber,
-          //                q1[d_lQuantumNumber] * d_Rc)) /
-          //                (std::sph_bessel(d_lQuantumNumber,
-          //                q2[d_lQuantumNumber] * d_Rc));
-          // double Value =
-          //   x > d_Rc ? 0.0 :
-          //            (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber]
-          //            * x) +
-          //             alpha * (std::sph_bessel(d_lQuantumNumber,
-          //             q2[d_lQuantumNumber] * x)));
-          // return Value;
+          double alpha =
+            -q1[d_lQuantumNumber] / q2[d_lQuantumNumber] *
+            (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * d_Rc)) /
+            (std::sph_bessel(d_lQuantumNumber, q2[d_lQuantumNumber] * d_Rc));
+          double Value =
+            x > d_Rc ?
+              0.0 :
+              (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * x) +
+               alpha *
+                 (std::sph_bessel(d_lQuantumNumber, q2[d_lQuantumNumber] * x)));
+          return Value;
         }
     };
     d_NormalizationConstant =
@@ -75,15 +74,15 @@ namespace dftfe
     std::vector<double> q2    = {6.283185307179586 / d_Rc,
                               7.7252518369375 / d_Rc,
                               9.095011330476355 / d_Rc};
-    // double alpha = -q1[d_lQuantumNumber] / q2[d_lQuantumNumber] *
-    //                (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] *
-    //                d_Rc)) / (std::sph_bessel(d_lQuantumNumber,
-    //                q2[d_lQuantumNumber] * d_Rc));
-    // Value =
-    //  r > d_Rc ? 0.0 :
-    //            (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * r) +
-    //             alpha * (std::sph_bessel(d_lQuantumNumber,
-    //             q2[d_lQuantumNumber] * r)));
+    double              alpha =
+      -q1[d_lQuantumNumber] / q2[d_lQuantumNumber] *
+      (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * d_Rc)) /
+      (std::sph_bessel(d_lQuantumNumber, q2[d_lQuantumNumber] * d_Rc));
+    Value =
+      r > d_Rc ?
+        0.0 :
+        (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * r) +
+         alpha * (std::sph_bessel(d_lQuantumNumber, q2[d_lQuantumNumber] * r)));
     return Value;
   }
   std::vector<double>

@@ -49,6 +49,41 @@ namespace dftfe
     d_atomTypeAtributes      = atomAttributes;
     d_useDevice              = useDevice;
   }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType,
+           memorySpace>::createAtomCenteredSphericalFunctionsForShapeFunctions()
+  {
+    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+         it != d_atomTypes.end();
+         ++it)
+      {
+        char         pseudoAtomDataFile[256];
+        unsigned int cumulativeSplineId = 0;
+        strcpy(pseudoAtomDataFile,
+               (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
+                "/PseudoAtomDat")
+                 .c_str());
+
+        unsigned int  Znum = *it;
+        std::ifstream readPseudoDataFileNames(pseudoAtomDataFile);
+        for (int i = 0; i < 4; i++)
+          readPseudoDataFileNames.ignore();
+        unsigned int shapeFnType;
+        readPseudoDataFileNames >> shapeFnType;
+        double rc;
+        readPseudoDataFileNames >> rc;
+        unsigned int lmaxAug = d_dftParamsPtr->noShapeFnsInPAW;
+        for(unsigned int lQuantumNo = 0; lQuantumNo < lmaxAug; lQuantumNo++ )
+        {
+          
+        }
+
+
+
+      } //*it
+  }
+
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
@@ -68,27 +103,70 @@ namespace dftfe
         char         valenceDataFile[256];
         strcpy(valenceDataFile,
                (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
-                "/density.inp")
+                "/pseudo_valence_density.dat")
                  .c_str());
-        char coreDataFile[256];
-        strcpy(coreDataFile,
+        char coreDataFileAE[256];
+        strcpy(coreDataFileAE,
                (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
-                "/coreDensity.inp")
+                "/ae_core_density.dat")
+                 .c_str());
+        char coreDataFilePS[256];
+        strcpy(coreDataFilePS,
+               (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
+                "/pseudo_core_density.dat")
                  .c_str());
 
         for (unsigned int i = 0; i < d_nOMPThreads; i++)
           {
             d_atomicValenceDensityVector[i][*it] = std::make_shared<
               AtomCenteredSphericalFunctionValenceDensitySpline>(
-              valenceDataFile, 1E-10, false);
+              valenceDataFile, 1E-10, true);
             d_atomicCoreDensityVector[i][*it] =
               std::make_shared<AtomCenteredSphericalFunctionCoreDensitySpline>(
-                coreDataFile, 1E-12, true);
+                coreDataFilePS, 1E-12, true);
           }
         if (d_atomicCoreDensityVector[0][atomicNumber]->isDataPresent())
           d_atomTypeCoreFlagMap[atomicNumber] = true;
         else
           d_atomTypeCoreFlagMap[atomicNumber] = false;
+        std::vector<double> radialMesh     = d_radialMesh[*it];
+        unsigned int        numValues      = radialMesh.size();
+        std::vector<double> jacobianValues = d_radialJacobianData[*it];
+        std::vector<double> radialAECoreDensity(numValues, 0.00);
+        std::vector<double> radialPSCoreDensity(numValues, 0.00);
+
+        if (d_atomicCoreDensityVector[0][atomicNumber]->isDataPresent())
+          {
+            std::vector<std::vector<double>> AECoreDensityData(0),
+              PSCoreDensityData(0);
+            dftUtils::readFile(2, AECoreDensityData, coreDataFileAE);
+            dftUtils::readFile(2, PSCoreDensityData, coreDataFilePS);
+
+            for (unsigned int iRow = 0; iRow < numValues; iRow++)
+              {
+                radialAECoreDensity[iRow] = AECoreDensityData[iRow][1];
+                radialPSCoreDensity[iRow] = PSCoreDensityData[iRow][1];
+              }
+
+            pcout << "Radial Derivative of Nc" << std::endl;
+            d_radialCoreDerAE[*it] =
+              radialDerivativeOfMeshData(radialMesh,
+                                         jacobianValues,
+                                         radialAECoreDensity);
+            pcout << "Radial Derivative of TIlde Nc" << std::endl;
+            d_radialCoreDerPS[*it] =
+              radialDerivativeOfMeshData(radialMesh,
+                                         jacobianValues,
+                                         radialPSCoreDensity);
+          }
+        else
+          {
+            d_radialCoreDerAE[*it] = std::vector<double>(numValues, 0.0);
+            d_radialCoreDerPS[*it] = std::vector<double>(numValues, 0.0);
+          }
+        d_atomCoreDensityAE[*it] = radialAECoreDensity;
+        d_atomCoreDensityPS[*it] = radialPSCoreDensity;
+
       } //*it loop
   }
 
@@ -162,9 +240,79 @@ namespace dftfe
     d_numEigenValues                = numEigenValues;
     d_compensationChargeQuadratureIdElectro =
       compensationChargeQuadratureIdElectro;
-    createAtomCenteredSphericalFunctionsForDensities();
-    createAtomCenteredSphericalFunctionsForProjectors();
+    // Read Derivative File
+    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+         it != d_atomTypes.end();
+         ++it)
+      {
+        char DerivativeFileName[256];
+        strcpy(DerivativeFileName,
+               (d_dftfeScratchFolderName + "/z" + std::to_string(*it) + "/" +
+                "derivatives.dat")
+                 .c_str());
+        std::vector<std::vector<double>> derivativeData(0);
+        dftUtils::readFile(2, derivativeData, DerivativeFileName);
+        unsigned int        RmaxIndex = 0;
+        unsigned int        maxIndex  = derivativeData.size();
+        std::vector<double> RadialMesh(maxIndex, 0.0);
+        std::vector<double> radialDerivative(maxIndex, 0.0);
+        char                pseudoAtomDataFile[256];
+        strcpy(pseudoAtomDataFile,
+               (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
+                "/PseudoAtomDat")
+                 .c_str());
+        std::ifstream readPseudoDataFileNames(pseudoAtomDataFile);
+        char          isCore;
+        double        coreKE;
+        double        RmaxAug;
+        if (readPseudoDataFileNames.is_open())
+          {
+            readPseudoDataFileNames >> isCore;
+            readPseudoDataFileNames >> RmaxAug;
+            if (isCore == 'T')
+              readPseudoDataFileNames >> coreKE;
+            else
+              coreKE = 0.0;
+            d_RmaxAug[*it] = RmaxAug;
+            d_coreKE[*it]  = coreKE;
+          }
+        double deltaR = 1000;
+        for (int iRow = 0; iRow < maxIndex; iRow++)
+          {
+            RadialMesh[iRow]       = derivativeData[iRow][0];
+            radialDerivative[iRow] = derivativeData[iRow][1];
+            if (std::fabs(RadialMesh[iRow] - RmaxAug) < deltaR)
+              {
+                RmaxIndex = iRow;
+                deltaR    = std::fabs(RadialMesh[iRow] - RmaxAug);
+              }
+          }
+        d_radialMesh[*it]         = RadialMesh;
+        d_radialJacobianData[*it] = radialDerivative;
+        pcout << "PAW Initialization: Rmax Index is: " << RmaxIndex
+              << std::endl;
+        pcout
+          << "PAW Initialization: Difference in RmaxAug with xml augmentation Radius: "
+          << deltaR << std::endl;
+        d_RmaxAugIndex[*it] = RmaxIndex;
+        pcout
+          << "PAW Initializaion: Warning! make sure the above value is not large!!"
+          << std::endl;
+        double Rold = d_RmaxAug[*it];
+        if (deltaR > 1E-8)
+          d_RmaxAug[*it] = RadialMesh[RmaxIndex];
+        pcout << "PAW Initialization: Warning!! PAW RmaxAug is reset to: "
+              << d_RmaxAug[*it] << " from: " << Rold << std::endl;
+      }
+    // Reading ZeroPotential Data
     createAtomCenteredSphericalFunctionsForZeroPotential();
+    // Reading Core Density Data
+    createAtomCenteredSphericalFunctionsForDensities();
+    // Reading Projectors/partial and PS partial waves Data
+    createAtomCenteredSphericalFunctionsForProjectors();
+    // Rading Shapefunctions Data
+    createAtomCenteredSphericalFunctionsForShapeFunctions();
+
 
     d_atomicProjectorFnsContainer =
       std::make_shared<AtomCenteredSphericalFunctionContainer>();
@@ -422,87 +570,95 @@ namespace dftfe
         unsigned int  Znum = *it;
         std::ifstream readPseudoDataFileNames(pseudoAtomDataFile);
         unsigned int  numberOfProjectors;
+        for (int i = 0; i <= 5; i++)
+          readPseudoDataFileNames.ignore();
         readPseudoDataFileNames >> numberOfProjectors;
-        readPseudoDataFileNames.ignore();
-        projectorIdDetails.resize(numberOfProjectors);
-        std::string   readLine;
-        std::set<int> radFunctionIds;
-        atomicFunctionIdDetails.resize(numberOfProjectors);
-        for (unsigned int i = 0; i < numberOfProjectors; ++i)
+        std::vector<unsigned int> projectorPerOrbital(4, 0);
+        readPseudoDataFileNames >> projectorPerOrbital[0];
+        readPseudoDataFileNames >> projectorPerOrbital[1];
+        readPseudoDataFileNames >> projectorPerOrbital[2];
+        readPseudoDataFileNames >> projectorPerOrbital[3];
+        unsigned int totalProjectors =
+          projectorPerOrbital[0] + projectorPerOrbital[1] +
+          projectorPerOrbital[2] + projectorPerOrbital[3];
+        if (totalProjectors == numberOfProjectors)
+          pcout
+            << "PAW::Initialization total Radial Projectors in pseudopotential file: "
+            << totalProjectors;
+        else
+          AssertThrow(
+            false,
+            dealii::ExcMessage(
+              "PAW::Initialization No. of radial projectors mismatch. Check input data "));
+        unsigned int alpha = 0;
+        for (unsigned int lQuantumNo = 0; lQuantumNo < 4; lQuantumNo++)
           {
-            std::vector<int> &radAndAngularFunctionId =
-              atomicFunctionIdDetails[i];
-            radAndAngularFunctionId.resize(3, 0);
-            std::getline(readPseudoDataFileNames, readLine);
-
-            std::istringstream lineString(readLine);
-            unsigned int       count = 0;
-            int                Id;
-            double             mollifierRadius;
-            std::string        dummyString;
-            while (lineString >> dummyString)
+            if (projectorPerOrbital[lQuantumNo] == 0)
+              continue;
+            else
               {
-                if (count < 3)
+                unsigned int noOfProjectors = projectorPerOrbital[lQuantumNo];
+                char         projectorFile[256];
+                char         AEpartialWaveFile[256];
+                char         PSpartialWaveFile[256];
+                strcpy(projectorFile,
+                       (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
+                        "/proj_l" + std::to_string(lQuantumNo))
+                         .c_str());
+                strcpy(AEpartialWaveFile,
+                       (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
+                        "/allelectron_partial_l" + std::to_string(lQuantumNo))
+                         .c_str());
+                strcpy(PSpartialWaveFile,
+                       (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
+                        "/smooth_partial_l" + std::to_string(lQuantumNo))
+                         .c_str());
+                // std::vector<std::vector<double>> projectorData(0);
+                // dftUtils::readFile(noOfProjectors+1, projectorData,
+                // projectorFile);
+                // std::vector<std::vector<double>> allElectronPartialData(0);
+                // dftUtils::readFile(noOfProjectors + 1,
+                //                    allElectronPartialData,
+                //                    AEpartialWaveFile);
+                // std::vector<std::vector<double>> smoothPartialData(0);
+                // dftUtils::readFile(noOfProjectors + 1,
+                //                    smoothPartialData,
+                //                    PSpartialWaveFile);
+                for (int j = 1; j < noOfProjectors + 1; j++)
                   {
-                    Id = atoi(dummyString.c_str());
-
-                    if (count == 1)
-                      radFunctionIds.insert(Id);
-                    radAndAngularFunctionId[count] = Id;
+                    d_atomicProjectorFnsMap[std::make_pair(Znum, alpha)] =
+                      std::make_shared<
+                        AtomCenteredSphericalFunctionProjectorSpline>(
+                        projectorFile,
+                        lQuantumNo,
+                        0,
+                        j,
+                        noOfProjectors + 1,
+                        1E-12);
+                    d_atomicAEPartialWaveFnsMap[std::make_pair(Znum, alpha)] =
+                      std::make_shared<
+                        AtomCenteredSphericalFunctionProjectorSpline>(
+                        AEpartialWaveFile,
+                        lQuantumNo,
+                        0,
+                        j,
+                        noOfProjectors + 1,
+                        1E-12);
+                    d_atomicPSPartialWaveFnsMap[std::make_pair(Znum, alpha)] =
+                      std::make_shared<
+                        AtomCenteredSphericalFunctionProjectorSpline>(
+                        PSpartialWaveFile,
+                        lQuantumNo,
+                        0,
+                        j,
+                        noOfProjectors + 1,
+                        1E-12);
+                    alpha++;
                   }
-
-                if (count > 3)
-                  {
-                    std::cerr << "Invalid argument in the SingleAtomData file"
-                              << std::endl;
-                    exit(-1);
-                  }
-
-                count++;
               }
           }
-        std::string  tempProjRadialFunctionFileName;
-        unsigned int numProj;
-        unsigned int alpha = 0;
-        for (std::set<int>::iterator i = radFunctionIds.begin();
-             i != radFunctionIds.end();
-             ++i)
-          {
-            char         projRadialFunctionFileName[512];
-            unsigned int lQuantumNo = *i;
-            readPseudoDataFileNames >> tempProjRadialFunctionFileName;
-            readPseudoDataFileNames >> numProj;
-            strcpy(projRadialFunctionFileName,
-                   (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
-                    "/" + tempProjRadialFunctionFileName)
-                     .c_str());
 
-            //
-            // 2D vector to store the radial coordinate and its
-            // corresponding function value
-            std::vector<std::vector<double>> radialFunctionData(0);
 
-            //
-            // read the radial function file
-            //
-            dftUtils::readFile(numProj + 1,
-                               radialFunctionData,
-                               projRadialFunctionFileName);
-
-            for (int j = 1; j < numProj + 1; j++)
-              {
-                d_atomicProjectorFnsMap[std::make_pair(Znum, alpha)] =
-                  std::make_shared<
-                    AtomCenteredSphericalFunctionProjectorSpline>(
-                    projRadialFunctionFileName,
-                    lQuantumNo,
-                    0,
-                    j,
-                    numProj + 1,
-                    1E-12);
-                alpha++;
-              }
-          } // i loop
 
       } // for loop *it
   }
@@ -529,11 +685,15 @@ namespace dftfe
                  .c_str());
         for (unsigned int i = 0; i < d_nOMPThreads; i++)
           d_atomicZeroPotVector[i][*it] =
-            std::make_shared<AtomCenteredSphericalFunctionLocalPotentialSpline>(
-              LocalDataFile,
-              d_atomTypeAtributes[*it],
-              d_reproducible_output ? 1.0e-8 : 1.0e-7,
-              d_reproducible_output ? 8.0001 : 10.0001);
+            std::make_shared<AtomCenteredSphericalFunctionCoreDensitySpline>(
+              LocalDataFile, 1E-12, true);
+        std::vector<std::vector<double>> zeroPotentialData(0);
+        dftUtils::readFile(2, zeroPotentialData, LocalDataFile);
+        unsigned int        numValues = zeroPotentialData.size();
+        std::vector<double> zeroPotential(numValues, 0.0);
+        for (int iRow = 0; iRow < numValues; iRow++)
+          zeroPotential[iRow] = zeroPotentialData[iRow][1];
+        d_zeroPotentialRadialValues[*it] = zeroPotential;
 
       } //*it loop
   }
