@@ -692,7 +692,14 @@ namespace dftfe
             false,
             dealii::ExcMessage(
               "PAW::Initialization No. of radial projectors mismatch. Check input data "));
-        unsigned int alpha = 0;
+        std::vector<double> radialMesh   = d_radialMesh[*it];
+        std::vector<double> jacobianData = d_radialJacobianData[*it];
+        unsigned int        meshSize     = radialMesh.size();
+        unsigned int        alpha        = 0;
+        std::vector<double> radialValuesAE(meshSize * numberOfProjectors);
+        std::vector<double> radialValuesPS(meshSize * numberOfProjectors);
+        std::vector<double> radialDerivativeAE(meshSize * numberOfProjectors);
+        std::vector<double> radialDerivativePS(meshSize * numberOfProjectors);
         for (unsigned int lQuantumNo = 0; lQuantumNo < 4; lQuantumNo++)
           {
             if (projectorPerOrbital[lQuantumNo] == 0)
@@ -715,19 +722,42 @@ namespace dftfe
                        (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
                         "/smooth_partial_l" + std::to_string(lQuantumNo))
                          .c_str());
-                // std::vector<std::vector<double>> projectorData(0);
-                // dftUtils::readFile(noOfProjectors+1, projectorData,
-                // projectorFile);
-                // std::vector<std::vector<double>> allElectronPartialData(0);
-                // dftUtils::readFile(noOfProjectors + 1,
-                //                    allElectronPartialData,
-                //                    AEpartialWaveFile);
-                // std::vector<std::vector<double>> smoothPartialData(0);
-                // dftUtils::readFile(noOfProjectors + 1,
-                //                    smoothPartialData,
-                //                    PSpartialWaveFile);
+                std::vector<std::vector<double>> allElectronPartialData(0);
+                dftUtils::readFile(noOfProjectors + 1,
+                                   allElectronPartialData,
+                                   AEpartialWaveFile);
+                std::vector<std::vector<double>> smoothPartialData(0);
+                dftUtils::readFile(noOfProjectors + 1,
+                                   smoothPartialData,
+                                   PSpartialWaveFile);
+
                 for (int j = 1; j < noOfProjectors + 1; j++)
                   {
+                    unsigned int        startIndex = alpha * meshSize;
+                    std::vector<double> aePhi(meshSize, 0.0);
+                    std::vector<double> psPhi(meshSize, 0.0);
+                    for (int iRow = 0; iRow < meshSize; iRow++)
+                      {
+                        aePhi[iRow] = allElectronPartialData[iRow][j];
+                        psPhi[iRow] = smoothPartialData[iRow][j];
+                      }
+                    std::vector<double> functionDerivativesAE =
+                      radialDerivativeOfMeshData(radialMesh,
+                                                 jacobianData,
+                                                 aePhi);
+                    std::vector<double> functionDerivativesPS =
+                      radialDerivativeOfMeshData(radialMesh,
+                                                 jacobianData,
+                                                 psPhi);
+                    for (int iRow = 0; iRow < meshSize; iRow++)
+                      {
+                        radialValuesAE[startIndex + iRow] = aePhi[iRow];
+                        radialValuesPS[startIndex + iRow] = psPhi[iRow];
+                        radialDerivativeAE[startIndex + iRow] =
+                          functionDerivativesAE[iRow];
+                        radialDerivativePS[startIndex + iRow] =
+                          functionDerivativesPS[iRow];
+                      }
                     d_atomicProjectorFnsMap[std::make_pair(Znum, alpha)] =
                       std::make_shared<
                         AtomCenteredSphericalFunctionProjectorSpline>(
@@ -755,10 +785,15 @@ namespace dftfe
                         j,
                         noOfProjectors + 1,
                         1E-12);
+
                     alpha++;
                   }
               }
           }
+        d_radialWfcValAE[*it] = radialValuesAE;
+        d_radialWfcValPS[*it] = radialValuesPS;
+        d_radialWfcDerAE[*it] = radialDerivativeAE;
+        d_radialWfcDerPS[*it] = radialDerivativePS;
 
 
 
@@ -3075,6 +3110,9 @@ namespace dftfe
           radialMeshSize * numberOfProjectors * numberOfProjectors, 0.0);
         std::vector<double> productOfPSpartialWfc(
           radialMeshSize * numberOfProjectors * numberOfProjectors, 0.0);
+
+        // Core densit changes
+
         for (int rPoint = 0; rPoint < radialMeshSize; rPoint++)
           {
             double r                = radialMesh[rPoint];
@@ -3164,6 +3202,134 @@ namespace dftfe
             std::vector<double> productDerValsijklPS(radialMeshSize * npj_4,
                                                      0.0);
 
+            std::vector<double> derCoreRhoAE = d_radialCoreDerAE[*it];
+            std::vector<double> derCoreRhoPS = d_radialCoreDerPS[*it];
+
+            std::vector<double> derWfcAE = d_radialWfcDerAE[*it];
+            std::vector<double> derWfcPS = d_radialWfcDerPS[*it];
+            std::vector<double> WfcAE    = d_radialWfcValAE[*it];
+            std::vector<double> WfcPS    = d_radialWfcValPS[*it];
+
+            // map of projectroIndex tot radialProjectorId
+            std::vector<unsigned int> projectorIndexRadialIndexMap(
+              numberOfProjectors);
+            unsigned int projectorIndex = 0;
+            for (unsigned int alpha = 0; alpha < numberOfRadialProjectors;
+                 alpha++)
+              {
+                std::shared_ptr<AtomCenteredSphericalFunctionBase> AEsphFn =
+                  d_atomicAEPartialWaveFnsMap.find(std::make_pair(Znum, alpha))
+                    ->second;
+                int lQuantumNo = AEsphFn->getQuantumNumberl();
+                for (int mQuantumNo = -lQuantumNo; mQuantumNo <= lQuantumNo;
+                     mQuantumNo++)
+                  {
+                    projectorIndexRadialIndexMap[projectorIndex] = alpha;
+                    projectorIndex++;
+                  }
+              }
+
+            for (int rpoint = 0; rpoint < radialMeshSize; rpoint++)
+              {
+                // CoreDensity Changes Pending
+
+                for (int projectorIndex_i = 0;
+                     projectorIndex_i < numberOfProjectors;
+                     projectorIndex_i++)
+                  {
+                    unsigned int alpha_i =
+                      projectorIndexRadialIndexMap[projectorIndex_i];
+                    for (int projectorIndex_j = 0;
+                         projectorIndex_j < numberOfProjectors;
+                         projectorIndex_j++)
+                      {
+                        unsigned int alpha_j =
+                          projectorIndexRadialIndexMap[projectorIndex_j];
+                        unsigned int index =
+                          rpoint * numberOfProjectors * numberOfProjectors +
+                          projectorIndex_i * numberOfProjectors +
+                          projectorIndex_j;
+                        if (d_atomTypeCoreFlagMap[*it])
+                          {
+                            derAECoreWfc[index] =
+                              1 / sqrt(4 * M_PI) * derCoreRhoAE[rpoint] *
+                              WfcAE[alpha_i * radialMeshSize + rpoint] *
+                              derWfcAE[alpha_j * radialMeshSize + rpoint];
+                            derPSCoreWfc[index] =
+                              1 / sqrt(4 * M_PI) * derCoreRhoPS[rpoint] *
+                              WfcPS[alpha_i * radialMeshSize + rpoint] *
+                              derWfcPS[alpha_j * radialMeshSize + rpoint];
+                          }
+                        double ValAEij =
+                          WfcAE[alpha_i * radialMeshSize + rpoint] *
+                          WfcAE[alpha_j * radialMeshSize + rpoint];
+                        double ValPSij =
+                          WfcPS[alpha_i * radialMeshSize + rpoint] *
+                          WfcPS[alpha_j * radialMeshSize + rpoint];
+
+                        double DerAEij =
+                          WfcAE[alpha_i * radialMeshSize + rpoint] *
+                          derWfcAE[alpha_j * radialMeshSize + rpoint];
+                        double DerPSij =
+                          WfcPS[alpha_i * radialMeshSize + rpoint] *
+                          derWfcPS[alpha_j * radialMeshSize + rpoint];
+                        productValDerAE[index] = DerAEij;
+                        productValDerPS[index] = DerPSij;
+                        for (int projectorIndex_k = 0;
+                             projectorIndex_k < numberOfProjectors;
+                             projectorIndex_k++)
+                          {
+                            unsigned int alpha_k =
+                              projectorIndexRadialIndexMap[projectorIndex_k];
+                            for (int projectorIndex_l = 0;
+                                 projectorIndex_l < numberOfProjectors;
+                                 projectorIndex_l++)
+                              {
+                                unsigned int alpha_l =
+                                  projectorIndexRadialIndexMap
+                                    [projectorIndex_l];
+                                unsigned int indexijkl =
+                                  rpoint * npj_4 + projectorIndex_i * npj_3 +
+                                  projectorIndex_j * npj_2 +
+                                  projectorIndex_k * numberOfProjectors +
+                                  projectorIndex_l;
+                                productValsijklAE[indexijkl] =
+                                  ValAEij *
+                                  WfcAE[alpha_k * radialMeshSize + rpoint] *
+                                  WfcAE[alpha_l * radialMeshSize + rpoint];
+                                productValsijklPS[indexijkl] =
+                                  ValPSij *
+                                  WfcPS[alpha_k * radialMeshSize + rpoint] *
+                                  WfcPS[alpha_l * radialMeshSize + rpoint];
+                                productDerValsijklAE[indexijkl] =
+                                  DerAEij *
+                                  WfcAE[alpha_k * radialMeshSize + rpoint] *
+                                  derWfcAE[alpha_l * radialMeshSize + rpoint];
+                                productDerValsijklPS[indexijkl] =
+                                  DerPSij *
+                                  WfcPS[alpha_k * radialMeshSize + rpoint] *
+                                  derWfcPS[alpha_l * radialMeshSize + rpoint];
+                              } // projectorIndex_l
+
+                          } // projectorIndex_k
+                      }     // projectorIndex_j
+                  }         // projectorIndex_i
+
+
+
+              } // rPoint
+            d_gradCoreSqAE[*it]                     = derAECoreSq;
+            d_gradCoreSqPS[*it]                     = derPSCoreSq;
+            d_productOfAEpartialWfcDer[*it]         = productValDerAE;
+            d_productOfPSpartialWfcDer[*it]         = productValDerPS;
+            d_productOfAEpartialWfcValue[*it]       = productValsAE;
+            d_productOfPSpartialWfcValue[*it]       = productValsPS;
+            d_productDerCoreDensityWfcDerWfcAE[*it] = derAECoreWfc;
+            d_productDerCoreDensityWfcDerWfcPS[*it] = derPSCoreWfc;
+            d_tensorWfcAE[*it]                      = productValsijklAE;
+            d_tensorWfcPS[*it]                      = productValsijklPS;
+            d_tensorWfcDerAE[*it]                   = productDerValsijklAE;
+            d_tensorWfcDerPS[*it]                   = productDerValsijklPS;
 
           } // isGGA
 

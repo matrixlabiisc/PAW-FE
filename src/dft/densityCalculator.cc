@@ -528,7 +528,12 @@ namespace dftfe
       }
 
 #endif
-
+    if (dftParams.pawPseudoPotential)
+      {
+        pawClassPtr->communicateDijAcrossAllProcessors(TypeOfField::Out,
+                                                       interpoolcomm,
+                                                       interBandGroupComm);
+      }
     int size;
     MPI_Comm_size(interpoolcomm, &size);
     if (size > 1)
