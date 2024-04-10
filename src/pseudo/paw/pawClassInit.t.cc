@@ -447,7 +447,7 @@ namespace dftfe
             d_mpiCommParent);
       }
 #endif
-    initializeRadialDataOnRadialMesh();
+    initialiseDataonRadialMesh();
     computeRadialMultipoleData();
     computeNonlocalPseudoPotentialConstants(CouplingType::pawOverlapEntries);
     initialiseKineticEnergyCorrection();
@@ -947,10 +947,7 @@ namespace dftfe
       d_atomicProjectorFnsContainer->getTotalNumberOfSphericalFunctionsPerAtom(
         atomicNumbers[atomId]));
   }
-  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
-  void
-  pawClass<ValueType, memorySpace>::initialiseDataonRadialMesh()
-  {}
+
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
@@ -3043,25 +3040,132 @@ namespace dftfe
         d_nProjPerTask += d_atomicProjectorFnsContainer
                             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
       }
+    d_nProjSqTotal = 0;
+    for (unsigned int i = 0; i < atomicNumber.size(); i++)
+      {
+        unsigned int Znum = atomicNumber[i];
+        unsigned int numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+
+        d_projectorStartIndex.push_back(d_nProjSqTotal);
+        d_nProjSqTotal += (numberOfProjectors * (numberOfProjectors + 1)) / 2;
+      }
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  pawClass<ValueType, memorySpace>::initializeRadialDataOnRadialMesh()
+  pawClass<ValueType, memorySpace>::initialiseDataonRadialMesh()
   {
     for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
          it != d_atomTypes.end();
          ++it)
       {
-        const unsigned int        Znum           = *it;
-        const std::vector<double> RadialMesh     = d_radialMesh[*it];
-        const std::vector<double> jacobianData   = d_radialJacobianData[*it];
-        const unsigned int        rmaxAugIndex   = d_RmaxAugIndex[*it];
-        const unsigned int        RadialMeshSize = RadialMesh.size();
-        const unsigned int        numberOfValuesTotal = RadialMeshSize;
-        unsigned int              numberOfProjectors =
+        unsigned int        Znum           = *it;
+        std::vector<double> radialMesh     = d_radialMesh[*it];
+        std::vector<double> jacobianData   = d_radialJacobianData[*it];
+        const unsigned int  radialMeshSize = radialMesh.size();
+        const unsigned int  rmaxAugIndex   = d_RmaxAugIndex[*it];
+        const unsigned int  numberOfProjectors =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        const unsigned int numberOfRadialProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
+        std::vector<double> productOfAEpartialWfc(
+          radialMeshSize * numberOfProjectors * numberOfProjectors, 0.0);
+        std::vector<double> productOfPSpartialWfc(
+          radialMeshSize * numberOfProjectors * numberOfProjectors, 0.0);
+        for (int rPoint = 0; rPoint < radialMeshSize; rPoint++)
+          {
+            double r                = radialMesh[rPoint];
+            int    projectorIndex_i = 0;
+            for (int alpha_i = 0; alpha_i < numberOfRadialProjectors; alpha_i++)
+              {
+                std::shared_ptr<AtomCenteredSphericalFunctionBase> AEsphFn_i =
+                  d_atomicAEPartialWaveFnsMap
+                    .find(std::make_pair(Znum, alpha_i))
+                    ->second;
+                std::shared_ptr<AtomCenteredSphericalFunctionBase> PSsphFn_i =
+                  d_atomicPSPartialWaveFnsMap
+                    .find(std::make_pair(Znum, alpha_i))
+                    ->second;
+                int    lQuantumNo_i  = AEsphFn_i->getQuantumNumberl();
+                double radialValAE_i = AEsphFn_i->getRadialValue(r);
+                double radialValPS_i = PSsphFn_i->getRadialValue(r);
+                for (int mQuantumNo_i = -lQuantumNo_i;
+                     mQuantumNo_i <= lQuantumNo_i;
+                     mQuantumNo_i++)
+                  {
+                    int projectorIndex_j = 0;
+                    for (int alpha_j = 0; alpha_j < numberOfRadialProjectors;
+                         alpha_j++)
+                      {
+                        std::shared_ptr<AtomCenteredSphericalFunctionBase>
+                          AEsphFn_j = d_atomicAEPartialWaveFnsMap
+                                        .find(std::make_pair(Znum, alpha_j))
+                                        ->second;
+                        std::shared_ptr<AtomCenteredSphericalFunctionBase>
+                          PSsphFn_j = d_atomicPSPartialWaveFnsMap
+                                        .find(std::make_pair(Znum, alpha_j))
+                                        ->second;
+                        double radialValAE_j = AEsphFn_j->getRadialValue(r);
+                        double radialValPS_j = PSsphFn_j->getRadialValue(r);
+                        int    lQuantumNo_j  = AEsphFn_j->getQuantumNumberl();
+                        for (int mQuantumNo_j = -lQuantumNo_j;
+                             mQuantumNo_j <= lQuantumNo_j;
+                             mQuantumNo_j++)
+                          {
+                            unsigned int index =
+                              rPoint * numberOfProjectors * numberOfProjectors +
+                              projectorIndex_i * numberOfProjectors +
+                              projectorIndex_j;
+                            productOfAEpartialWfc[index] =
+                              radialValAE_j * radialValAE_i;
+                            productOfPSpartialWfc[index] =
+                              radialValPS_i * radialValPS_j;
+                            projectorIndex_j++;
+                          } // mQuantumNo_j
+                      }     // alpha_j
 
+                    projectorIndex_i++;
+                  } // mQuantumNo_i
+
+
+
+              } // alpha_i
+
+          } // rPoint
+        d_productOfAEpartialWfc[*it] = productOfAEpartialWfc;
+        d_productOfPSpartialWfc[*it] = productOfPSpartialWfc;
+        const bool isGGA = d_excManagerPtr->getDensityBasedFamilyType() ==
+                           densityFamilyType::GGA;
+        if (isGGA)
+          {
+            std::vector<double> derAECoreSq(radialMeshSize, 0.0);
+            std::vector<double> derPSCoreSq(radialMeshSize, 0.0);
+            std::vector<double> derAECoreWfc(
+              radialMeshSize * numberOfProjectors * numberOfProjectors, 0.0);
+            std::vector<double> derPSCoreWfc(
+              radialMeshSize * numberOfProjectors * numberOfProjectors, 0.0);
+            unsigned int        npj_4 = pow(numberOfProjectors, 4);
+            unsigned int        npj_3 = pow(numberOfProjectors, 3);
+            unsigned int        npj_2 = pow(numberOfProjectors, 2);
+            std::vector<double> productValDerPS(npj_2 * radialMeshSize, 0.0);
+            std::vector<double> productValDerAE(npj_2 * radialMeshSize, 0.0);
+
+            std::vector<double> productValsPS(npj_2 * radialMeshSize, 0.0);
+            std::vector<double> productValsAE(npj_2 * radialMeshSize, 0.0);
+
+            std::vector<double> productValsijklAE(radialMeshSize * npj_4, 0.0);
+            std::vector<double> productValsijklPS(radialMeshSize * npj_4, 0.0);
+
+            std::vector<double> productDerValsijklAE(radialMeshSize * npj_4,
+                                                     0.0);
+            std::vector<double> productDerValsijklPS(radialMeshSize * npj_4,
+                                                     0.0);
+
+
+          } // isGGA
 
       } //*it
   }

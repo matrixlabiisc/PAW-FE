@@ -196,6 +196,9 @@ namespace dftfe
     const std::vector<unsigned int> &
     getSphericalFnTimesVectorFlattenedVectorLocalIds() const;
 
+    const std::vector<unsigned int> &
+    getOwnedAtomIdsInCurrentProcessor() const;
+
     void
     computeCconjtransCMatrix(
       const unsigned int atomId,
@@ -383,9 +386,9 @@ namespace dftfe
     std::map<std::pair<unsigned int, unsigned int>, unsigned int>
       d_sphericalFunctionIdsNumberingMapCurrentProcess;
 
-
-    dealii::IndexSet d_locallyOwnedAtomCenteredFnIdsCurrentProcess;
-    dealii::IndexSet d_ghostAtomCenteredFnIdsCurrentProcess;
+    std::vector<unsigned int> d_OwnedAtomIdsInCurrentProcessor;
+    dealii::IndexSet          d_locallyOwnedAtomCenteredFnIdsCurrentProcess;
+    dealii::IndexSet          d_ghostAtomCenteredFnIdsCurrentProcess;
     std::map<std::pair<unsigned int, unsigned int>, unsigned int>
       d_AtomCenteredFnIdsNumberingMapCurrentProcess;
     std::vector<std::vector<

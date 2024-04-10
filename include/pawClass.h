@@ -276,6 +276,14 @@ namespace dftfe
     std::vector<double>
     DijVectorForMixing(TypeOfField typeOfField);
 
+    double
+    densityScalingFactor(const std::vector<std::vector<double>> &atomLocations);
+
+    void
+    communicateDijAcrossAllProcessors(TypeOfField     typeOfField,
+                                      const MPI_Comm &interpoolcomm,
+                                      const MPI_Comm &interBandGroupComm);
+
 
 
   private:
@@ -318,8 +326,9 @@ namespace dftfe
       d_deltaValenceC;
     std::map<unsigned int, std::vector<double>> d_deltaCij, d_deltaCijkl;
     std::map<unsigned int, std::vector<double>>
-                 d_nonLocalHamiltonianElectrostaticValue;
-    unsigned int d_nProjPerTask, nProjTotal;
+                              d_nonLocalHamiltonianElectrostaticValue;
+    unsigned int              d_nProjPerTask, d_nProjSqTotal;
+    std::vector<unsigned int> d_projectorStartIndex;
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
      * @param[in] atomLocations atomic Coordinates
@@ -349,8 +358,6 @@ namespace dftfe
     void
     createAtomCenteredSphericalFunctionsForZeroPotential();
 
-    void
-    initializeRadialDataOnRadialMesh();
 
 
     std::complex<double>

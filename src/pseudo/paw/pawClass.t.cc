@@ -588,10 +588,14 @@ namespace dftfe
       d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
     std::vector<unsigned int> atomicNumber =
       d_atomicProjectorFnsContainer->getAtomicNumbers();
-    char            transA = 'N';
-    char            transB = 'T';
-    const ValueType beta   = 0.0;
-    const ValueType alpha  = 1.0;
+    char transA = 'N';
+#ifdef USE_COMPLEX
+    char transB = 'H';
+#else
+    char transB = 'T';
+#endif
+    const ValueType beta  = 0.0;
+    const ValueType alpha = 1.0;
 
     for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
       {

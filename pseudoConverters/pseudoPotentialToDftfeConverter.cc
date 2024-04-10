@@ -1554,7 +1554,7 @@ namespace dftfe
 
       // Writing to the file
       std::fstream file;
-      file.open("shape_functions.dat", std::ios::out);
+      file.open(file_path_out + "/shape_functions.dat", std::ios::out);
       file << std::setprecision(17);
       if (file.is_open())
         {

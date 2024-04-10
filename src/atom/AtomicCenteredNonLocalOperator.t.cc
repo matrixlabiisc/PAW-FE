@@ -1164,6 +1164,7 @@ namespace dftfe
   AtomicCenteredNonLocalOperator<ValueType,
                                  memorySpace>::initialisePartitioner()
   {
+    d_OwnedAtomIdsInCurrentProcessor.clear();
     std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
     const unsigned int numberAtoms =
@@ -1432,6 +1433,7 @@ namespace dftfe
         const int numberSphericalFunctions =
           d_atomCenteredSphericalFunctionContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(atomicNumber[*it]);
+        d_OwnedAtomIdsInCurrentProcessor.push_back(*it);
 
         for (unsigned int i = 0; i < numberSphericalFunctions; ++i)
           {
@@ -2431,5 +2433,13 @@ namespace dftfe
           } // iElem
       }     // kPoint
   }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  const std::vector<unsigned int> &
+  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
+    getOwnedAtomIdsInCurrentProcessor() const
+  {
+    return d_OwnedAtomIdsInCurrentProcessor;
+  }
+
 
 } // namespace dftfe

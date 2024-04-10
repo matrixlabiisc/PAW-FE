@@ -639,5 +639,139 @@ namespace dftfe
 
     return (IntegralResult);
   }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  double
+  pawClass<ValueType, memorySpace>::densityScalingFactor(
+    const std::vector<std::vector<double>> &atomLocations)
+  {
+    double scaleFactor  = 0.0;
+    double numElectrons = 0;
+
+    for (int atomId = 0; atomId < atomLocations.size(); atomId++)
+      {
+        unsigned int Znum = atomLocations[atomId][0];
+        numElectrons += atomLocations[atomId][1];
+        const unsigned int numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        const unsigned int numberOfRadialProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
+        std::vector<double> Dij              = D_ij[TypeOfField::In][atomId];
+        std::vector<double> multipoleTable   = d_multipole[Znum];
+        unsigned int        projectorIndex_i = 0;
+        for (int alpha_i = 0; alpha_i < numberOfRadialProjectors; alpha_i++)
+          {
+            std::shared_ptr<AtomCenteredSphericalFunctionBase> AEsphFn_i =
+              d_atomicAEPartialWaveFnsMap.find(std::make_pair(Znum, alpha_i))
+                ->second;
+            int lQuantumNo_i = AEsphFn_i->getQuantumNumberl();
+            for (int mQuantumNo_i = -lQuantumNo_i; mQuantumNo_i <= lQuantumNo_i;
+                 mQuantumNo_i++)
+              {
+                unsigned int projectorIndex_j = 0;
+                for (int alpha_j = 0; alpha_j < numberOfRadialProjectors;
+                     alpha_j++)
+                  {
+                    std::shared_ptr<AtomCenteredSphericalFunctionBase>
+                      AEsphFn_j = d_atomicAEPartialWaveFnsMap
+                                    .find(std::make_pair(Znum, alpha_j))
+                                    ->second;
+                    int lQuantumNo_j = AEsphFn_j->getQuantumNumberl();
+                    for (int mQuantumNo_j = -lQuantumNo_j;
+                         mQuantumNo_j <= lQuantumNo_j;
+                         mQuantumNo_j++)
+                      {
+                        scaleFactor +=
+                          gaunt(lQuantumNo_i,
+                                lQuantumNo_j,
+                                0,
+                                mQuantumNo_i,
+                                mQuantumNo_j,
+                                0) *
+                          Dij[projectorIndex_i * numberOfProjectors +
+                              projectorIndex_j] *
+                          multipoleTable[alpha_i * numberOfRadialProjectors +
+                                         alpha_j];
+                        projectorIndex_j++;
+                      }
+                  }
+
+                projectorIndex_i++;
+              }
+          }
+      }
+    pcout << "Number of Electrons: " << numElectrons << std::endl;
+    pcout << "sqrt(4*M_PI)*DeltaijDij: " << sqrt(4 * M_PI) * scaleFactor;
+    pcout << "Scaling Factor for Init Rho: "
+          << numElectrons - sqrt(4 * M_PI) * scaleFactor << std::endl;
+    return (numElectrons - sqrt(4 * M_PI) * scaleFactor);
+  }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::communicateDijAcrossAllProcessors(
+    TypeOfField     typeOfField,
+    const MPI_Comm &interpoolcomm,
+    const MPI_Comm &interBandGroupComm)
+  {
+    std::vector<unsigned int> ownedAtomIds =
+      d_nonLocalOperator->getOwnedAtomIdsInCurrentProcessor();
+    std::vector<double>       DijTotalVector(d_nProjSqTotal, 0.0);
+    std::vector<unsigned int> atomicNumber =
+      d_atomicProjectorFnsContainer->getAtomicNumbers();
+    if (ownedAtomIds.size() > 0)
+      {
+        for (int iAtom = 0; iAtom < ownedAtomIds.size(); iAtom++)
+          {
+            unsigned int        atomId     = ownedAtomIds[iAtom];
+            unsigned int        Znum       = atomicNumber[atomId];
+            unsigned int        startIndex = d_projectorStartIndex[atomId];
+            std::vector<double> Dij        = D_ij[typeOfField][atomId];
+            unsigned int        numberOfProjectors =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+            unsigned int index = 0;
+            for (unsigned int i = 0; i < Dij.size(); i++)
+              {
+                for (unsigned int j = 0; j <= i; j++)
+                  {
+                    DijTotalVector[(startIndex + index)] =
+                      Dij[i * numberOfProjectors + j];
+                    index++;
+                  }
+              }
+          }
+      }
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &DijTotalVector[0],
+                  d_nProjSqTotal,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    for (unsigned int atomId = 0; atomId < atomicNumber.size(); atomId++)
+      {
+        unsigned int Znum = atomicNumber[atomId];
+        unsigned int numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        unsigned int        startIndex = d_projectorStartIndex[atomId];
+        std::vector<double> Dij(numberOfProjectors * numberOfProjectors, 0.0);
+        unsigned int        index = 0;
+        for (int i = 0; i < numberOfProjectors; i++)
+          {
+            for (int j = 0; j < numberOfProjectors; j++)
+              {
+                Dij[i * numberOfProjectors + j] =
+                  DijTotalVector[(startIndex + index)];
+                Dij[j * numberOfProjectors + i] =
+                  DijTotalVector[(startIndex + index)];
+                index++;
+              }
+          }
+
+        D_ij[typeOfField][atomId] = Dij;
+      }
+  }
+
 
 } // namespace dftfe
