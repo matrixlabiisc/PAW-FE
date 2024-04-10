@@ -284,7 +284,16 @@ namespace dftfe
                                       const MPI_Comm &interpoolcomm,
                                       const MPI_Comm &interBandGroupComm);
 
-
+    void
+    computeDijFromPSIinitialGuess(
+      const dftfe::utils::MemoryStorage<ValueType, memorySpace> *X,
+      const unsigned int         numberOfElectrons,
+      const unsigned int         totalNumWaveFunctions,
+      const unsigned int         matrixFreeDofhandlerIndex,
+      const unsigned int         quadratureIndex,
+      const std::vector<double> &kPointWeights,
+      const MPI_Comm &           interpoolcomm,
+      const MPI_Comm &           interBandGroupComm);
 
   private:
     void
@@ -470,7 +479,7 @@ namespace dftfe
       d_BLASWrapperDevicePtr;
 #endif
     std::vector<std::vector<double>> d_nonLocalPseudoPotentialConstants;
-    std::map<unsigned int, std::vector<double>>
+    std::map<CouplingType, std::map<unsigned int, std::vector<double>>>
       d_atomicNonLocalPseudoPotentialConstants;
     std::map<CouplingType, dftfe::utils::MemoryStorage<ValueType, memorySpace>>
       d_couplingMatrixEntries;

@@ -483,13 +483,32 @@ namespace dftfe
                 std::vector<ValueType> Entries;
                 dftfe::utils::MemoryStorage<ValueType,
                                             dftfe::utils::MemorySpace::HOST>
-                  couplingEntriesHost;
-
-
+                                                couplingEntriesHost;
+                const std::vector<unsigned int> atomIdsInProcessor =
+                  d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
+                std::vector<unsigned int> atomicNumber =
+                  d_atomicProjectorFnsContainer->getAtomicNumbers();
+                for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
+                  {
+                    unsigned int atomId = atomIdsInProcessor[iAtom];
+                    unsigned int Zno    = atomicNumber[atomId];
+                    unsigned int numberSphericalFunctions =
+                      d_atomicProjectorFnsContainer
+                        ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+                    for (unsigned int alpha = 0;
+                         alpha < numberSphericalFunctions;
+                         alpha++)
+                      {
+                        double V = d_atomicNonLocalPseudoPotentialConstants
+                          [CouplingType::HamiltonianEntries][Zno][alpha];
+                        Entries.push_back(V);
+                      }
+                  }
                 couplingEntriesHost.resize(Entries.size());
                 couplingEntriesHost.copyFrom(Entries);
                 d_couplingMatrixEntries[CouplingType::HamiltonianEntries] =
                   couplingEntriesHost;
+                d_HamiltonianCouplingMatrixEntriesUpdated = true;
               }
           }
         else if (couplingtype == CouplingType::pawOverlapEntries)
@@ -515,8 +534,8 @@ namespace dftfe
                          alpha < numberSphericalFunctions;
                          alpha++)
                       {
-                        double V =
-                          d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
+                        double V = d_atomicNonLocalPseudoPotentialConstants
+                          [CouplingType::pawOverlapEntries][Zno][alpha];
                         Entries.push_back(V);
                       }
                   }
@@ -551,8 +570,8 @@ namespace dftfe
                          alpha < numberSphericalFunctions;
                          alpha++)
                       {
-                        double V =
-                          d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
+                        double V = d_atomicNonLocalPseudoPotentialConstants
+                          [CouplingType::inversePawOverlapEntries][Zno][alpha];
                         Entries.push_back(V);
                       }
                   }

@@ -447,12 +447,13 @@ namespace dftfe
             d_mpiCommParent);
       }
 #endif
-    initialiseDataonRadialMesh();
+
     computeRadialMultipoleData();
     computeNonlocalPseudoPotentialConstants(CouplingType::pawOverlapEntries);
     initialiseKineticEnergyCorrection();
     initialiseColoumbicEnergyCorrection();
     initialiseZeroPotential();
+    initialiseDataonRadialMesh();
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
@@ -517,7 +518,8 @@ namespace dftfe
     pcout << "-----Compensation Charge---" << std::endl;
     computeCompensationChargeCoeff();
     computeCompensationChargeL0();
-
+    computeNonlocalPseudoPotentialConstants(
+      CouplingType::inversePawOverlapEntries);
 
     MPI_Barrier(d_mpiCommParent);
     double TotalTime = MPI_Wtime() - InitTimeTotal;
@@ -605,47 +607,57 @@ namespace dftfe
     CouplingType coulingtype,
     unsigned int s)
   {
-    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
-         it != d_atomTypes.end();
-         ++it)
+    if (coulingtype == pawOverlapEntries)
       {
-        const unsigned int Znum = *it;
-        const std::map<std::pair<unsigned int, unsigned int>,
-                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
-          sphericalFunction =
-            d_atomicProjectorFnsContainer->getSphericalFunctions();
-        unsigned int numberOfRadialProjectors =
-          d_atomicProjectorFnsContainer
-            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
-        unsigned int numTotalProjectors =
-          d_atomicProjectorFnsContainer
-            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
-        char denominatorDataFileName[256];
-        strcpy(denominatorDataFileName,
-               (d_dftfeScratchFolderName + "/z" + std::to_string(Znum) + "/" +
-                "denom.dat")
-                 .c_str());
-        std::vector<std::vector<double>> denominator(0);
-        dftUtils::readFile(numberOfRadialProjectors,
-                           denominator,
-                           denominatorDataFileName);
-        std::vector<double> pseudoPotentialConstants(numTotalProjectors, 0.0);
-        unsigned int        ProjId = 0;
-        for (unsigned int iProj = 0; iProj < numberOfRadialProjectors; iProj++)
+        for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+             it != d_atomTypes.end();
+             ++it)
           {
-            std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
-              sphericalFunction.find(std::make_pair(Znum, iProj))->second;
-            unsigned int lQuantumNumber = sphFn->getQuantumNumberl();
-            for (int l = 0; l < 2 * lQuantumNumber + 1; l++)
+            const unsigned int Znum = *it;
+            const std::map<std::pair<unsigned int, unsigned int>,
+                           std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+              sphericalFunction =
+                d_atomicProjectorFnsContainer->getSphericalFunctions();
+            unsigned int numberOfRadialProjectors =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
+            unsigned int numTotalProjectors =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+            char denominatorDataFileName[256];
+            strcpy(denominatorDataFileName,
+                   (d_dftfeScratchFolderName + "/z" + std::to_string(Znum) +
+                    "/" + "denom.dat")
+                     .c_str());
+            std::vector<std::vector<double>> denominator(0);
+            dftUtils::readFile(numberOfRadialProjectors,
+                               denominator,
+                               denominatorDataFileName);
+            std::vector<double> pseudoPotentialConstants(numTotalProjectors,
+                                                         0.0);
+            unsigned int        ProjId = 0;
+            for (unsigned int iProj = 0; iProj < numberOfRadialProjectors;
+                 iProj++)
               {
-                pseudoPotentialConstants[ProjId] = denominator[iProj][iProj];
-                ProjId++;
+                std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
+                  sphericalFunction.find(std::make_pair(Znum, iProj))->second;
+                unsigned int lQuantumNumber = sphFn->getQuantumNumberl();
+                for (int l = 0; l < 2 * lQuantumNumber + 1; l++)
+                  {
+                    pseudoPotentialConstants[ProjId] =
+                      denominator[iProj][iProj];
+                    ProjId++;
+                  }
               }
-          }
-        d_atomicNonLocalPseudoPotentialConstants[Znum] =
-          pseudoPotentialConstants;
-
-      } //*it
+            d_atomicNonLocalPseudoPotentialConstants
+              [CouplingType::pawOverlapEntries][Znum] =
+                pseudoPotentialConstants;
+          } //*it
+      }
+    else if (coulingtype == inversePawOverlapEntries)
+      {}
+    else
+      {}
   }
 
 
@@ -3175,6 +3187,11 @@ namespace dftfe
           } // rPoint
         d_productOfAEpartialWfc[*it] = productOfAEpartialWfc;
         d_productOfPSpartialWfc[*it] = productOfPSpartialWfc;
+        for (int rPoint = 0; rPoint < radialMeshSize; rPoint++)
+          {
+            d_atomCoreDensityAE[*it][rPoint] /= sqrt(4 * M_PI);
+            d_atomCoreDensityPS[*it][rPoint] /= sqrt(4 * M_PI);
+          }
         const bool isGGA = d_excManagerPtr->getDensityBasedFamilyType() ==
                            densityFamilyType::GGA;
         if (isGGA)
@@ -3232,7 +3249,15 @@ namespace dftfe
             for (int rpoint = 0; rpoint < radialMeshSize; rpoint++)
               {
                 // CoreDensity Changes Pending
-
+                if (d_atomTypeCoreFlagMap[*it])
+                  {
+                    derAECoreSq[rpoint] = 1 / (4 * M_PI) *
+                                          derCoreRhoAE[rpoint] *
+                                          derCoreRhoAE[rpoint];
+                    derPSCoreSq[rpoint] = 1 / (4 * M_PI) *
+                                          derCoreRhoPS[rpoint] *
+                                          derCoreRhoPS[rpoint];
+                  }
                 for (int projectorIndex_i = 0;
                      projectorIndex_i < numberOfProjectors;
                      projectorIndex_i++)
@@ -3335,5 +3360,177 @@ namespace dftfe
 
       } //*it
   }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::computeDijFromPSIinitialGuess(
+    const dftfe::utils::MemoryStorage<ValueType, memorySpace> *X,
+    const unsigned int         numberOfElectrons,
+    const unsigned int         totalNumWaveFunctions,
+    const unsigned int         matrixFreeDofhandlerIndex,
+    const unsigned int         quadratureIndex,
+    const std::vector<double> &kPointWeights,
+    const MPI_Comm &           interpoolcomm,
+    const MPI_Comm &           interBandGroupComm)
+  {
+    MPI_Barrier(d_mpiCommParent);
+    const unsigned int numKPoints   = kPointWeights.size();
+    const unsigned int numLocalDofs = d_BasisOperatorHostPtr->nOwnedDofs();
+    const unsigned int totalLocallyOwnedCells =
+      d_BasisOperatorHostPtr->nCells();
+    const unsigned int numNodesPerElement =
+      d_BasisOperatorHostPtr->nDofsPerCell();
+    // band group parallelization data structures
+    const unsigned int numberBandGroups =
+      dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
+    const unsigned int bandGroupTaskId =
+      dealii::Utilities::MPI::this_mpi_process(interBandGroupComm);
+    std::vector<unsigned int> bandGroupLowHighPlusOneIndices;
+    dftUtils::createBandParallelizationIndices(interBandGroupComm,
+                                               totalNumWaveFunctions,
+                                               bandGroupLowHighPlusOneIndices);
 
+    const unsigned int BVec = std::min(d_dftParamsPtr->chebyWfcBlockSize,
+                                       bandGroupLowHighPlusOneIndices[1]);
+
+    dftfe::utils::MemoryStorage<ValueType, memorySpace> tempCellNodalData;
+
+    const double spinPolarizedFactor =
+      (d_dftParamsPtr->spinPolarized == 1) ? 1.0 : 2.0;
+    const unsigned int numSpinComponents =
+      (d_dftParamsPtr->spinPolarized == 1) ? 2 : 1;
+
+    const ValueType zero                    = 0;
+    const ValueType scalarCoeffAlphaRho     = 1.0;
+    const ValueType scalarCoeffBetaRho      = 1.0;
+    const ValueType scalarCoeffAlphaGradRho = 1.0;
+    const ValueType scalarCoeffBetaGradRho  = 1.0;
+
+    const unsigned int cellsBlockSize =
+      memorySpace == dftfe::utils::MemorySpace::DEVICE ? 50 : 1;
+    const unsigned int numCellBlocks = totalLocallyOwnedCells / cellsBlockSize;
+    const unsigned int remCellBlockSize =
+      totalLocallyOwnedCells - numCellBlocks * cellsBlockSize;
+    d_BasisOperatorHostPtr->reinit(BVec, cellsBlockSize, quadratureIndex);
+    const unsigned int numQuadPoints = d_BasisOperatorHostPtr->nQuadsPerCell();
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+          partialOccupVecHost(BVec, 0.0);
+    auto &partialOccupVec = partialOccupVecHost;
+
+    dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
+      *flattenedArrayBlock;
+
+    dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
+                 projectorKetTimesVector;
+    unsigned int previousSize = 0;
+    for (unsigned int kPoint = 0; kPoint < kPointWeights.size(); ++kPoint)
+      {
+        unsigned int numberOfRemainingElectrons = numberOfElectrons;
+        for (unsigned int spinIndex = 0; spinIndex < numSpinComponents;
+             ++spinIndex)
+          {
+            d_nonLocalOperator->initialiseOperatorActionOnX(kPoint);
+
+            for (unsigned int jvec = 0; jvec < totalNumWaveFunctions;
+                 jvec += BVec)
+              {
+                const unsigned int currentBlockSize =
+                  std::min(BVec, totalNumWaveFunctions - jvec);
+                flattenedArrayBlock = &(
+                  d_BasisOperatorHostPtr->getMultiVector(currentBlockSize, 0));
+                d_nonLocalOperator->initialiseFlattenedDataStructure(
+                  currentBlockSize, projectorKetTimesVector);
+                if ((jvec + currentBlockSize) <=
+                      bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId + 1] &&
+                    (jvec + currentBlockSize) >
+                      bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
+                  {
+                    // compute occupancy Vector
+                    for (unsigned int iEigenVec = 0;
+                         iEigenVec < currentBlockSize;
+                         ++iEigenVec)
+                      {
+                        double OccupancyFactor = 0.0;
+                        if (numberOfRemainingElectrons == 1)
+                          {
+                            OccupancyFactor            = 0.5;
+                            numberOfRemainingElectrons = 0;
+                          }
+                        else if (numberOfRemainingElectrons > 1)
+                          {
+                            OccupancyFactor = 1.0;
+                            numberOfRemainingElectrons -= spinPolarizedFactor;
+                          }
+
+
+
+                        *(partialOccupVecHost.begin() + iEigenVec) =
+                          OccupancyFactor * kPointWeights[kPoint] *
+                          spinPolarizedFactor;
+                      }
+                    for (unsigned int iNode = 0; iNode < numLocalDofs; ++iNode)
+                      std::memcpy(flattenedArrayBlock->data() +
+                                    iNode * currentBlockSize,
+                                  X->data() +
+                                    numLocalDofs * totalNumWaveFunctions *
+                                      (numSpinComponents * kPoint + spinIndex) +
+                                    iNode * totalNumWaveFunctions + jvec,
+                                  currentBlockSize * sizeof(ValueType));
+                    flattenedArrayBlock->updateGhostValues();
+                    d_BasisOperatorHostPtr->distribute(*(flattenedArrayBlock));
+
+                    for (int iblock = 0; iblock < (numCellBlocks + 1); iblock++)
+                      {
+                        const unsigned int currentCellsBlockSize =
+                          (iblock == numCellBlocks) ? remCellBlockSize :
+                                                      cellsBlockSize;
+                        if (currentCellsBlockSize > 0)
+                          {
+                            const unsigned int startingCellId =
+                              iblock * cellsBlockSize;
+                            if (currentCellsBlockSize * currentBlockSize !=
+                                previousSize)
+                              {
+                                tempCellNodalData.resize(currentCellsBlockSize *
+                                                         currentBlockSize *
+                                                         numLocalDofs);
+                                previousSize =
+                                  currentCellsBlockSize * currentBlockSize;
+                              }
+                            d_BasisOperatorHostPtr
+                              ->extractToCellNodalDataKernel(
+                                *(flattenedArrayBlock),
+                                tempCellNodalData.data(),
+                                std::pair<unsigned int, unsigned int>(
+                                  startingCellId,
+                                  startingCellId + currentCellsBlockSize));
+                            d_nonLocalOperator->applyCconjtransOnX(
+                              tempCellNodalData.data(),
+                              std::pair<unsigned int, unsigned int>(
+                                startingCellId,
+                                startingCellId + currentCellsBlockSize));
+                            // Call apply CconjTranspose
+
+
+                          } // non-trivial cell block check
+                      }     // cells block loop
+
+                    d_nonLocalOperator->applyAllReduceOnCconjtransX(
+                      projectorKetTimesVector);
+                    d_nonLocalOperator
+                      ->copyBackFromDistributedVectorToLocalDataStructure(
+                        projectorKetTimesVector, partialOccupVec);
+                    computeDij(
+                      false, jvec, currentBlockSize, spinIndex, kPoint);
+                    // Call computeDij
+                  }
+              }
+          }
+      }
+
+
+
+    communicateDijAcrossAllProcessors(TypeOfField::In,
+                                      interpoolcomm,
+                                      interBandGroupComm);
+  }
 } // namespace dftfe

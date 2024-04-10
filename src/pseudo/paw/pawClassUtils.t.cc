@@ -771,6 +771,7 @@ namespace dftfe
 
         D_ij[typeOfField][atomId] = Dij;
       }
+    d_HamiltonianCouplingMatrixEntriesUpdated = false;
   }
 
 
