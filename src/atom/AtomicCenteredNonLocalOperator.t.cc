@@ -2434,12 +2434,39 @@ namespace dftfe
       }     // kPoint
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  std::vector<ValueType> &
+  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::getCmatrixEntries(
+    int          kPointIndex,
+    unsigned int atomId,
+    int          iElem) const
+  {
+    const std::vector<unsigned int> &atomicNumber =
+      d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
+    const std::map<unsigned int, std::vector<int>> sparsityPattern =
+      d_atomCenteredSphericalFunctionContainer->getSparsityPattern();
+    const int nonZeroElementMatrixId =
+      sparsityPattern.find(atomId)->second[iElem];
+    const unsigned int numberSphericalFunctions =
+      d_atomCenteredSphericalFunctionContainer
+        ->getTotalNumberOfSphericalFunctionsPerAtom(atomicNumber[atomId]);
+    std::vector<ValueType> Ctemp(d_numberNodesPerElement *
+                                   numberSphericalFunctions,
+                                 0.0);
+    for (int i = 0; i < Ctemp.size(); i++)
+      Ctemp[i] =
+        d_CMatrixEntriesConjugate[atomId][nonZeroElementMatrixId]
+                                 [kPointIndex * d_numberNodesPerElement *
+                                    numberSphericalFunctions +
+                                  i];
+    return Ctemp;
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   const std::vector<unsigned int> &
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
     getOwnedAtomIdsInCurrentProcessor() const
   {
     return d_OwnedAtomIdsInCurrentProcessor;
   }
-
 
 } // namespace dftfe

@@ -480,6 +480,8 @@ namespace dftfe
           {
             if (!d_HamiltonianCouplingMatrixEntriesUpdated)
               {
+                computeNonlocalPseudoPotentialConstants(
+                  CouplingType::HamiltonianEntries);
                 std::vector<ValueType> Entries;
                 dftfe::utils::MemoryStorage<ValueType,
                                             dftfe::utils::MemorySpace::HOST>
@@ -500,7 +502,7 @@ namespace dftfe
                          alpha++)
                       {
                         double V = d_atomicNonLocalPseudoPotentialConstants
-                          [CouplingType::HamiltonianEntries][Zno][alpha];
+                          [CouplingType::HamiltonianEntries][atomId][alpha];
                         Entries.push_back(V);
                       }
                   }
@@ -571,7 +573,8 @@ namespace dftfe
                          alpha++)
                       {
                         double V = d_atomicNonLocalPseudoPotentialConstants
-                          [CouplingType::inversePawOverlapEntries][Zno][alpha];
+                          [CouplingType::inversePawOverlapEntries][atomId]
+                          [alpha];
                         Entries.push_back(V);
                       }
                   }
@@ -609,7 +612,7 @@ namespace dftfe
       d_atomicProjectorFnsContainer->getAtomicNumbers();
     char transA = 'N';
 #ifdef USE_COMPLEX
-    char transB = 'H';
+    char transB = 'C';
 #else
     char transB = 'T';
 #endif

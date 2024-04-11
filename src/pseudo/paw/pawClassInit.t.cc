@@ -449,6 +449,7 @@ namespace dftfe
 #endif
 
     computeRadialMultipoleData();
+    computeMultipoleInverse();
     computeNonlocalPseudoPotentialConstants(CouplingType::pawOverlapEntries);
     initialiseKineticEnergyCorrection();
     initialiseColoumbicEnergyCorrection();
@@ -468,7 +469,7 @@ namespace dftfe
   {
     std::vector<unsigned int> atomicNumbers;
     std::vector<double>       atomCoords;
-
+    d_kpointWeights = kPointWeights;
 
     for (int iAtom = 0; iAtom < atomLocations.size(); iAtom++)
       {
@@ -604,10 +605,10 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
   pawClass<ValueType, memorySpace>::computeNonlocalPseudoPotentialConstants(
-    CouplingType coulingtype,
+    CouplingType couplingtype,
     unsigned int s)
   {
-    if (coulingtype == pawOverlapEntries)
+    if (couplingtype == CouplingType::pawOverlapEntries)
       {
         for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
              it != d_atomTypes.end();
@@ -654,10 +655,386 @@ namespace dftfe
                 pseudoPotentialConstants;
           } //*it
       }
-    else if (coulingtype == inversePawOverlapEntries)
-      {}
-    else
-      {}
+    else if (couplingtype == CouplingType::inversePawOverlapEntries)
+      {
+        const unsigned int numberNodesPerElement =
+          d_BasisOperatorHostPtr->nDofsPerCell();
+
+        const unsigned int numberAtomsOfInterest =
+          d_atomicProjectorFnsContainer->getNumAtomCentersSize();
+        const std::vector<unsigned int> &atomicNumber =
+          d_atomicProjectorFnsContainer->getAtomicNumbers();
+        const std::vector<unsigned int> atomIdsInCurrentProcess =
+          d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
+        std::vector<std::vector<ValueType>> Pmatrix(numberAtomsOfInterest);
+        std::vector<double>                 PmatrixVector(d_nProjSqTotal, 0.0);
+        for (int iAtom = 0; iAtom < numberAtomsOfInterest; iAtom++)
+          {
+            unsigned int atomId = atomIdsInCurrentProcess[iAtom];
+            unsigned int Znum   = atomicNumber[atomId];
+            unsigned int numberOfProjectors =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+            Pmatrix[iAtom].clear();
+            Pmatrix[iAtom].resize(numberOfProjectors * numberOfProjectors, 0.0);
+            std::vector<unsigned int> elementIndexesInAtomCompactSupport =
+              d_atomicProjectorFnsContainer
+                ->d_elementIndexesInAtomCompactSupport[atomId];
+            int numberElementsInAtomCompactSupport =
+              elementIndexesInAtomCompactSupport.size();
+            for (int kPoint = 0; kPoint < d_kpointWeights.size(); kPoint++)
+              {
+                for (int iElem = 0; iElem < numberElementsInAtomCompactSupport;
+                     iElem++)
+                  {
+                    unsigned int elementIndex =
+                      elementIndexesInAtomCompactSupport[iElem];
+                    std::vector<ValueType> CMatrixEntries =
+                      d_nonLocalOperator->getCmatrixEntries(kPoint,
+                                                            atomId,
+                                                            iElem);
+                    AssertThrow(
+                      CMatrixEntries.size() ==
+                        numberOfProjectors * numberNodesPerElement,
+                      dealii::ExcMessage(
+                        "PAW::Initialization No. of  projectors mismatch in CmatrixEntries. Check input data "));
+                    // scaling of CMatrixEntries
+                    d_BLASWrapperHostPtr->stridedBlockScale(
+                      numberOfProjectors,
+                      numberNodesPerElement,
+                      1.0,
+                      d_BasisOperatorHostPtr->inverseMassVectorBasisData()
+                          .data() +
+                        elementIndex * numberNodesPerElement,
+                      CMatrixEntries.data());
+                    // GEMMCall
+                    char      transA = 'N';
+                    ValueType alpha  = d_kpointWeights[kPoint];
+                    ValueType beta   = 1.0;
+#ifdef USE_COMPLEX
+                    char transB = 'C';
+#else
+                    char transB = 'T';
+#endif
+                    d_BLASWrapperHostPtr->xgemm(transA,
+                                                transB,
+                                                numberOfProjectors,
+                                                numberOfProjectors,
+                                                numberNodesPerElement,
+                                                &alpha,
+                                                &CMatrixEntries[0],
+                                                numberOfProjectors,
+                                                &CMatrixEntries[0],
+                                                numberOfProjectors,
+                                                &beta,
+                                                &Pmatrix[iAtom][0],
+                                                numberOfProjectors);
+
+
+                  } // iElem
+              }     // kpoint
+
+            unsigned int startIndex = d_projectorStartIndex[atomId];
+            unsigned int alpha      = 0;
+            for (int i = 0; i < numberOfProjectors; i++)
+              {
+                for (int j = 0; j <= i; j++)
+                  {
+                    PmatrixVector[startIndex + alpha] =
+                      std::abs(Pmatrix[iAtom][i * numberOfProjectors + j]);
+                    alpha++;
+                  }
+              }
+
+          } // iAtom
+        MPI_Allreduce(MPI_IN_PLACE,
+                      &PmatrixVector[0],
+                      d_nProjSqTotal,
+                      MPI_DOUBLE,
+                      MPI_SUM,
+                      d_mpiCommParent);
+        // Across kpools and across bands all reduce to be called
+        for (unsigned int atomId = 0; atomId < atomicNumber.size(); atomId++)
+          {
+            unsigned int Znum = atomicNumber[atomId];
+            unsigned int numberOfProjectors =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+            unsigned int        startIndex = d_projectorStartIndex[atomId];
+            std::vector<double> Pij(numberOfProjectors * numberOfProjectors,
+                                    0.0);
+            std::vector<double> multipoleInverse = d_multipoleInverse[Znum];
+            unsigned int        index            = 0;
+            for (int i = 0; i < numberOfProjectors; i++)
+              {
+                for (int j = 0; j < numberOfProjectors; j++)
+                  {
+                    Pij[i * numberOfProjectors + j] =
+                      PmatrixVector[(startIndex + index)] +
+                      multipoleInverse[i * numberOfProjectors + j];
+                    Pij[j * numberOfProjectors + i] =
+                      PmatrixVector[(startIndex + index)] +
+                      multipoleInverse[j * numberOfProjectors + i];
+                    index++;
+                  } // j
+              }     // i
+            dftfe::linearAlgebraOperations::inverse(&Pij[0],
+                                                    numberOfProjectors);
+            d_atomicNonLocalPseudoPotentialConstants
+              [CouplingType::inversePawOverlapEntries][atomId] = Pij;
+
+          } // atomId
+      }
+    else if (couplingtype == CouplingType::HamiltonianEntries)
+      {
+        unsigned int       one     = 1;
+        const char         transA  = 'N';
+        const char         transB  = 'N';
+        const char         transB2 = 'T';
+        const double       alpha   = 1.0;
+        const double       beta    = 1.0;
+        const unsigned int inc     = 1;
+        const std::map<std::pair<unsigned int, unsigned int>,
+                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+          shapeFunction = d_atomicShapeFnsContainer->getSphericalFunctions();
+        const std::map<std::pair<unsigned int, unsigned int>,
+                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+          projectorFunction =
+            d_atomicProjectorFnsContainer->getSphericalFunctions();
+        for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+             it != d_atomTypes.end();
+             ++it)
+          {
+            unsigned int              atomType  = *it;
+            std::vector<unsigned int> atomLists = d_atomTypesList[atomType];
+            unsigned int              Znum      = *it;
+            const unsigned int        numberOfProjectorFns =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfSphericalFunctionsPerAtom(*it);
+            const unsigned int npjsq =
+              numberOfProjectorFns * numberOfProjectorFns;
+            std::vector<double> KEContribution =
+              d_KineticEnergyCorrectionTerm[Znum];
+            std::vector<double> C_ijcontribution  = d_deltaCij[Znum];
+            std::vector<double> Cijkl             = d_deltaCijkl[Znum];
+            std::vector<double> zeroPotentialAtom = d_zeroPotentialij[Znum];
+            std::vector<double> multipoleValue    = d_multipole[Znum];
+            std::vector<double> nonLocalHamiltonianVector(npjsq *
+                                                            atomLists.size(),
+                                                          0.0);
+            std::vector<double> deltaColoumbicEnergyDijVector(
+              npjsq * atomLists.size(), 0.0);
+            std::vector<double> NonLocalComputedContributions(
+              npjsq * atomLists.size(), 0.0);
+            std::vector<double> LocalContribution(npjsq, 0.0);
+            int                 numRadProj =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
+            const unsigned int noOfShapeFns =
+              d_atomicShapeFnsContainer
+                ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+            const int numRadShapeFns =
+              d_atomicShapeFnsContainer
+                ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
+            std::vector<double> FullMultipoleTable(npjsq * noOfShapeFns, 0.0);
+            int                 projectorIndex_i = 0;
+            for (int alpha_i = 0; alpha_i < numRadProj; alpha_i++)
+              {
+                std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_i =
+                  projectorFunction.find(std::make_pair(Znum, alpha_i))->second;
+                int lQuantumNumber_i = sphFn_i->getQuantumNumberl();
+                for (int mQuantumNo_i = -lQuantumNumber_i;
+                     mQuantumNo_i <= lQuantumNumber_i;
+                     mQuantumNo_i++)
+                  {
+                    int projectorIndex_j = 0;
+                    for (int alpha_j = 0; alpha_j < numRadProj; alpha_j++)
+                      {
+                        std::shared_ptr<AtomCenteredSphericalFunctionBase>
+                          sphFn_j = projectorFunction
+                                      .find(std::make_pair(Znum, alpha_j))
+                                      ->second;
+                        int lQuantumNumber_j = sphFn_j->getQuantumNumberl();
+                        for (int mQuantumNo_j = -lQuantumNumber_j;
+                             mQuantumNo_j <= lQuantumNumber_j;
+                             mQuantumNo_j++)
+                          {
+                            int LshapeFnIndex = 0;
+                            for (int L = 0; L < numRadShapeFns; L++)
+                              {
+                                std::shared_ptr<
+                                  AtomCenteredSphericalFunctionBase>
+                                  sphFn =
+                                    shapeFunction.find(std::make_pair(Znum, L))
+                                      ->second;
+                                int lQuantumNumber_L =
+                                  sphFn->getQuantumNumberl();
+                                for (int mQuantumNo_L = -lQuantumNumber_L;
+                                     mQuantumNo_L <= lQuantumNumber_L;
+                                     mQuantumNo_L++)
+                                  {
+                                    FullMultipoleTable[projectorIndex_i *
+                                                         numberOfProjectorFns *
+                                                         noOfShapeFns +
+                                                       projectorIndex_j *
+                                                         noOfShapeFns +
+                                                       LshapeFnIndex] =
+                                      multipoleValue[L * numRadProj *
+                                                       numRadProj +
+                                                     alpha_i * numRadProj +
+                                                     alpha_j] *
+                                      gaunt(lQuantumNumber_i,
+                                            lQuantumNumber_j,
+                                            lQuantumNumber_L,
+                                            mQuantumNo_i,
+                                            mQuantumNo_j,
+                                            mQuantumNo_L);
+
+                                    LshapeFnIndex++;
+                                  } // mQuantumNo_L
+                              }     // L
+
+                            projectorIndex_j++;
+                          } // mQuantumNo_j
+                      }     // alpha_j
+
+                    projectorIndex_i++;
+                  } // mQuantumNo_i
+
+              } // alpha_i
+
+            for (int iProj = 0; iProj < npjsq; iProj++)
+              LocalContribution[iProj] = KEContribution[iProj] +
+                                         C_ijcontribution[iProj] -
+                                         zeroPotentialAtom[iProj];
+
+            for (int i = 0; i < atomLists.size(); i++)
+              {
+                for (int iAtomList = 0; iAtomList < d_LocallyOwnedAtomId.size();
+                     iAtomList++)
+                  {
+                    unsigned int atomId = d_LocallyOwnedAtomId[iAtomList];
+
+                    if (atomLists[i] == atomId)
+                      {
+                        // Cijkl Contribution
+                        std::vector<double> CijklContribution(npjsq, 0.0);
+                        std::vector<double> Dij = D_ij[TypeOfField::In][atomId];
+                        dgemm_(&transA,
+                               &transB,
+                               &inc,
+                               &npjsq,
+                               &npjsq,
+                               &alpha,
+                               &Dij[0],
+                               &inc,
+                               &Cijkl[0],
+                               &npjsq,
+                               &beta,
+                               &CijklContribution[0],
+                               &inc);
+                        dgemm_(&transA,
+                               &transB2,
+                               &inc,
+                               &npjsq,
+                               &npjsq,
+                               &alpha,
+                               &Dij[0],
+                               &inc,
+                               &Cijkl[0],
+                               &npjsq,
+                               &beta,
+                               &CijklContribution[0],
+                               &inc);
+                        std::vector<double> XCcontribution =
+                          d_ExchangeCorrelationEnergyCorrectionTerm[atomId];
+                        for (int iProj = 0; iProj < npjsq; iProj++)
+                          {
+                            NonLocalComputedContributions[i * npjsq + iProj] =
+                              CijklContribution[iProj] + XCcontribution[iProj];
+                            // if (flagEnergy)
+                            //   deltaColoumbicEnergyDijVector[i * npjsq +
+                            //                                 iProj] +=
+                            //     CijklContribution[iProj];
+                          }
+
+                      } // Accessing locally owned atom in the current AtomList
+                  }     // AtomList in locallyOwnedLoop
+                std::vector<double> nonLocalElectrostatics =
+                  d_nonLocalHamiltonianElectrostaticValue[atomLists[i]];
+                std::vector<double> NonLocalElectorstaticsContributions(npjsq,
+                                                                        0.0);
+                dgemm_(&transA,
+                       &transB,
+                       &inc,
+                       &npjsq,
+                       &noOfShapeFns,
+                       &alpha,
+                       &nonLocalElectrostatics[0],
+                       &inc,
+                       &FullMultipoleTable[0],
+                       &noOfShapeFns,
+                       &beta,
+                       &NonLocalElectorstaticsContributions[0],
+                       &inc);
+                for (int iProj = 0; iProj < npjsq; iProj++)
+                  {
+                    NonLocalComputedContributions[i * npjsq + iProj] +=
+                      NonLocalElectorstaticsContributions[iProj];
+                    // deltaColoumbicEnergyDijVector[i * npjsq + iProj] +=
+                    //   NonLocalElectorstaticsContributions[iProj];
+                  }
+              } // i in AtomList Loop
+            MPI_Allreduce(MPI_IN_PLACE,
+                          &NonLocalComputedContributions[0],
+                          npjsq * atomLists.size(),
+                          MPI_DOUBLE,
+                          MPI_SUM,
+                          d_mpiCommParent);
+            // if (flagEnergy)
+            //   MPI_Allreduce(MPI_IN_PLACE,
+            //                 &deltaColoumbicEnergyDijVector[0],
+            //                 npjsq * atomLists.size(),
+            //                 MPI_DOUBLE,
+            //                 MPI_SUM,
+            //                 d_mpiCommParent);
+            for (int i = 0; i < atomLists.size(); i++)
+              {
+                std::vector<double> ValueAtom(npjsq, 0.0);
+                std::vector<double> deltaColoumbicEnergyDij(npjsq, 0.0);
+                unsigned int        iAtom = atomLists[i];
+                // pcout << "Entries in nonLocal Hamiltonian for iAtom: " <<
+                // iAtom
+                //       << std::endl;
+                for (int iProj = 0; iProj < npjsq; iProj++)
+                  {
+                    // nonLocalHamiltonianVector[i * npjsq + iProj] =
+                    //   NonLocalComputedContributions[i * npjsq + iProj] +
+                    //   LocalContribution[iProj];
+                    ValueAtom[iProj] =
+                      NonLocalComputedContributions[i * npjsq + iProj] +
+                      LocalContribution[iProj];
+                    // ValueAtom[iProj] =
+                    //   nonLocalHamiltonianVector[i * npjsq + iProj];
+                    // if (flagEnergy)
+                    //   deltaColoumbicEnergyDij[iProj] =
+                    //     deltaColoumbicEnergyDijVector[i * npjsq + iProj];
+                    // pcout << iProj << " "
+                    //       << nonLocalHamiltonianVector[i * npjsq + iProj] <<
+                    //       " "
+                    //       << ValueAtom[iProj] << " "
+                    //       << NonLocalComputedContributions[i * npjsq + iProj]
+                    //       << " "
+                    //       << LocalContribution[iProj] << std::endl;
+                  }
+                d_atomicNonLocalPseudoPotentialConstants
+                  [CouplingType::HamiltonianEntries][atomLists[i]] = ValueAtom;
+                // d_DeltaColoumbicEnergyDij[iAtom]    =
+                // deltaColoumbicEnergyDij;
+              } // i in atomList
+
+          } // *it
+      }
   }
 
 
@@ -2861,7 +3238,8 @@ namespace dftfe
                 projIndex_i++;
               } // mQuantumNo_i
           }     // alpha_i
-      }         //*it
+        d_KineticEnergyCorrectionTerm[*it] = Tij;
+      } //*it
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>

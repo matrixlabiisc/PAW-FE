@@ -714,7 +714,7 @@ namespace dftfe
     const MPI_Comm &interpoolcomm,
     const MPI_Comm &interBandGroupComm)
   {
-    std::vector<unsigned int> ownedAtomIds =
+    const std::vector<unsigned int> ownedAtomIds =
       d_nonLocalOperator->getOwnedAtomIdsInCurrentProcessor();
     std::vector<double>       DijTotalVector(d_nProjSqTotal, 0.0);
     std::vector<unsigned int> atomicNumber =
@@ -731,7 +731,7 @@ namespace dftfe
               d_atomicProjectorFnsContainer
                 ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
             unsigned int index = 0;
-            for (unsigned int i = 0; i < Dij.size(); i++)
+            for (unsigned int i = 0; i < numberOfProjectors; i++)
               {
                 for (unsigned int j = 0; j <= i; j++)
                   {
@@ -772,6 +772,99 @@ namespace dftfe
         D_ij[typeOfField][atomId] = Dij;
       }
     d_HamiltonianCouplingMatrixEntriesUpdated = false;
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::computeMultipoleInverse()
+  {
+    pcout << "PAWClass Init: computing Inverse Multipole Table" << std::endl;
+    const std::map<std::pair<unsigned int, unsigned int>,
+                   std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+      sphericalFunction =
+        d_atomicProjectorFnsContainer->getSphericalFunctions();
+    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+         it != d_atomTypes.end();
+         ++it)
+      {
+        unsigned int       atomicNumber = *it;
+        const unsigned int numberOfRadialProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(atomicNumber);
+        const unsigned int numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(atomicNumber);
+        std::vector<double> fullMultipoleTable(numberOfProjectors *
+                                                 numberOfProjectors,
+                                               0.0);
+        std::vector<double> multipoleTable = d_multipole[*it];
+        for (int alpha_i = 0; alpha_i < numberOfRadialProjectors; alpha_i++)
+          {
+            std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_i =
+              sphericalFunction.find(std::make_pair(atomicNumber, alpha_i))
+                ->second;
+            int lQuantumNumber_i = sphFn_i->getQuantumNumberl();
+            int projectorIndex_i = 0;
+            for (int mQuantumNumber_i = -lQuantumNumber_i;
+                 mQuantumNumber_i <= lQuantumNumber_i;
+                 mQuantumNumber_i++)
+              {
+                int projectorIndex_j = 0;
+                for (int alpha_j = 0; alpha_j < numberOfRadialProjectors;
+                     alpha_j++)
+                  {
+                    std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_j =
+                      sphericalFunction
+                        .find(std::make_pair(atomicNumber, alpha_j))
+                        ->second;
+                    int lQuantumNumber_j = sphFn_j->getQuantumNumberl();
+                    for (int mQuantumNumber_j = -lQuantumNumber_j;
+                         mQuantumNumber_j <= lQuantumNumber_j;
+                         mQuantumNumber_j++)
+                      {
+                        fullMultipoleTable[projectorIndex_i *
+                                             numberOfProjectors +
+                                           projectorIndex_j] =
+                          sqrt(4 * M_PI) *
+                          gaunt(lQuantumNumber_i,
+                                lQuantumNumber_j,
+                                0,
+                                mQuantumNumber_i,
+                                mQuantumNumber_j,
+                                0) *
+                          multipoleTable[alpha_i * numberOfRadialProjectors +
+                                         alpha_j];
+
+                        projectorIndex_j++;
+                      } // mQuantumNumber_j
+                  }     // alpha_j
+                projectorIndex_i++;
+              } // mQuantumNumber_i
+          }     // alpha_i
+        const char          uplo = 'L';
+        const int           N    = numberOfProjectors;
+        std::vector<double> A    = fullMultipoleTable;
+        pcout << "Multipole Table: " << std::endl;
+        for (int i = 0; i < numberOfProjectors; i++)
+          {
+            for (int j = 0; j < numberOfProjectors; j++)
+              pcout << A[i * numberOfProjectors + j] << " ";
+            pcout << std::endl;
+          }
+
+        dftfe::linearAlgebraOperations::inverse(&A[0], N);
+        d_multipoleInverse[atomicNumber] = A;
+
+        pcout << "Multipole Table Inverse: " << std::endl;
+        for (int i = 0; i < numberOfProjectors; i++)
+          {
+            for (int j = 0; j < numberOfProjectors; j++)
+              pcout << A[i * numberOfProjectors + j] << " ";
+            pcout << std::endl;
+          }
+
+
+      } //*it
   }
 
 

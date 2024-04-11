@@ -256,7 +256,7 @@ namespace dftfe
     initialiseExchangeCorrelationEnergyCorrection(unsigned int s);
 
     void
-    computeNonlocalPseudoPotentialConstants(CouplingType coulingtype,
+    computeNonlocalPseudoPotentialConstants(CouplingType couplingtype,
                                             unsigned int s = 0);
 
     void
@@ -315,6 +315,9 @@ namespace dftfe
 
     void
     computeRadialMultipoleData();
+
+    void
+    computeMultipoleInverse();
 
     void
     computeInverseOfMultipoleData();
@@ -591,6 +594,8 @@ namespace dftfe
     std::vector<std::vector<double>>                  d_imagePositions;
     unsigned int                                      d_numEigenValues;
     unsigned int                                      d_nOMPThreads;
+
+    std::vector<double> d_kpointWeights;
 
     // Creating Object for Atom Centerd Nonlocal Operator
     std::shared_ptr<AtomicCenteredNonLocalOperator<ValueType, memorySpace>>
