@@ -614,7 +614,8 @@ namespace dftfe
              it != d_atomTypes.end();
              ++it)
           {
-            const unsigned int Znum = *it;
+            const unsigned int  Znum           = *it;
+            std::vector<double> multipoleTable = d_multipole[Znum];
             const std::map<std::pair<unsigned int, unsigned int>,
                            std::shared_ptr<AtomCenteredSphericalFunctionBase>>
               sphericalFunction =
@@ -625,34 +626,61 @@ namespace dftfe
             unsigned int numTotalProjectors =
               d_atomicProjectorFnsContainer
                 ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
-            char denominatorDataFileName[256];
-            strcpy(denominatorDataFileName,
-                   (d_dftfeScratchFolderName + "/z" + std::to_string(Znum) +
-                    "/" + "denom.dat")
-                     .c_str());
-            std::vector<std::vector<double>> denominator(0);
-            dftUtils::readFile(numberOfRadialProjectors,
-                               denominator,
-                               denominatorDataFileName);
-            std::vector<double> pseudoPotentialConstants(numTotalProjectors,
-                                                         0.0);
-            unsigned int        ProjId = 0;
-            for (unsigned int iProj = 0; iProj < numberOfRadialProjectors;
-                 iProj++)
+            std::vector<double> fullMultipoleTable(numTotalProjectors *
+                                                     numTotalProjectors,
+                                                   0.0);
+            int                 projectorIndex_i = 0;
+            for (unsigned int alpha_i = 0; alpha_i < numberOfRadialProjectors;
+                 alpha_i++)
               {
-                std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
-                  sphericalFunction.find(std::make_pair(Znum, iProj))->second;
-                unsigned int lQuantumNumber = sphFn->getQuantumNumberl();
-                for (int l = 0; l < 2 * lQuantumNumber + 1; l++)
+                std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_i =
+                  sphericalFunction.find(std::make_pair(Znum, alpha_i))->second;
+                int lQuantumNo_i = sphFn_i->getQuantumNumberl();
+
+                for (int mQuantumNo_i = -lQuantumNo_i;
+                     mQuantumNo_i <= lQuantumNo_i;
+                     mQuantumNo_i++)
                   {
-                    pseudoPotentialConstants[ProjId] =
-                      denominator[iProj][iProj];
-                    ProjId++;
-                  }
-              }
+                    int projectorIndex_j = 0;
+                    for (unsigned int alpha_j = 0;
+                         alpha_j < numberOfRadialProjectors;
+                         alpha_j++)
+                      {
+                        std::shared_ptr<AtomCenteredSphericalFunctionBase>
+                          sphFn_j = sphericalFunction
+                                      .find(std::make_pair(Znum, alpha_j))
+                                      ->second;
+                        int lQuantumNo_j = sphFn_j->getQuantumNumberl();
+                        for (int mQuantumNo_j = -lQuantumNo_j;
+                             mQuantumNo_j <= lQuantumNo_j;
+                             mQuantumNo_j++)
+                          {
+                            fullMultipoleTable[projectorIndex_i *
+                                                 numTotalProjectors +
+                                               projectorIndex_j] =
+                              sqrt(4 * M_PI) *
+                              multipoleTable[alpha_i *
+                                               numberOfRadialProjectors +
+                                             alpha_j] *
+                              gaunt(lQuantumNo_i,
+                                    lQuantumNo_j,
+                                    0,
+                                    mQuantumNo_i,
+                                    mQuantumNo_j,
+                                    0);
+
+                            projectorIndex_j++;
+                          } // mQuantumeNo_j
+
+                      } // alpha_j
+
+
+                    projectorIndex_i++;
+                  } // mQuantumNo_i
+              }     // alpha_i
+
             d_atomicNonLocalPseudoPotentialConstants
-              [CouplingType::pawOverlapEntries][Znum] =
-                pseudoPotentialConstants;
+              [CouplingType::pawOverlapEntries][Znum] = fullMultipoleTable;
           } //*it
       }
     else if (couplingtype == CouplingType::inversePawOverlapEntries)

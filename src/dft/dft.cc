@@ -826,6 +826,7 @@ namespace dftfe
     nlccFlag = pspFlags[0];
     pawFlag  = pspFlags[1];
     nlccFlag = dealii::Utilities::MPI::sum(nlccFlag, d_mpiCommParent);
+    pawFlag  = dealii::Utilities::MPI::sum(pawFlag, d_mpiCommParent);
     if (nlccFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
       d_dftParamsPtr->nonLinearCoreCorrection = true;
     if (pawFlag > 0 && d_dftParamsPtr->isPseudopotential == true)

@@ -74,19 +74,20 @@ namespace dftfe
       std::string              toParse;
       std::vector<std::string> atomTypes;
       unsigned int             nlccSum = 0;
+      unsigned int             pawSum  = 0;
 
       while (input_file >> z >> toParse)
         {
           std::string newFolder = dftfeScratchFolderName + "/" + "z" + z;
           mkdir(newFolder.c_str(), ACCESSPERMS);
           AssertThrow(
-            isupf(toParse),
+            isupf(toParse) || isxml(toParse),
             dealii::ExcMessage(
-              "Not a valid pseudopotential format and upf format only is currently supported"));
+              "Not a valid pseudopotential format and only xml,upf format only is currently supported"));
 
           atomTypes.push_back(z);
 
-          if (isupf(toParse))
+          if (isupf(toParse) || isxml(toParse))
             {
               // std::string xmlFileName = newFolder + "/" + toParse.substr(0,
               // toParse.find(".upf"));
@@ -118,6 +119,7 @@ namespace dftfe
                   errorFlag = dftfe::pseudoUtils::pseudoPotentialToDftfeParser(
                     toParse, newFolder, verbosity, nlccFlag, socFlag, pawFlag);
                   nlccSum += nlccFlag;
+                  pawSum += pawFlag;
 
                   if (verbosity >= 1)
                     {
@@ -131,6 +133,10 @@ namespace dftfe
                               << ", with atomic number: " << z
                               << ", and has no nonlinear core-correction"
                               << std::endl;
+                      if (pawFlag > 0)
+                        pcout << " Reading Pseudopotential File: " << toParse
+                              << ", with atomic number: " << z
+                              << ", and is of type PAW" << std::endl;
                     }
                 }
 
@@ -152,10 +158,15 @@ namespace dftfe
         atomTypes.size() == natomTypes,
         dealii::ExcMessage(
           "Number of atom types in your pseudopotential file does not match with that given in the parameter file"));
+      if (pawSum > 0)
+        AssertThrow(
+          atomTypes.size() == pawSum,
+          dealii::ExcMessage(
+            "PAW pseudopotentials can only be used stand alone. No mixture with ONCV is allowed"));
 
       std::vector<int> pspFlags(2, 0);
       pspFlags[0] = nlccSum;
-      pspFlags[1] = 0;
+      pspFlags[1] = pawSum;
 
 
       return pspFlags;

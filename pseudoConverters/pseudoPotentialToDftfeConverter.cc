@@ -856,7 +856,7 @@ namespace dftfe
 
       // Writing zero_potential.dat
       std::fstream file;
-      file.open(file_path_out + "/zero_potential.dat", std::ios::out);
+      file.open(file_path_out + "/zeroPotential.dat", std::ios::out);
       file << std::setprecision(17);
       if (file.is_open())
         {
@@ -2016,6 +2016,7 @@ namespace dftfe
                                  unsigned int &    pawFlag)
     {
       auto file_type = file_path_in.substr(file_path_in.size() - 3, 3);
+      std::cout << "File Type: " << file_type << std::endl;
       if (file_type == "upf")
         {
           xmltoSummaryFile(file_path_in, file_path_out);

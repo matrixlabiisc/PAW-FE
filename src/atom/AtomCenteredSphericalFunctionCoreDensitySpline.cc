@@ -28,10 +28,10 @@ namespace dftfe
     std::vector<std::vector<double>> radialFunctionData(0);
     unsigned int                     fileReadFlag =
       dftUtils::readPsiFile(2, radialFunctionData, filename);
-    d_DataPresent = fileReadFlag;
+    d_DataPresent = fileReadFlag == 1 ? true : false;
     d_cutOff      = 0.0;
     d_rMin        = 0.0;
-    if (fileReadFlag == 0)
+    if (fileReadFlag == 1)
       {
         unsigned int        numRows = radialFunctionData.size() - 1;
         std::vector<double> xData(numRows), yData(numRows);
