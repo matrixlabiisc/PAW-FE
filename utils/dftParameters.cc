@@ -267,6 +267,15 @@ namespace dftfe
                           "2",
                           dealii::Patterns::Integer(0),
                           "[Standard] ");
+        prm.declare_entry("ZERO POTENTIAL QUADRATURE ORDER",
+                          "10",
+                          dealii::Patterns::Integer(0),
+                          "[Standard] ");
+        prm.declare_entry("ZERO POTENTIAL QUADRATURE COPY",
+                          "2",
+                          dealii::Patterns::Integer(0),
+                          "[Standard] ");
+
         prm.declare_entry("USE DIAGONAL MASS MATRIX",
                           "false",
                           dealii::Patterns::Bool(),
@@ -1481,6 +1490,11 @@ namespace dftfe
         prm.get_integer("COMPENSATION CHARGE QUADRATURE ORDER");
       QuadratureCopyComp =
         prm.get_integer("COMPENSATION CHARGE QUADRATURE COPY");
+      QuadratureOrderZeroPotential =
+        prm.get_integer("ZERO POTENTIAL QUADRATURE ORDER");
+      QuadratureCopyZeroPotential =
+        prm.get_integer("ZERO POTENTIAL QUADRATURE COPY");
+
       DiagonalMassMatrix = prm.get_bool("USE DIAGONAL MASS MATRIX");
       ApproxDelta        = prm.get_bool("USE APPROX DELTA MATRIX");
       noShapeFnsInPAW =

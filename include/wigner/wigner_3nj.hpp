@@ -40,6 +40,11 @@
 
 #include "half_integer.hpp"
 
+template<typename T>
+T default_constructed() {
+    return T();
+}
+
 namespace wigner
 {
 
@@ -211,7 +216,9 @@ void rec_luscombe_luban(ArgT nmin_, ArgT nmax_, Iterator dest, const FuncXYZ fn)
     //
     // For the convenience, we set f'[n1] = 1.
     //
-    auto i1         = siz;
+
+
+    auto i1 = default_constructed<decltype(siz)>();
     auto n1         = nmin;
     const auto ymin = fn.Y(nmin);
     if (abs(ymin) < tiny)

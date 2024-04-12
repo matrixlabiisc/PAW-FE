@@ -139,7 +139,7 @@ namespace dftfe
             normalizationalizationConstant = // normalizationConstant2;
               simpsonIntegral(0, rmaxAugIndex + 1, f);
             pcout << "Normalization Constant Value: "
-                  << normalizationalizationConstant;
+                  << normalizationalizationConstant << std::endl;
             for (int iRow = 0; iRow < numValues; iRow++)
               {
                 shapeFnGridData[lQuantumNo * numValues + iRow] =
@@ -1089,8 +1089,12 @@ namespace dftfe
         unsigned int  Znum = *it;
         std::ifstream readPseudoDataFileNames(pseudoAtomDataFile);
         unsigned int  numberOfProjectors;
-        for (int i = 0; i <= 5; i++)
-          readPseudoDataFileNames.ignore();
+        for (int i = 0; i <= 4; i++)
+          {
+            std::string temp;
+            std::getline(readPseudoDataFileNames, temp);
+            // pcout<<temp<<std::endl;
+          }
         readPseudoDataFileNames >> numberOfProjectors;
         std::vector<unsigned int> projectorPerOrbital(4, 0);
         readPseudoDataFileNames >> projectorPerOrbital[0];
@@ -1100,10 +1104,21 @@ namespace dftfe
         unsigned int totalProjectors =
           projectorPerOrbital[0] + projectorPerOrbital[1] +
           projectorPerOrbital[2] + projectorPerOrbital[3];
+        pcout << "Znum: " << *it
+              << " has no. of radial projectors to be: " << numberOfProjectors
+              << std::endl;
+        pcout << " Projector l = 0 has: " << projectorPerOrbital[0]
+              << " components" << std::endl;
+        pcout << " Projector l = 1 has: " << projectorPerOrbital[1]
+              << " components" << std::endl;
+        pcout << " Projector l = 2 has: " << projectorPerOrbital[2]
+              << " components" << std::endl;
+        pcout << " Projector l = 3 has: " << projectorPerOrbital[3]
+              << " components" << std::endl;
         if (totalProjectors == numberOfProjectors)
           pcout
             << "PAW::Initialization total Radial Projectors in pseudopotential file: "
-            << totalProjectors;
+            << totalProjectors << std::endl;
         else
           AssertThrow(
             false,
@@ -1129,15 +1144,17 @@ namespace dftfe
                 char         PSpartialWaveFile[256];
                 strcpy(projectorFile,
                        (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
-                        "/proj_l" + std::to_string(lQuantumNo))
+                        "/proj_l" + std::to_string(lQuantumNo) + ".dat")
                          .c_str());
                 strcpy(AEpartialWaveFile,
                        (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
-                        "/allelectron_partial_l" + std::to_string(lQuantumNo))
+                        "/allelectron_partial_l" + std::to_string(lQuantumNo) +
+                        ".dat")
                          .c_str());
                 strcpy(PSpartialWaveFile,
                        (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
-                        "/smooth_partial_l" + std::to_string(lQuantumNo))
+                        "/smooth_partial_l" + std::to_string(lQuantumNo) +
+                        ".dat")
                          .c_str());
                 std::vector<std::vector<double>> allElectronPartialData(0);
                 dftUtils::readFile(noOfProjectors + 1,
@@ -3382,7 +3399,7 @@ namespace dftfe
             std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_i =
               sphericalFunction.find(std::make_pair(atomicNumber, iProj))
                 ->second;
-            const int lQuantumNo_i = sphFn_i->getQuantumNumberl();
+            int lQuantumNo_i = sphFn_i->getQuantumNumberl();
             for (int mQuantumNumber_i = -lQuantumNo_i;
                  mQuantumNumber_i <= lQuantumNo_i;
                  mQuantumNumber_i++)
@@ -3394,7 +3411,7 @@ namespace dftfe
                       sphericalFunction
                         .find(std::make_pair(atomicNumber, jProj))
                         ->second;
-                    const int lQuantumNo_j = sphFn_j->getQuantumNumberl();
+                    int lQuantumNo_j = sphFn_j->getQuantumNumberl();
                     for (int mQuantumNumber_j = -lQuantumNo_j;
                          mQuantumNumber_j <= lQuantumNo_j;
                          mQuantumNumber_j++)
