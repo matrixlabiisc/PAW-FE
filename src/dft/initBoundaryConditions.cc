@@ -362,9 +362,8 @@ namespace dftfe
               BVec, d_dftParamsPtr->overlapComputeCommunCheby ? 4 : 2);
             d_basisOperationsPtrDevice->computeCellStiffnessMatrix(
               d_feOrderPlusOneQuadratureId, 50, true, false);
-            if (std::is_same<dataTypes::number, std::complex<double>>::value)
-              d_basisOperationsPtrDevice->computeCellMassMatrix(
-                d_feOrderPlusOneQuadratureId, 50, true, true);
+            d_basisOperationsPtrDevice->computeCellMassMatrix(
+              d_feOrderPlusOneQuadratureId, 50, true, true);
             d_basisOperationsPtrDevice->computeInverseSqrtMassVector(true,
                                                                      true);
             unsigned int BVec2 =
