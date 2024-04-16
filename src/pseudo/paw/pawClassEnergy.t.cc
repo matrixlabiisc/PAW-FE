@@ -28,6 +28,7 @@ namespace dftfe
   {
     double alpha = 1.0;
     double beta  = 1.0;
+    pcout << "DEBUG: Line 31 pawClassEnergy" << std::endl;
     d_BasisOperatorElectroHostPtr->reinit(
       0, 0, d_compensationChargeQuadratureIdElectro);
     const unsigned int numberNodesPerElement =

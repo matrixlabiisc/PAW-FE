@@ -1230,6 +1230,54 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::scaleRhoInQuadValues(
+    double scalingFactor)
+  {
+    const dealii::Quadrature<3> &quadrature_formula =
+      matrix_free_data.get_quadrature(d_densityQuadratureId);
+    const unsigned int n_q_points = quadrature_formula.size();
+    const unsigned int nCells     = matrix_free_data.n_physical_cells();
+    const double       charge =
+      totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
+    const double scaling = scalingFactor;
+
+    if (d_dftParamsPtr->verbosity >= 2)
+      pcout
+        << "initial total charge before normalizing to number of electrons: "
+        << charge << std::endl;
+
+    // scaling rho
+    for (unsigned int iCell = 0; iCell < nCells; ++iCell)
+      {
+        for (unsigned int q = 0; q < n_q_points; ++q)
+          {
+            for (unsigned int iComp = 0; iComp < d_densityInQuadValues.size();
+                 ++iComp)
+              d_densityInQuadValues[iComp][iCell * n_q_points + q] *= scaling;
+            if (d_excManagerPtr->getDensityBasedFamilyType() ==
+                densityFamilyType::GGA)
+              for (unsigned int iComp = 0;
+                   iComp < d_gradDensityInQuadValues.size();
+                   ++iComp)
+                for (unsigned int idim = 0; idim < 3; ++idim)
+                  d_gradDensityInQuadValues[iComp][3 * iCell * n_q_points +
+                                                   3 * q + idim] *= scaling;
+          }
+      }
+    double chargeAfterScaling =
+      totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
+
+    if (d_dftParamsPtr->verbosity >= 1)
+      pcout << "Initial total charge: " << chargeAfterScaling << std::endl;
+  }
+
+  //
+  // Normalize rho
+  //
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::normalizeRhoOutQuadValues()
   {
     const dealii::Quadrature<3> &quadrature_formula =

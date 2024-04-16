@@ -618,7 +618,7 @@ namespace dftfe
 #endif
     const ValueType beta  = 0.0;
     const ValueType alpha = 1.0;
-
+    pcout << "COmputing DIJ" << std::endl;
     for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
       {
         const unsigned int atomId = atomIdsInProcessor[iAtom];
@@ -655,6 +655,8 @@ namespace dftfe
           tempDij.data(),
           D_ij[isDijOut ? TypeOfField::Out : TypeOfField::In][atomId].data(),
           [](auto &p, auto &q) { return p + dftfe::utils::realPart(q); });
+        pcout << "DEBUG: PAW DijIn size: " << D_ij[TypeOfField::In].size()
+              << std::endl;
       }
   }
 

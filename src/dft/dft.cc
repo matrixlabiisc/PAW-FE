@@ -1344,6 +1344,19 @@ namespace dftfe
 
         d_isRestartGroundStateCalcFromChk = true;
       }
+    if (d_dftParamsPtr->pawPseudoPotential)
+      {
+        d_pawClassPtr->computeDijFromPSIinitialGuess(
+          &d_eigenVectorsFlattenedHost,
+          numElectrons,
+          d_numEigenValues,
+          d_densityQuadratureId,
+          d_kPointWeights,
+          interpoolcomm,
+          interBandGroupComm);
+        double scaleFactor = d_pawClassPtr->densityScalingFactor(atomLocations);
+        scaleRhoInQuadValues(scaleFactor);
+      }
 
     d_isFirstFilteringCall.clear();
     d_isFirstFilteringCall.resize((d_dftParamsPtr->spinPolarized + 1) *
@@ -1417,6 +1430,22 @@ namespace dftfe
       {
         readPSI();
         initRho();
+        pcout << "DEBUG: Line 1420" << std::endl;
+        if (d_dftParamsPtr->pawPseudoPotential)
+          {
+            pcout << "DEBUG: Line 1423" << std::endl;
+            d_pawClassPtr->computeDijFromPSIinitialGuess(
+              &d_eigenVectorsFlattenedHost,
+              numElectrons,
+              d_numEigenValues,
+              d_densityQuadratureId,
+              d_kPointWeights,
+              interpoolcomm,
+              interBandGroupComm);
+            double scaleFactor =
+              d_pawClassPtr->densityScalingFactor(atomLocations);
+            scaleRhoInQuadValues(scaleFactor);
+          }
       }
     else
       {
@@ -1530,6 +1559,20 @@ namespace dftfe
         else
           {
             initRho();
+            if (d_dftParamsPtr->pawPseudoPotential)
+              {
+                d_pawClassPtr->computeDijFromPSIinitialGuess(
+                  &d_eigenVectorsFlattenedHost,
+                  numElectrons,
+                  d_numEigenValues,
+                  d_densityQuadratureId,
+                  d_kPointWeights,
+                  interpoolcomm,
+                  interBandGroupComm);
+                double scaleFactor =
+                  d_pawClassPtr->densityScalingFactor(atomLocations);
+                scaleRhoInQuadValues(scaleFactor);
+              }
           }
       }
 
@@ -3095,6 +3138,33 @@ namespace dftfe
                               s);
                             computing_timer.leave_subsection(
                               "VEff Computation");
+                            if (d_dftParamsPtr->isPseudopotential &&
+                                d_dftParamsPtr->pawPseudoPotential)
+                              {
+                                computing_timer.enter_subsection(
+                                  "Computing Non-Local Hamiltonian Entries");
+                                computing_timer.enter_subsection(
+                                  "Computing Non-Local XC Term Entries");
+                                d_pawClassPtr
+                                  ->initialiseExchangeCorrelationEnergyCorrection(
+                                    s);
+                                computing_timer.leave_subsection(
+                                  "Computing Non-Local XC Term Entries");
+                                computing_timer.enter_subsection(
+                                  "Computing Non-Local Electrostatics Term Entries");
+                                if (s == 0)
+                                  d_pawClassPtr
+                                    ->evaluateNonLocalHamiltonianElectrostaticsValue(
+                                      d_phiTotRhoIn,
+                                      d_phiTotDofHandlerIndexElectro);
+                                computing_timer.leave_subsection(
+                                  "Computing Non-Local Electrostatics Term Entries");
+                                d_pawClassPtr
+                                  ->computeNonlocalPseudoPotentialConstants(
+                                    CouplingType::HamiltonianEntries, s);
+                                computing_timer.leave_subsection(
+                                  "Computing Non-Local Hamiltonian Entries");
+                              }
                           }
                         for (unsigned int kPoint = 0;
                              kPoint < d_kPointWeights.size();
@@ -3225,7 +3295,27 @@ namespace dftfe
                                                  d_rhoCore,
                                                  d_gradRhoCore);
             computing_timer.leave_subsection("VEff Computation");
-
+            if (d_dftParamsPtr->isPseudopotential &&
+                d_dftParamsPtr->pawPseudoPotential)
+              {
+                computing_timer.enter_subsection(
+                  "Computing Non-Local Hamiltonian Entries");
+                computing_timer.enter_subsection(
+                  "Computing Non-Local XC Term Entries");
+                d_pawClassPtr->initialiseExchangeCorrelationEnergyCorrection(0);
+                computing_timer.leave_subsection(
+                  "Computing Non-Local XC Term Entries");
+                computing_timer.enter_subsection(
+                  "Computing Non-Local Electrostatics Term Entries");
+                d_pawClassPtr->evaluateNonLocalHamiltonianElectrostaticsValue(
+                  d_phiTotRhoIn, d_phiTotDofHandlerIndexElectro);
+                computing_timer.leave_subsection(
+                  "Computing Non-Local Electrostatics Term Entries");
+                d_pawClassPtr->computeNonlocalPseudoPotentialConstants(
+                  CouplingType::HamiltonianEntries, 0);
+                computing_timer.leave_subsection(
+                  "Computing Non-Local Hamiltonian Entries");
+              }
 
             for (unsigned int kPoint = 0; kPoint < d_kPointWeights.size();
                  ++kPoint)

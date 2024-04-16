@@ -286,10 +286,10 @@ namespace dftfe
 
     void
     computeDijFromPSIinitialGuess(
-      const dftfe::utils::MemoryStorage<ValueType, memorySpace> *X,
+      const dftfe::utils::MemoryStorage<ValueType,
+                                        dftfe::utils::MemorySpace::HOST> *X,
       const unsigned int         numberOfElectrons,
       const unsigned int         totalNumWaveFunctions,
-      const unsigned int         matrixFreeDofhandlerIndex,
       const unsigned int         quadratureIndex,
       const std::vector<double> &kPointWeights,
       const MPI_Comm &           interpoolcomm,

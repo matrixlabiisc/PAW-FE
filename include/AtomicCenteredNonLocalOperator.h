@@ -327,7 +327,7 @@ namespace dftfe
     applyCOnVCconjtransX(ValueType *                                 Xout,
                          const std::pair<unsigned int, unsigned int> cellRange);
 
-    std::vector<ValueType> &
+    std::vector<ValueType>
     getCmatrixEntries(int kPointIndex, unsigned int atomId, int iElem) const;
 
 

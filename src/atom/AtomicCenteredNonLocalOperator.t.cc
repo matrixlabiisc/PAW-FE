@@ -2434,7 +2434,7 @@ namespace dftfe
       }     // kPoint
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
-  std::vector<ValueType> &
+  std::vector<ValueType>
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::getCmatrixEntries(
     int          kPointIndex,
     unsigned int atomId,
@@ -2452,12 +2452,16 @@ namespace dftfe
     std::vector<ValueType> Ctemp(d_numberNodesPerElement *
                                    numberSphericalFunctions,
                                  0.0);
+    std::cout << "Size of Ctemp: " << Ctemp.size() << std::endl;
     for (int i = 0; i < Ctemp.size(); i++)
-      Ctemp[i] =
-        d_CMatrixEntriesConjugate[atomId][nonZeroElementMatrixId]
-                                 [kPointIndex * d_numberNodesPerElement *
-                                    numberSphericalFunctions +
-                                  i];
+      {
+        Ctemp[i] =
+          d_CMatrixEntriesConjugate[atomId][nonZeroElementMatrixId]
+                                   [kPointIndex * d_numberNodesPerElement *
+                                      numberSphericalFunctions +
+                                    i];
+        std::cout << kPointIndex << " " << atomId << Ctemp[i] << std::endl;
+      }
     return Ctemp;
   }
 

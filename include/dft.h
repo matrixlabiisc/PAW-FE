@@ -874,6 +874,11 @@ namespace dftfe
      */
     void
     normalizeRhoInQuadValues();
+    /**
+     *@brief Used in PAW to scale rhoIn
+     */
+    void
+    scaleRhoInQuadValues(double scalingFactor);
 
     /**
      *@brief normalize the output electron density in each scf

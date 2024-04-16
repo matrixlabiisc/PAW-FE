@@ -511,27 +511,73 @@ namespace dftfe
   {
     std::vector<double> DijVector(d_nProjPerTask * d_nProjPerTask, 0.0);
     unsigned int        index = 0;
-    for (unsigned int i = 0; i < d_LocallyOwnedAtomId.size(); i++)
+    for (unsigned int iAtom = 0; iAtom < d_LocallyOwnedAtomId.size(); iAtom++)
       {
-        unsigned int              atomId = d_LocallyOwnedAtomId[i];
+        unsigned int              atomId = d_LocallyOwnedAtomId[iAtom];
         std::vector<unsigned int> atomicNumber =
           d_atomicProjectorFnsContainer->getAtomicNumbers();
         unsigned int Znum = atomicNumber[atomId];
         unsigned int numProj =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        const std::map<std::pair<unsigned int, unsigned int>,
+                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+          sphericalFunction =
+            d_atomicProjectorFnsContainer->getSphericalFunctions();
+        unsigned int numRadProj =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
         std::vector<double> multipoleTable = d_multipole[Znum];
-        std::vector<double> Dij_in         = D_ij[TypeOfField::In][atomId];
-        std::vector<double> Dij_out        = D_ij[TypeOfField::Out][atomId];
+
+        std::vector<double> multipoleTableVal(numProj * numProj, 0.0);
+        int                 projectorIndex_i = 0;
+        for (int alpha_i = 0; alpha_i < numRadProj; alpha_i++)
+          {
+            std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_i =
+              sphericalFunction.find(std::make_pair(Znum, alpha_i))->second;
+            int lQuantumNo_i = sphFn_i->getQuantumNumberl();
+            for (int mQuantumNo_i = -lQuantumNo_i; mQuantumNo_i <= lQuantumNo_i;
+                 mQuantumNo_i++)
+              {
+                int projectorIndex_j = 0;
+                for (int alpha_j = 0; alpha_j < numRadProj; alpha_j++)
+                  {
+                    std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_j =
+                      sphericalFunction.find(std::make_pair(Znum, alpha_j))
+                        ->second;
+                    int lQuantumNo_j = sphFn_j->getQuantumNumberl();
+                    for (int mQuantumNo_j = -lQuantumNo_j;
+                         mQuantumNo_j <= lQuantumNo_j;
+                         mQuantumNo_j++)
+                      {
+                        multipoleTableVal[projectorIndex_i * numProj +
+                                          projectorIndex_j] =
+                          multipoleTable[alpha_i * numRadProj + alpha_j] *
+                          gaunt(lQuantumNo_i,
+                                lQuantumNo_j,
+                                0,
+                                mQuantumNo_i,
+                                mQuantumNo_j,
+                                0);
+                        projectorIndex_j++;
+                      }
+                  }
+                projectorIndex_i++;
+              }
+          }
+
+        std::vector<double> Dij_in  = D_ij[TypeOfField::In][atomId];
+        std::vector<double> Dij_out = D_ij[TypeOfField::Out][atomId];
         if (typeOfField == TypeOfField::In)
           {
             for (int iProj = 0; iProj < numProj; iProj++)
               {
                 for (int jProj = 0; jProj < numProj; jProj++)
                   {
-                    DijVector[index] = std::sqrt(4 * M_PI) *
-                                       multipoleTable[iProj * numProj + jProj] *
-                                       Dij_in[iProj * numProj + jProj];
+                    DijVector[index] =
+                      std::sqrt(4 * M_PI) *
+                      multipoleTableVal[iProj * numProj + jProj] *
+                      Dij_in[iProj * numProj + jProj];
                     index++;
                   }
               }
@@ -542,9 +588,10 @@ namespace dftfe
               {
                 for (int jProj = 0; jProj < numProj; jProj++)
                   {
-                    DijVector[index] = std::sqrt(4 * M_PI) *
-                                       multipoleTable[iProj * numProj + jProj] *
-                                       Dij_out[iProj * numProj + jProj];
+                    DijVector[index] =
+                      std::sqrt(4 * M_PI) *
+                      multipoleTableVal[iProj * numProj + jProj] *
+                      Dij_out[iProj * numProj + jProj];
                     index++;
                   }
               }
@@ -555,10 +602,11 @@ namespace dftfe
               {
                 for (int jProj = 0; jProj < numProj; jProj++)
                   {
-                    DijVector[index] = std::sqrt(4 * M_PI) *
-                                       multipoleTable[iProj * numProj + jProj] *
-                                       (Dij_out[iProj * numProj + jProj] -
-                                        Dij_in[iProj * numProj + jProj]);
+                    DijVector[index] =
+                      std::sqrt(4 * M_PI) *
+                      multipoleTableVal[iProj * numProj + jProj] *
+                      (Dij_out[iProj * numProj + jProj] -
+                       Dij_in[iProj * numProj + jProj]);
                     index++;
                   }
               }
