@@ -1657,6 +1657,10 @@ namespace dftfe
             ->getAtomIdsInCurrentProcess();
         unsigned int       startIndex = 0;
         const unsigned int inc        = 1;
+        pcout << "Scaling Vector" << std::endl;
+        for (int iWave = 0; iWave < d_numberWaveFunctions; iWave++)
+          pcout << *(scalingVector.data() + iWave) << " ";
+        pcout << std::endl;
         for (int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
           {
             const unsigned int atomId = atomIdsInProc[iAtom];
@@ -1665,7 +1669,7 @@ namespace dftfe
               d_atomCenteredSphericalFunctionContainer
                 ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
 
-
+            pcout << "UMatrix entries for iAtom: " << iAtom << std::endl;
             for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
                  alpha++)
               {
@@ -1676,6 +1680,12 @@ namespace dftfe
                       d_sphericalFunctionIdsNumberingMapCurrentProcess
                         .find(std::make_pair(atomId, alpha))
                         ->second);
+                for (int iWave = 0; iWave < d_numberWaveFunctions; iWave++)
+                  pcout
+                    << *(sphericalFunctionKetTimesVectorParFlattened.data() +
+                         localId * d_numberWaveFunctions + iWave)
+                    << " ";
+                pcout << std::endl;
                 std::transform(
                   sphericalFunctionKetTimesVectorParFlattened.begin() +
                     localId * d_numberWaveFunctions,
@@ -2452,7 +2462,7 @@ namespace dftfe
     std::vector<ValueType> Ctemp(d_numberNodesPerElement *
                                    numberSphericalFunctions,
                                  0.0);
-    std::cout << "Size of Ctemp: " << Ctemp.size() << std::endl;
+    // std::cout << "Size of Ctemp: " << Ctemp.size() << std::endl;
     for (int i = 0; i < Ctemp.size(); i++)
       {
         Ctemp[i] =
@@ -2460,7 +2470,7 @@ namespace dftfe
                                    [kPointIndex * d_numberNodesPerElement *
                                       numberSphericalFunctions +
                                     i];
-        std::cout << kPointIndex << " " << atomId << Ctemp[i] << std::endl;
+        // std::cout << kPointIndex << " " << atomId << Ctemp[i] << std::endl;
       }
     return Ctemp;
   }

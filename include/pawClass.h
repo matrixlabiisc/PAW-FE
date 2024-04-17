@@ -184,6 +184,13 @@ namespace dftfe
     void
     computeCompensationCharge(TypeOfField typeOfField);
 
+    /**
+     * @brief pawclass omputecompensationchargel0:
+     *
+     */
+    double
+    TotalCompensationCharge();
+
     void
     computeDij(const bool         isDijOut,
                const unsigned int startVectorIndex,
@@ -341,6 +348,8 @@ namespace dftfe
                               d_nonLocalHamiltonianElectrostaticValue;
     unsigned int              d_nProjPerTask, d_nProjSqTotal;
     std::vector<unsigned int> d_projectorStartIndex;
+
+    double d_TotalCompensationCharge;
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
      * @param[in] atomLocations atomic Coordinates

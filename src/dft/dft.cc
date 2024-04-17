@@ -743,7 +743,25 @@ namespace dftfe
                   << std::endl;
           }
       }
+    int              nlccFlag = 0;
+    int              pawFlag  = 0;
+    std::vector<int> pspFlags(2, 0);
+    if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0 &&
+        d_dftParamsPtr->isPseudopotential == true)
+      pspFlags = pseudoUtils::convert(d_dftParamsPtr->pseudoPotentialFile,
+                                      d_dftfeScratchFolderName,
+                                      d_dftParamsPtr->verbosity,
+                                      d_dftParamsPtr->natomTypes,
+                                      d_dftParamsPtr->pseudoTestsFlag);
 
+    nlccFlag = pspFlags[0];
+    pawFlag  = pspFlags[1];
+    nlccFlag = dealii::Utilities::MPI::sum(nlccFlag, d_mpiCommParent);
+    pawFlag  = dealii::Utilities::MPI::sum(pawFlag, d_mpiCommParent);
+    if (nlccFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
+      d_dftParamsPtr->nonLinearCoreCorrection = true;
+    if (pawFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
+      d_dftParamsPtr->pawPseudoPotential = true;
     // estimate total number of wave functions from atomic orbital filling
     if (d_dftParamsPtr->startingWFCType == "ATOMIC")
       determineOrbitalFilling();
@@ -812,25 +830,7 @@ namespace dftfe
           << d_dftParamsPtr->pseudoPotentialFile << std::endl;
       }
 
-    int              nlccFlag = 0;
-    int              pawFlag  = 0;
-    std::vector<int> pspFlags(2, 0);
-    if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0 &&
-        d_dftParamsPtr->isPseudopotential == true)
-      pspFlags = pseudoUtils::convert(d_dftParamsPtr->pseudoPotentialFile,
-                                      d_dftfeScratchFolderName,
-                                      d_dftParamsPtr->verbosity,
-                                      d_dftParamsPtr->natomTypes,
-                                      d_dftParamsPtr->pseudoTestsFlag);
 
-    nlccFlag = pspFlags[0];
-    pawFlag  = pspFlags[1];
-    nlccFlag = dealii::Utilities::MPI::sum(nlccFlag, d_mpiCommParent);
-    pawFlag  = dealii::Utilities::MPI::sum(pawFlag, d_mpiCommParent);
-    if (nlccFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
-      d_dftParamsPtr->nonLinearCoreCorrection = true;
-    if (pawFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
-      d_dftParamsPtr->pawPseudoPotential = true;
     if (d_dftParamsPtr->isPseudopotential == true &&
         d_dftParamsPtr->pawPseudoPotential == false)
       {
@@ -2966,6 +2966,7 @@ namespace dftfe
                 if (d_dftParamsPtr->isPseudopotential &&
                     d_dftParamsPtr->pawPseudoPotential)
                   {
+                    pcout << "DEBUG: Line 2969" << std::endl;
                     computing_timer.enter_subsection(
                       "Computing Non-Local Hamiltonian Entries");
                     computing_timer.enter_subsection(
@@ -3141,6 +3142,7 @@ namespace dftfe
                             if (d_dftParamsPtr->isPseudopotential &&
                                 d_dftParamsPtr->pawPseudoPotential)
                               {
+                                pcout << "DEBUG Line 3145" << std::endl;
                                 computing_timer.enter_subsection(
                                   "Computing Non-Local Hamiltonian Entries");
                                 computing_timer.enter_subsection(
@@ -3298,6 +3300,7 @@ namespace dftfe
             if (d_dftParamsPtr->isPseudopotential &&
                 d_dftParamsPtr->pawPseudoPotential)
               {
+                pcout << "DEBUG: Line 3301" << std::endl;
                 computing_timer.enter_subsection(
                   "Computing Non-Local Hamiltonian Entries");
                 computing_timer.enter_subsection(

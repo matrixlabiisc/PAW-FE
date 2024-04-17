@@ -276,7 +276,7 @@ namespace dftfe
       }
 
     // scale quadrature values
-    normalizeRhoInQuadValues();
+    // normalizeRhoInQuadValues(); Not sure why we normalise here??
   }
 
   template <unsigned int              FEOrder,

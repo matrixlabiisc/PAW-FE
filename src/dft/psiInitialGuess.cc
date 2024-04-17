@@ -81,6 +81,7 @@ namespace dftfe
         l);
 
     std::vector<std::vector<double>> values;
+    pcout << "PSI file is being read from: " << psiFile << std::endl;
 
     fileReadFlag = dftUtils::readPsiFile(2, values, psiFile);
 

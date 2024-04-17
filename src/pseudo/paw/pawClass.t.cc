@@ -610,11 +610,11 @@ namespace dftfe
       d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
     std::vector<unsigned int> atomicNumber =
       d_atomicProjectorFnsContainer->getAtomicNumbers();
-    char transA = 'N';
+    char transB = 'N';
 #ifdef USE_COMPLEX
-    char transB = 'C';
+    char transA = 'C';
 #else
-    char transB = 'T';
+    char transA = 'T';
 #endif
     const ValueType beta  = 0.0;
     const ValueType alpha = 1.0;
@@ -634,6 +634,12 @@ namespace dftfe
         std::vector<ValueType> tempDij(numberSphericalFunctions *
                                          numberSphericalFunctions,
                                        0.0);
+        pcout << "U Matrix Entries" << std::endl;
+        for (int i = 0; i < numberSphericalFunctions * vectorBlockSize; i++)
+          pcout << *(d_nonLocalOperator->getCconjtansXLocalDataStructure(
+                       atomId) +
+                     i)
+                << std::endl;
         d_BLASWrapperHostPtr->xgemm(
           transA,
           transB,
@@ -642,9 +648,9 @@ namespace dftfe
           vectorBlockSize,
           &alpha,
           d_nonLocalOperator->getCconjtansXLocalDataStructure(atomId),
-          numberSphericalFunctions,
+          vectorBlockSize,
           d_nonLocalOperator->getCconjtansXLocalDataStructure(atomId),
-          numberSphericalFunctions,
+          vectorBlockSize,
           &beta,
           &tempDij[0],
           numberSphericalFunctions);
@@ -656,6 +662,23 @@ namespace dftfe
           D_ij[isDijOut ? TypeOfField::Out : TypeOfField::In][atomId].data(),
           [](auto &p, auto &q) { return p + dftfe::utils::realPart(q); });
         pcout << "DEBUG: PAW DijIn size: " << D_ij[TypeOfField::In].size()
+              << std::endl;
+        pcout << "---------------MATRIX METHOD ------------------------"
+              << std::endl;
+
+
+        pcout << "------------------------------------------------------------"
+              << std::endl;
+        pcout << "D_ij of atom: " << atomId << " with Z:" << Znum << std::endl;
+        int                 numberProjectorFunctions = numberSphericalFunctions;
+        std::vector<double> tempD_ij                 = tempDij;
+        for (int i = 0; i < numberProjectorFunctions; i++)
+          {
+            for (int j = 0; j < numberProjectorFunctions; j++)
+              pcout << tempD_ij[i * numberProjectorFunctions + j] << " ";
+            pcout << std::endl;
+          }
+        pcout << "------------------------------------------------------------"
               << std::endl;
       }
   }

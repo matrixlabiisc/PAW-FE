@@ -386,8 +386,8 @@ namespace dftfe
               d_excManagerPtr->getDensityBasedFamilyType() ==
                 densityFamilyType::GGA);
           }
-
-        normalizeRhoInQuadValues();
+        if (!d_dftParamsPtr->pawPseudoPotential)
+          normalizeRhoInQuadValues();
       }
     else
       {
@@ -686,8 +686,8 @@ namespace dftfe
                   }
               }
           }
-
-        normalizeRhoInQuadValues();
+        if (!d_dftParamsPtr->pawPseudoPotential)
+          normalizeRhoInQuadValues();
       }
     //
     computingTimerStandard.leave_subsection("initialize density");
@@ -1169,8 +1169,8 @@ namespace dftfe
             }
           ++iCell;
         }
-
-    normalizeRhoInQuadValues();
+    if (!d_dftParamsPtr->pawPseudoPotential)
+      normalizeRhoInQuadValues();
     //
     computingTimerStandard.leave_subsection("initialize density");
   }
@@ -1242,9 +1242,7 @@ namespace dftfe
     const double scaling = scalingFactor;
 
     if (d_dftParamsPtr->verbosity >= 2)
-      pcout
-        << "initial total charge before normalizing to number of electrons: "
-        << charge << std::endl;
+      pcout << "initial total charge before scaling: " << charge << std::endl;
 
     // scaling rho
     for (unsigned int iCell = 0; iCell < nCells; ++iCell)
@@ -1268,7 +1266,8 @@ namespace dftfe
       totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
 
     if (d_dftParamsPtr->verbosity >= 1)
-      pcout << "Initial total charge: " << chargeAfterScaling << std::endl;
+      pcout << "Initial total charge after scaling: " << chargeAfterScaling
+            << std::endl;
   }
 
   //

@@ -795,6 +795,7 @@ namespace dftfe
                                     0.0);
             std::vector<double> multipoleInverse = d_multipoleInverse[Znum];
             unsigned int        index            = 0;
+            pcout << "Delta Matrix: " << std::endl;
             for (int i = 0; i < numberOfProjectors; i++)
               {
                 for (int j = 0; j < numberOfProjectors; j++)
@@ -802,14 +803,22 @@ namespace dftfe
                     Pij[i * numberOfProjectors + j] =
                       PmatrixVector[(startIndex + index)] +
                       multipoleInverse[i * numberOfProjectors + j];
-                    Pij[j * numberOfProjectors + i] =
-                      PmatrixVector[(startIndex + index)] +
-                      multipoleInverse[j * numberOfProjectors + i];
+                    pcout << Pij[i * numberOfProjectors + j] << " ";
                     index++;
                   } // j
-              }     // i
+                pcout << std::endl;
+              } // i
             dftfe::linearAlgebraOperations::inverse(&Pij[0],
                                                     numberOfProjectors);
+            pcout << "Inverse Delta Matrix: " << std::endl;
+            for (int i = 0; i < numberOfProjectors; i++)
+              {
+                for (int j = 0; j < numberOfProjectors; j++)
+                  {
+                    pcout << Pij[i * numberOfProjectors + j] << " ";
+                  } // j
+                pcout << std::endl;
+              }
             d_atomicNonLocalPseudoPotentialConstants
               [CouplingType::inversePawOverlapEntries][atomId] = Pij;
 
@@ -817,7 +826,7 @@ namespace dftfe
       }
     else if (couplingtype == CouplingType::HamiltonianEntries)
       {
-        initialiseExchangeCorrelationEnergyCorrection(s);
+        // initialiseExchangeCorrelationEnergyCorrection(s);
         unsigned int       one     = 1;
         const char         transA  = 'N';
         const char         transB  = 'N';
@@ -1286,7 +1295,8 @@ namespace dftfe
   {
     unsigned int threadId = omp_get_thread_num();
     double       Value =
-      d_atomicValenceDensityVector[threadId][Znum]->getRadialValue(rad);
+      d_atomicValenceDensityVector[threadId][Znum]->getRadialValue(rad) /
+      (sqrt(4 * M_PI));
 
     return (Value);
   }
@@ -1300,6 +1310,8 @@ namespace dftfe
     unsigned int threadId = omp_get_thread_num();
     Val.clear();
     Val = d_atomicValenceDensityVector[threadId][Znum]->getDerivativeValue(rad);
+    for (int i = 0; i < Val.size(); i++)
+      Val[i] /= sqrt(4 * M_PI);
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -1326,6 +1338,7 @@ namespace dftfe
     unsigned int threadId = omp_get_thread_num();
     double       Value =
       d_atomicCoreDensityVector[threadId][Znum]->getRadialValue(rad);
+    Value /= sqrt(4 * M_PI);
     return (Value);
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -1338,6 +1351,8 @@ namespace dftfe
     unsigned int threadId = omp_get_thread_num();
     Val.clear();
     Val = d_atomicCoreDensityVector[threadId][Znum]->getDerivativeValue(rad);
+    for (int i = 0; i < Val.size(); i++)
+      Val[i] /= sqrt(4 * M_PI);
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -1347,6 +1362,7 @@ namespace dftfe
   {
     unsigned int threadId = omp_get_thread_num();
     double Value = d_atomicZeroPotVector[threadId][Znum]->getRadialValue(rad);
+    Value /= sqrt(4 * M_PI);
     return (Value);
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -1433,7 +1449,7 @@ namespace dftfe
   void
   pawClass<ValueType, memorySpace>::initialiseColoumbicEnergyCorrection()
   {
-    pcout << "Initlising Delta C Correction Term" << std::endl;
+    pcout << "Initalising Delta C Correction Term" << std::endl;
     for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
          it != d_atomTypes.end();
          ++it)
@@ -1521,7 +1537,7 @@ namespace dftfe
           {
             std::vector<double> tempPotential;
             oneTermPoissonPotential(&shapeFnRadial[lShapeFn * meshSize],
-                                    0,
+                                    lShapeFn,
                                     0,
                                     RmaxIndex,
                                     2,
@@ -1580,6 +1596,8 @@ namespace dftfe
             for (int m = -L; m <= L; m++)
               {
                 ShapeFnContribution[lshapeFn] = ValTempShapeFnContribution;
+                pcout << "ShapeFn COntribution: " << lshapeFn << " "
+                      << ValTempShapeFnContribution << std::endl;
                 lshapeFn++;
               }
           }
@@ -1620,8 +1638,8 @@ namespace dftfe
                                             0,
                                             RmaxIndex,
                                             2,
-                                            rab,
                                             radialMesh,
+                                            rab,
                                             tempPotentialAE);
                     twoTermPoissonPotential(&psPhi[iProj * meshSize],
                                             &psPhi[jProj * meshSize],
@@ -1629,8 +1647,8 @@ namespace dftfe
                                             0,
                                             RmaxIndex,
                                             2,
-                                            rab,
                                             radialMesh,
+                                            rab,
                                             tempPotentialPS);
                     phiIphiJPotentialAE[std::make_pair(index1, lShapeFn)] =
                       tempPotentialAE;
@@ -1687,7 +1705,6 @@ namespace dftfe
                     RmaxIndex + 1);
                 integralAllElectronPhiIphiJContribution[index2] =
                   integralAllElectronPhiIphiJContribution[index1];
-
                 int shapeFnIndex = 0;
                 for (int L = 0; L < numRadialShapeFunctions; L++)
                   {
@@ -1713,6 +1730,11 @@ namespace dftfe
                              numShapeFunctions +
                            iProj * numShapeFunctions + shapeFnIndex] =
                             ValTempShapeFnContribution;
+
+                        pcout << shapeFnIndex << " " << iProj << " " << jProj
+                              << " "
+                              << "Debug2_0: PhitIPhiJgL: "
+                              << ValTempShapeFnContribution << std::endl;
                         shapeFnIndex++;
                       }
                   }
@@ -1763,6 +1785,7 @@ namespace dftfe
 
             for (int j = 0; j < numberOfProjectors; j++)
               {
+                // pcout << "DEBUG2: " << i << " " << j << " ";
                 int    l_j           = projectorDetailsOfAtom[j][1];
                 int    m_j           = projectorDetailsOfAtom[j][2];
                 int    radProjIndexJ = projectorDetailsOfAtom[j][0];
@@ -1777,13 +1800,28 @@ namespace dftfe
                        pseudoSmoothPhiIphiJCoreDensityContribution
                          [radProjIndexI * numberOfRadialProjectors +
                           radProjIndexJ]);
+                    //               pcout << GauntValueij *
+                    //      (allElectronPhiIphiJCoreDensityContribution
+                    //         [radProjIndexI * numberOfRadialProjectors +
+                    //         radProjIndexJ] -
+                    //       pseudoSmoothPhiIphiJCoreDensityContribution
+                    //         [radProjIndexI * numberOfRadialProjectors +
+                    //         radProjIndexJ])
+                    // << " ";
                   }
                 if (l_i == l_j && m_i == m_j)
                   {
                     Delta_Cij[i * numberOfProjectors + j] +=
-                      -(*it) * integralAllElectronPhiIphiJContribution
-                                 [radProjIndexI * numberOfRadialProjectors +
-                                  radProjIndexJ];
+                      -(double(atomicNumber)) *
+                      integralAllElectronPhiIphiJContribution
+                        [radProjIndexI * numberOfRadialProjectors +
+                         radProjIndexJ];
+                    //               pcout << -(double(atomicNumber))*
+                    //      integralAllElectronPhiIphiJContribution[radProjIndexI
+                    //      * numberOfRadialProjectors
+                    //      +
+                    //                         radProjIndexJ]
+                    // << " ";
                   }
                 double multipoleValue =
                   multipoleTable[radProjIndexI * numberOfRadialProjectors +
@@ -1791,6 +1829,10 @@ namespace dftfe
                 Delta_Cij[i * numberOfProjectors + j] -=
                   multipoleValue * GauntValueij *
                   (dL0 * ShapeFnContribution[0]);
+                // pcout << -multipoleValue *
+                //            (d_DeltaL0coeff[*it] * ShapeFnContribution[0]) *
+                //            GauntValueij
+                //       << " ";
                 if (d_atomTypeCoreFlagMap[*it])
                   {
                     Delta_Cij[i * numberOfProjectors + j] -=
@@ -1845,33 +1887,50 @@ namespace dftfe
                         int    lmin =
                           std::min(std::abs(l_i - l_j), std::abs(l_k - l_l));
                         int lmax = std::max((l_i + l_j), (l_k + l_l));
+                        pcout << "Lmin and Lmax: " << lmin << " " << lmax
+                              << std::endl;
 
-
-                        for (int lproj = lmin; lproj <= lmax; lproj++)
+                        for (int lprojShapeFn = lmin; lprojShapeFn <= lmax;
+                             lprojShapeFn++)
                           {
                             bool flag = false;
-                            for (int mproj = -lproj; mproj <= lproj; mproj++)
+                            for (int mprojShapeFn = -lprojShapeFn;
+                                 mprojShapeFn <= lprojShapeFn;
+                                 mprojShapeFn++)
                               {
                                 double CG1, CG2;
-                                CG1 = gaunt(l_i, l_j, lproj, m_i, m_j, mproj);
-                                CG2 = gaunt(l_k, l_l, lproj, m_k, m_l, mproj);
+                                CG1 = gaunt(l_i,
+                                            l_j,
+                                            lprojShapeFn,
+                                            m_i,
+                                            m_j,
+                                            mprojShapeFn);
+                                CG2 = gaunt(l_k,
+                                            l_l,
+                                            lprojShapeFn,
+                                            m_k,
+                                            m_l,
+                                            mprojShapeFn);
                                 if (std::fabs(CG1 * CG2) > 1E-10)
                                   flag = true;
                               } // mproj
                             if (flag)
                               {
                                 if (phiIphiJPotentialAE
-                                      .find(std::make_pair(index_ij, lproj))
+                                      .find(
+                                        std::make_pair(index_ij, lprojShapeFn))
                                       ->second.size() > 0)
                                   {
                                     std::vector<double> potentialPhiIPhiJ =
                                       phiIphiJPotentialAE
-                                        .find(std::make_pair(index_ij, lproj))
+                                        .find(std::make_pair(index_ij,
+                                                             lprojShapeFn))
                                         ->second;
                                     std::vector<double>
                                       potentialTildePhiITildePhiJ =
                                         phiIphiJPotentialPS
-                                          .find(std::make_pair(index_ij, lproj))
+                                          .find(std::make_pair(index_ij,
+                                                               lprojShapeFn))
                                           ->second;
 
 
@@ -1903,14 +1962,23 @@ namespace dftfe
                                                       IntegralContribution);
                                     double TotalContribution = 0.0;
 
-                                    for (int mproj = -lproj; mproj <= lproj;
-                                         mproj++)
+                                    for (int mprojShapeFn = -lprojShapeFn;
+                                         mprojShapeFn <= lprojShapeFn;
+                                         mprojShapeFn++)
                                       {
                                         double CG1, CG2;
-                                        CG1 = gaunt(
-                                          l_i, l_j, lproj, m_i, m_j, mproj);
-                                        CG2 = gaunt(
-                                          l_k, l_l, lproj, m_k, m_l, mproj);
+                                        CG1 = gaunt(l_i,
+                                                    l_j,
+                                                    lprojShapeFn,
+                                                    m_i,
+                                                    m_j,
+                                                    mprojShapeFn);
+                                        CG2 = gaunt(l_k,
+                                                    l_l,
+                                                    lprojShapeFn,
+                                                    m_k,
+                                                    m_l,
+                                                    mprojShapeFn);
                                         if (std::fabs(CG1 * CG2) > 1E-10)
                                           TotalContribution +=
                                             (TotalValue)*CG1 * CG2;
@@ -1918,18 +1986,17 @@ namespace dftfe
                                       } // mproj
                                     Delta_Cijkl[index] +=
                                       0.5 * TotalContribution;
-                                    // pcout
-                                    //   << "DEBUG: Value Check: " <<
-                                    //   (TotalValue)
-                                    //   << " " << i << " " << j << " " << k <<
-                                    //   " "
-                                    //   << l << " " << lproj << std::endl;
+                                    pcout
+                                      << "DEBUG: Value Check: " << (TotalValue)
+                                      << " " << iProj << " " << jProj << " "
+                                      << kProj << " " << lProj << " "
+                                      << lprojShapeFn << std::endl;
                                   }
 
                                 else
                                   {
                                     pcout
-                                      << "Mising Entries for lproj: " << lproj
+                                      << "Mising Entries for lproj: " << lProj
                                       << " " << index_ij << std::endl;
                                   }
                               }
@@ -1994,6 +2061,33 @@ namespace dftfe
         // printing the entries
         pcout << "** Delta C0 Term: " << DeltaC << std::endl;
         pcout << "** Delta C0 Valence Term: " << DeltaCValence << std::endl;
+        pcout << "Delta Cij Term: " << std::endl;
+        for (int i = 0; i < numberOfProjectors; i++)
+          {
+            for (int j = 0; j < numberOfProjectors; j++)
+              pcout << Delta_Cij[i * numberOfProjectors + j] << " ";
+            pcout << std::endl;
+          }
+        pcout << "Delta sum_klCijkl: " << std::endl;
+        for (int i = 0; i < numberOfProjectors; i++)
+          {
+            for (int j = 0; j < numberOfProjectors; j++)
+              {
+                double Value = 0.0;
+                for (int k = 0; k < numberOfProjectors; k++)
+                  {
+                    for (int l = 0; l < numberOfProjectors; l++)
+                      {
+                        Value += Delta_Cijkl[i * pow(numberOfProjectors, 3) +
+                                             j * pow(numberOfProjectors, 2) +
+                                             k * numberOfProjectors + l];
+                      }
+                  }
+                pcout << Value << " ";
+              }
+            pcout << std::endl;
+          }
+
       } //*it
   }
 
@@ -2050,6 +2144,7 @@ namespace dftfe
           }     // i
 
         int projIndexI = 0;
+        pcout << "Delta Zero potential " << std::endl;
         for (int iProj = 0; iProj < numberOfRadialProjectors; iProj++)
           {
             std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_i =
@@ -2082,10 +2177,15 @@ namespace dftfe
                                 0) *
                           radialIntegralData[iProj * numberOfRadialProjectors +
                                              jProj];
+                        pcout << tempZeroPotentialIJ[projIndexI *
+                                                       numberOfProjectors +
+                                                     projIndexJ]
+                              << " ";
                         projIndexJ++;
                       } // mQuantumNumber_j
 
                   } // jProj
+                pcout << std::endl;
                 projIndexI++;
               } // mQuantumNumber_i
 

@@ -319,10 +319,11 @@ namespace dftfe
         double g_y;
         radL[i]  = pow(radial[i], l);
         radL1[i] = radL[i] * radial[i];
-        g_y      = fun1[i] * fun2[i];
+        g_y      = fun1[i] * fun2[i] * pow(r, powerofR);
         aa[i]    = g_y * radL[i] * rab[i];
         bb[i]    = g_y / radL1[i] * rab[i];
       }
+
 
     for (int i = (int)rminIndex + 2; i <= (int)rmaxIndex; i += 2)
       {
@@ -393,7 +394,6 @@ namespace dftfe
           return 0.0;
 
         double Value = rab[i] * f2[i] * f1[i] * radial[i];
-
         return (Value);
       };
     value = simpsonIntegral(rminIndex, rmaxIndex, integral);
@@ -750,7 +750,8 @@ namespace dftfe
           }
       }
     pcout << "Number of Electrons: " << numElectrons << std::endl;
-    pcout << "sqrt(4*M_PI)*DeltaijDij: " << sqrt(4 * M_PI) * scaleFactor;
+    pcout << "sqrt(4*M_PI)*DeltaijDij: " << sqrt(4 * M_PI) * scaleFactor
+          << std::endl;
     pcout << "Scaling Factor for Init Rho: "
           << numElectrons - sqrt(4 * M_PI) * scaleFactor << std::endl;
     return (numElectrons - sqrt(4 * M_PI) * scaleFactor);
@@ -845,14 +846,14 @@ namespace dftfe
         std::vector<double> fullMultipoleTable(numberOfProjectors *
                                                  numberOfProjectors,
                                                0.0);
-        std::vector<double> multipoleTable = d_multipole[*it];
+        std::vector<double> multipoleTable   = d_multipole[*it];
+        int                 projectorIndex_i = 0;
         for (int alpha_i = 0; alpha_i < numberOfRadialProjectors; alpha_i++)
           {
             std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_i =
               sphericalFunction.find(std::make_pair(atomicNumber, alpha_i))
                 ->second;
             int lQuantumNumber_i = sphFn_i->getQuantumNumberl();
-            int projectorIndex_i = 0;
             for (int mQuantumNumber_i = -lQuantumNumber_i;
                  mQuantumNumber_i <= lQuantumNumber_i;
                  mQuantumNumber_i++)
@@ -882,7 +883,23 @@ namespace dftfe
                                 0) *
                           multipoleTable[alpha_i * numberOfRadialProjectors +
                                          alpha_j];
-
+                        pcout
+                          << alpha_i << " " << alpha_j << " "
+                          << projectorIndex_i << " " << projectorIndex_j << " "
+                          << gaunt(lQuantumNumber_i,
+                                   lQuantumNumber_j,
+                                   0,
+                                   mQuantumNumber_i,
+                                   mQuantumNumber_j,
+                                   0)
+                          << " "
+                          << multipoleTable[alpha_i * numberOfRadialProjectors +
+                                            alpha_j]
+                          << " "
+                          << fullMultipoleTable[projectorIndex_i *
+                                                  numberOfProjectors +
+                                                projectorIndex_j]
+                          << std::endl;
                         projectorIndex_j++;
                       } // mQuantumNumber_j
                   }     // alpha_j
@@ -914,6 +931,47 @@ namespace dftfe
 
       } //*it
   }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  double
+  pawClass<ValueType, memorySpace>::TotalCompensationCharge()
+  {
+    double normValue = 0.0;
+    d_BasisOperatorElectroHostPtr->reinit(
+      0, 0, d_compensationChargeQuadratureIdElectro);
+    const unsigned int numberAtomsOfInterest =
+      d_atomicShapeFnsContainer->getNumAtomCentersSize();
+    const unsigned int numberQuadraturePoints =
+      d_BasisOperatorElectroHostPtr->nQuadsPerCell();
+    const std::vector<unsigned int> &atomicNumber =
+      d_atomicShapeFnsContainer->getAtomicNumbers();
+    const dftfe::utils::MemoryStorage<ValueType,
+                                      dftfe::utils::MemorySpace::HOST>
+      JxwVector = d_BasisOperatorElectroHostPtr->JxW();
+    for (std::map<dealii::CellId, std::vector<double>>::iterator it =
+           d_bl0QuadValuesAllAtoms.begin();
+         it != d_bl0QuadValuesAllAtoms.end();
+         ++it)
+      {
+        const dealii::CellId      cellId = it->first;
+        const std::vector<double> Temp =
+          (*d_bQuadValuesAllAtoms).find(it->first)->second;
+        const unsigned int elementIndex =
+          d_BasisOperatorElectroHostPtr->cellIndex(cellId);
+        for (unsigned int q_point = 0; q_point < numberQuadraturePoints;
+             q_point++)
+          {
+            normValue +=
+              Temp[q_point] *
+              JxwVector[elementIndex * numberQuadraturePoints + q_point];
+          }
+      }
 
+
+    d_TotalCompensationCharge =
+      dealii::Utilities::MPI::sum(normValue, d_mpiCommParent);
+    pcout << "Total Compensation Charge: " << d_TotalCompensationCharge
+          << std::endl;
+    return d_TotalCompensationCharge;
+  }
 
 } // namespace dftfe
