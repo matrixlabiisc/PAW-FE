@@ -632,8 +632,8 @@ namespace dftfe
   }; // end of class
 
 } // end of namespace dftfe
-#include "../src/pseudo/paw/pawClassInit.t.cc"
-#include "../src/pseudo/paw/pawClass.t.cc"
-#include "../src/pseudo/paw/pawClassUtils.t.cc"
-#include "../src/pseudo/paw/pawClassEnergy.t.cc"
+//#include "../src/pseudo/paw/pawClassInit.t.cc"
+//#include "../src/pseudo/paw/pawClass.t.cc"
+//#include "../src/pseudo/paw/pawClassUtils.t.cc"
+//#include "../src/pseudo/paw/pawClassEnergy.t.cc"
 #endif //  DFTFE_PSEUDOPOTENTIALBASE_H
