@@ -67,12 +67,17 @@ namespace dftfe
 
         unsigned int  Znum = *it;
         std::ifstream readPseudoDataFileNames(pseudoAtomDataFile);
-        for (int i = 0; i < 4; i++)
-          readPseudoDataFileNames.ignore();
+        for (int i = 0; i <= 2; i++)
+          {
+            std::string temp;
+            std::getline(readPseudoDataFileNames, temp);
+            // pcout<<temp<<std::endl;
+          }
         unsigned int shapeFnType;
         readPseudoDataFileNames >> shapeFnType;
         double rc;
         readPseudoDataFileNames >> rc;
+        pcout<<"Shape Fn Type and rc: "<<shapeFnType<<" "<<rc<<std::endl;
         unsigned int lmaxAug = d_dftParamsPtr->noShapeFnsInPAW;
         double       rmaxAug = d_RmaxAug[*it];
         for (unsigned int lQuantumNo = 0; lQuantumNo < lmaxAug; lQuantumNo++)
@@ -80,6 +85,7 @@ namespace dftfe
             if (shapeFnType == 0)
               {
                 // Bessel Function
+                pcout<<"Bessel function: "<<lQuantumNo<<std::endl;
                 d_atomicShapeFnsMap[std::make_pair(Znum, lQuantumNo)] =
                   std::make_shared<AtomCenteredSphericalFunctionBessel>(
                     rc, rmaxAug, lQuantumNo);
@@ -87,6 +93,7 @@ namespace dftfe
             else if (shapeFnType == 1)
               {
                 // Gauss Function
+                pcout<<"Gauss function: "<<lQuantumNo<<std::endl;
                 d_atomicShapeFnsMap[std::make_pair(Znum, lQuantumNo)] =
                   std::make_shared<AtomCenteredSphericalFunctionGaussian>(
                     rc, rmaxAug, lQuantumNo);
@@ -94,6 +101,7 @@ namespace dftfe
             else if (shapeFnType == 2)
               {
                 // sinc Function
+                pcout<<"sinc function: "<<lQuantumNo<<std::endl;
                 d_atomicShapeFnsMap[std::make_pair(Znum, lQuantumNo)] =
                   std::make_shared<AtomCenteredSphericalFunctionSinc>(
                     rc, rmaxAug, lQuantumNo);
@@ -494,9 +502,10 @@ namespace dftfe
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
-          d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
+          d_BasisOperatorHostPtr, d_nlpspQuadratureId, 1E-8, 0);
+        pcout<<"COmputing sparse structure for shapeFunctions: "<<std::endl;  
         d_atomicShapeFnsContainer->computeSparseStructure(
-          d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
+          d_BasisOperatorElectroHostPtr, d_compensationChargeQuadratureIdElectro, 1E-8, 0);
         d_atomicShapeFnsContainer->computeFEEvaluationMaps(
           d_BasisOperatorElectroHostPtr,
           d_compensationChargeQuadratureIdElectro,
@@ -517,8 +526,8 @@ namespace dftfe
       d_BasisOperatorHostPtr,
       d_nlpspQuadratureId);
     pcout << "-----Compensation Charge---" << std::endl;
-    computeCompensationChargeCoeff();
     computeCompensationChargeL0();
+    computeCompensationChargeCoeff();    
     computeNonlocalPseudoPotentialConstants(
       CouplingType::inversePawOverlapEntries);
 
@@ -696,7 +705,7 @@ namespace dftfe
           d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
         std::vector<std::vector<ValueType>> Pmatrix(numberAtomsOfInterest);
         std::vector<double>                 PmatrixVector(d_nProjSqTotal, 0.0);
-        for (int iAtom = 0; iAtom < numberAtomsOfInterest; iAtom++)
+        for (int iAtom = 0; iAtom < atomIdsInCurrentProcess.size(); iAtom++)
           {
             unsigned int atomId = atomIdsInCurrentProcess[iAtom];
             unsigned int Znum   = atomicNumber[atomId];
@@ -733,7 +742,7 @@ namespace dftfe
                       numberOfProjectors,
                       numberNodesPerElement,
                       1.0,
-                      d_BasisOperatorHostPtr->inverseMassVectorBasisData()
+                      d_BasisOperatorHostPtr->cellInverseMassVectorBasisData()
                           .data() +
                         elementIndex * numberNodesPerElement,
                       CMatrixEntries.data());
@@ -798,11 +807,12 @@ namespace dftfe
             pcout << "Delta Matrix: " << std::endl;
             for (int i = 0; i < numberOfProjectors; i++)
               {
-                for (int j = 0; j < numberOfProjectors; j++)
+                for (int j = 0; j <=i; j++)
                   {
                     Pij[i * numberOfProjectors + j] =
                       PmatrixVector[(startIndex + index)] +
                       multipoleInverse[i * numberOfProjectors + j];
+                    Pij[j*numberOfProjectors + i] =  Pij[i * numberOfProjectors + j]; 
                     pcout << Pij[i * numberOfProjectors + j] << " ";
                     index++;
                   } // j
@@ -4085,7 +4095,7 @@ namespace dftfe
           }
 
 
-
+        MPI_Barrier(d_mpiCommParent);
         communicateDijAcrossAllProcessors(TypeOfField::In,
                                           interpoolcomm,
                                           interBandGroupComm);

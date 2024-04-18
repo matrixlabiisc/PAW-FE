@@ -81,7 +81,6 @@ namespace dftfe
         l);
 
     std::vector<std::vector<double>> values;
-    pcout << "PSI file is being read from: " << psiFile << std::endl;
 
     fileReadFlag = dftUtils::readPsiFile(2, values, psiFile);
 
@@ -176,15 +175,15 @@ namespace dftfe
     level.push_back(3);
     level.push_back(1);
     stencil.push_back(level);
-    // 4s
-    level.clear();
-    level.push_back(4);
-    level.push_back(0);
-    stencil.push_back(level);
     // 3d
     level.clear();
     level.push_back(3);
     level.push_back(2);
+    stencil.push_back(level);
+    // 4s
+    level.clear();
+    level.push_back(4);
+    level.push_back(0);
     stencil.push_back(level);
     // 4p
     level.clear();

@@ -128,6 +128,7 @@ namespace dftfe
 
 
                       } // inside r <= Rmax
+                      //pcout<<"q_L0 at qpoint: "<<iElemComp<<" "<<quadvalues[iQuadPoint]<<std::endl; 
 
                   } // quad loop
 
@@ -143,6 +144,7 @@ namespace dftfe
   pawClass<ValueType, memorySpace>::computeCompensationCharge(
     TypeOfField typeOfField)
   {
+    d_BasisOperatorElectroHostPtr->reinit(0,0,d_compensationChargeQuadratureIdElectro);
     const unsigned int numberAtomsOfInterest =
       d_atomicShapeFnsContainer->getNumAtomCentersSize();
     const unsigned int numberQuadraturePoints =
@@ -166,7 +168,7 @@ namespace dftfe
         //   }
         (*d_bQuadValuesAllAtoms)[it->first] = ValueL0;
       }
-
+    pcout<<"DEBUG: Line 170"<<std::endl;
     const std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomicShapeFnsContainer->getAtomIdsInCurrentProcess();
 
@@ -182,7 +184,9 @@ namespace dftfe
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
         unsigned int        npjsq = numberOfProjectors * numberOfProjectors;
         std::vector<double> Tij   = d_ProductOfQijShapeFnAtQuadPoints[atomId];
+        pcout<<"Size of Tij: "<<Tij.size()<<std::endl;        
         std::vector<double> Dij   = D_ij[typeOfField][atomId];
+        pcout<<"Size of Dij: "<<Dij.size()<<std::endl;
         std::vector<unsigned int> elementIndexesInAtomCompactSupport =
           d_atomicShapeFnsContainer
             ->d_elementIndexesInAtomCompactSupport[atomId];
@@ -193,6 +197,7 @@ namespace dftfe
           {
             const unsigned int elementIndex =
               elementIndexesInAtomCompactSupport[iElem];
+            pcout<<"ElementIndex: "<<elementIndex<<" "<<iElem<<std::endl;  
             std::vector<double> &quadvalues =
               (*d_bQuadValuesAllAtoms)[d_BasisOperatorElectroHostPtr->cellID(
                 elementIndex)];
@@ -225,10 +230,10 @@ namespace dftfe
       d_BasisOperatorElectroHostPtr->nQuadsPerCell();
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       quadraturePointsVector = d_BasisOperatorElectroHostPtr->quadPoints();
-
+    pcout<<"Size of quadPoints: "<<quadraturePointsVector.size()<<std::endl;
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      JxwVector = d_BasisOperatorElectroHostPtr->JxWBasisData();
-
+      JxwVector = d_BasisOperatorElectroHostPtr->JxW();
+    pcout<<"Size of JxwVEctor: "<<JxwVector.size()<<std::endl;
     const std::vector<unsigned int> &atomicNumber =
       d_atomicShapeFnsContainer->getAtomicNumbers();
     const std::vector<double> &atomCoordinates =
@@ -283,24 +288,22 @@ namespace dftfe
         std::vector<double> tempCoeff(numberElementsInAtomCompactSupport *
                                         numberQuadraturePoints * numProjSq,
                                       0.0);
-
-        // std::vector<double> gLValues(numberElementsInAtomCompactSupport *
-        //                              numberQuadraturePoints *
-        //                              NumTotalSphericalFunctions);
-
-
         for (int iElemComp = 0; iElemComp < numberElementsInAtomCompactSupport;
              iElemComp++)
           {
+            
             const unsigned int elementIndex =
               elementIndexesInAtomCompactSupport[iElemComp];
+              //pcout<<"iElemComp: "<<iElemComp<<" elementIndex: "<<elementIndex<<std::endl;
             unsigned int        Lindex = 0;
             std::vector<double> gLValuesQuadPoints(numberQuadraturePoints *
                                                      NumTotalSphericalFunctions,
                                                    0.0);
+            //pcout<<"Size of gLValueQuadPoints: "<<numberQuadraturePoints* NumTotalSphericalFunctions<<std::endl;                                      
             for (unsigned int alpha = 0; alpha < NumRadialSphericalFunctions;
                  ++alpha)
               {
+                //pcout<<"Lindex: "<<Lindex<<std::endl;
                 std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
                   sphericalFunction.find(std::make_pair(Znum, alpha))->second;
                 int lQuantumNumber = sphFn->getQuantumNumberl();
@@ -412,6 +415,7 @@ namespace dftfe
                                                       1E-16 ||
                                                     std::fabs(Cijl) < 1E-16)
                                                   continue;
+ 
                                                 long unsigned int loc =
                                                   iElemComp *
                                                     (numberQuadraturePoints *
@@ -419,6 +423,11 @@ namespace dftfe
                                                   iQuadPoint * (numProjSq) +
                                                   alpha_i * NumProjectors +
                                                   alpha_j;
+                                                //pcout<<loc<<" "<<alpha_i<<" "<<alpha_j<<" "<<iElemComp<<" "<<lQuantumNumber *
+                                                    //    NumRadialProjectors *
+                                                    //    NumRadialProjectors +
+                                                    //  i * NumRadialProjectors +
+                                                    //  j<<" "<<iQuadPoint<<std::endl; 
                                                 if (r <= RmaxAug)
                                                   tempCoeff[loc] +=
                                                     Cijl * multipolevalue *
@@ -433,22 +442,11 @@ namespace dftfe
                                         alpha_i++;
                                       } // m_i
                                   }     // i loop
-                                unsigned int index =
-                                  Lindex * numberQuadraturePoints *
-                                    numberElementsInAtomCompactSupport +
-                                  iElemComp * numberQuadraturePoints +
-                                  iQuadPoint;
-                                // gLValues[index] +=
-                                //   JxwVector[elementIndex *
-                                //               numberQuadraturePoints +
-                                //             iQuadPoint] *
-                                //   sphericalFunctionValue;
-                                gLValuesQuadPoints[Lindex * iQuadPoint] +=
+                                gLValuesQuadPoints[Lindex * numberQuadraturePoints+iQuadPoint] +=
                                   JxwVector[elementIndex *
                                               numberQuadraturePoints +
                                             iQuadPoint] *
                                   sphericalFunctionValue;
-
 
                               } // inside r <= Rmax
 
@@ -671,7 +669,7 @@ namespace dftfe
               << std::endl;
         pcout << "D_ij of atom: " << atomId << " with Z:" << Znum << std::endl;
         int                 numberProjectorFunctions = numberSphericalFunctions;
-        std::vector<double> tempD_ij                 = tempDij;
+        std::vector<ValueType> tempD_ij                 = tempDij;
         for (int i = 0; i < numberProjectorFunctions; i++)
           {
             for (int j = 0; j < numberProjectorFunctions; j++)

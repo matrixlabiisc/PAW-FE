@@ -256,7 +256,8 @@ namespace dftfe
     // FeOrder+1 QuadratureId
     quadratureVector.push_back(dealii::QGauss<1>(C_num1DQuad<FEOrder>()));
     // SparsityPattern VEctor
-    quadratureVector.push_back(dealii::QGauss<1>(8));
+    quadratureVector.push_back(dealii::QGaussLobatto<1>(
+      C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>() + 1));
     d_densityQuadratureId         = 0;
     d_nlpspQuadratureId           = 1;
     d_gllQuadratureId             = 2;

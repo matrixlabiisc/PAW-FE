@@ -33,7 +33,7 @@ namespace dftfe
                    std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       &listOfSphericalFunctions)
   {
-    // std::cout << "Initialising Container Class: " << std::endl;
+
     d_atomicNumbers               = atomicNumbers;
     d_sphericalFunctionsContainer = listOfSphericalFunctions;
     std::map<unsigned int, unsigned int> startIndexLocation;
@@ -87,9 +87,6 @@ namespace dftfe
     const std::vector<std::vector<double>> &periodicCoords)
   {
     d_periodicImageCoord.clear();
-    // std::cout << "PeriodicCoords original Size: " << periodicCoords.size()
-    //           << std::endl;
-    // std::cout << "ImageIds original Size: " << imageIds.size() << std::endl;
     for (unsigned int iAtom = 0; iAtom < d_atomicNumbers.size(); iAtom++)
       {
         d_periodicImageCoord[iAtom].push_back(d_atomCoords[3 * iAtom + 0]);
@@ -235,7 +232,7 @@ namespace dftfe
     else
       {
         std::cout
-          << "Warning Illegal Access in Line 132 of AtomCenteredContainerClass"
+          << "Warning Illegal Access in Line 235 of AtomCenteredContainerClass"
           << std::endl;
         std::exit(0);
       }
@@ -412,10 +409,6 @@ namespace dftfe
                     chargePoint[2] =
                       d_periodicImageCoord[iAtom][3 * iImageAtomCount + 2];
                   }
-                // if(iCell == 0)
-                //   std::cout<<"DEBUG coordinates: "<<iAtom<<"
-                //   "<<chargePoint[0]<<" "<<chargePoint[1]<<"
-                //   "<<chargePoint[2]<<std::endl;
 
                 for (unsigned int iPsp = 0; iPsp < numberSphericalFunctions;
                      ++iPsp)
@@ -446,11 +439,6 @@ namespace dftfe
                                 sparseFlag = 1;
                                 if (r > maxR)
                                   maxR = r;
-                                // std::cout
-                                //   << "DEBUG: iAtom RadVal projIndex Cell: "
-                                //   << iAtom << " " << r << " "
-                                //   << std::fabs(RadVal) << " " << iPsp << " "
-                                //   << iCell << std::endl;
                                 break;
                               }
                           }
@@ -475,8 +463,6 @@ namespace dftfe
               {
                 dealii::CellId cell    = basisOperationsPtr->cellID(iCell);
                 sparsityPattern[iCell] = matCount;
-                // std::cout<<"Debug: iAtom iCell cellid maxR: "<<iAtom<<"
-                // "<<iCell<<" "<<cell<<" "<<maxR<<std::endl;
                 d_elementIdsInAtomCompactSupport[iAtom].push_back(cell);
                 d_elementIndexesInAtomCompactSupport[iAtom].push_back(iCell);
                 matCount += 1;
@@ -510,8 +496,10 @@ namespace dftfe
           {
             if (d_sparsityPattern[d_AtomIdsInCurrentProcess[iAtom]][iCell] >= 0)
               {
+                
                 d_AtomIdsInElement[iCell].push_back(
                   d_AtomIdsInCurrentProcess[iAtom]);
+
               }
           }
       }
@@ -560,6 +548,7 @@ namespace dftfe
     const unsigned int quadratureIndex,
     const unsigned int dofHandlerId)
   {
+
     basisOperationsPtr->reinit(0, 0, quadratureIndex);
     const unsigned int numberNodesPerElement =
       basisOperationsPtr->nDofsPerCell();
@@ -585,11 +574,12 @@ namespace dftfe
               cell, iSubCell, dofHandlerId);
             dealii::CellId subCellId = subCellPtr->id();
             unsigned int   cellIndex = basisOperationsPtr->cellIndex(subCellId);
-
             if (atomSupportInElement(cellIndex))
               {
                 d_feEvaluationMap.insert(cell);
+                //std::cout<<"Cell: "<<cell<<std::endl;
               }
+
           }
       }
   }

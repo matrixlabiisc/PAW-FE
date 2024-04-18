@@ -2463,6 +2463,7 @@ namespace dftfe
                                    numberSphericalFunctions,
                                  0.0);
     // std::cout << "Size of Ctemp: " << Ctemp.size() << std::endl;
+    pcout<<"CMatrixEntries: "<<iElem<<" ";
     for (int i = 0; i < Ctemp.size(); i++)
       {
         Ctemp[i] =
@@ -2470,8 +2471,10 @@ namespace dftfe
                                    [kPointIndex * d_numberNodesPerElement *
                                       numberSphericalFunctions +
                                     i];
+        pcout<<Ctemp[i]<<" ";
         // std::cout << kPointIndex << " " << atomId << Ctemp[i] << std::endl;
       }
+      pcout<<std::endl;
     return Ctemp;
   }
 

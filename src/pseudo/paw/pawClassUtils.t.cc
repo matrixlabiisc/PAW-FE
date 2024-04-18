@@ -741,6 +741,14 @@ namespace dftfe
                               projectorIndex_j] *
                           multipoleTable[alpha_i * numberOfRadialProjectors +
                                          alpha_j];
+                        pcout<<projectorIndex_i<<" "<<projectorIndex_j<<" "<< alpha_i<<" "<<alpha_j<<" "<< gaunt(lQuantumNo_i,
+                                lQuantumNo_j,
+                                0,
+                                mQuantumNo_i,
+                                mQuantumNo_j,
+                                0)<<" "<<Dij[projectorIndex_i * numberOfProjectors +
+                              projectorIndex_j] <<" "<<multipoleTable[alpha_i * numberOfRadialProjectors +
+                                         alpha_j]<<std::endl;               
                         projectorIndex_j++;
                       }
                   }
@@ -808,7 +816,7 @@ namespace dftfe
         unsigned int        index = 0;
         for (int i = 0; i < numberOfProjectors; i++)
           {
-            for (int j = 0; j < numberOfProjectors; j++)
+            for (int j = 0; j <= i; j++)
               {
                 Dij[i * numberOfProjectors + j] =
                   DijTotalVector[(startIndex + index)];
@@ -944,7 +952,7 @@ namespace dftfe
       d_BasisOperatorElectroHostPtr->nQuadsPerCell();
     const std::vector<unsigned int> &atomicNumber =
       d_atomicShapeFnsContainer->getAtomicNumbers();
-    const dftfe::utils::MemoryStorage<ValueType,
+    const dftfe::utils::MemoryStorage<double,
                                       dftfe::utils::MemorySpace::HOST>
       JxwVector = d_BasisOperatorElectroHostPtr->JxW();
     for (std::map<dealii::CellId, std::vector<double>>::iterator it =

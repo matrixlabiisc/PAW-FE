@@ -437,7 +437,7 @@ namespace dftfe
             std::vector<dftfe::basis::UpdateFlags> updateFlags{
               updateFlagsAll,
               updateFlagsAll,
-              dftfe::basis::update_quadpoints,
+              updateFlagsAll,
               updateFlagsAll};
             d_basisOperationsPtrElectroHost->init(d_matrixFreeDataPRefined,
                                                   d_constraintsVectorElectro,
