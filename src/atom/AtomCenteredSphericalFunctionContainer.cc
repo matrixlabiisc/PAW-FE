@@ -33,7 +33,6 @@ namespace dftfe
                    std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       &listOfSphericalFunctions)
   {
-
     d_atomicNumbers               = atomicNumbers;
     d_sphericalFunctionsContainer = listOfSphericalFunctions;
     std::map<unsigned int, unsigned int> startIndexLocation;
@@ -496,10 +495,8 @@ namespace dftfe
           {
             if (d_sparsityPattern[d_AtomIdsInCurrentProcess[iAtom]][iCell] >= 0)
               {
-                
                 d_AtomIdsInElement[iCell].push_back(
                   d_AtomIdsInCurrentProcess[iAtom]);
-
               }
           }
       }
@@ -548,7 +545,6 @@ namespace dftfe
     const unsigned int quadratureIndex,
     const unsigned int dofHandlerId)
   {
-
     basisOperationsPtr->reinit(0, 0, quadratureIndex);
     const unsigned int numberNodesPerElement =
       basisOperationsPtr->nDofsPerCell();
@@ -577,9 +573,8 @@ namespace dftfe
             if (atomSupportInElement(cellIndex))
               {
                 d_feEvaluationMap.insert(cell);
-                //std::cout<<"Cell: "<<cell<<std::endl;
+                // std::cout<<"Cell: "<<cell<<std::endl;
               }
-
           }
       }
   }

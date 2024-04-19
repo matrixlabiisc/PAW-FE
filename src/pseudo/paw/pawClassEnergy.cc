@@ -59,7 +59,7 @@ namespace dftfe
       d_compensationChargeQuadratureIdElectro);
     std::vector<double> phiValuesQuadPoints(numberQuadraturePoints, 0.0);
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
-    pcout<<"g_LPhi(bx): "<<std::endl;
+    pcout << "g_LPhi(bx): " << std::endl;
     int iElem = 0;
     for (std::set<unsigned int>::iterator it =
            d_atomicShapeFnsContainer->d_feEvaluationMap.begin();
@@ -103,10 +103,18 @@ namespace dftfe
                         ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                     std::vector<double> gLValues =
                       d_gLValuesQuadPoints[std::make_pair(atomId, cellIndex)];
-                    for(int L = 0; L < NumTotalSphericalFunctions;L++)
-                    {  for(int iQuadPoint = 0; iQuadPoint < numberQuadraturePoints; iQuadPoint++)
-                        pcout<<iElem<<" "<<L<<" "<< gLValues[L*numberQuadraturePoints+ iQuadPoint]<<" "<<tempVec[iQuadPoint]<<" "<<*(phiValuesQuadPoints.data()+iQuadPoint)<<std::endl; 
-                    }
+                    for (int L = 0; L < NumTotalSphericalFunctions; L++)
+                      {
+                        for (int iQuadPoint = 0;
+                             iQuadPoint < numberQuadraturePoints;
+                             iQuadPoint++)
+                          pcout
+                            << iElem << " " << L << " "
+                            << gLValues[L * numberQuadraturePoints + iQuadPoint]
+                            << " " << tempVec[iQuadPoint] << " "
+                            << *(phiValuesQuadPoints.data() + iQuadPoint)
+                            << std::endl;
+                      }
                     iElem++;
                     d_BLASWrapperHostPtr->xgemm(
                       'N',
@@ -126,18 +134,20 @@ namespace dftfe
 
 
                   } // iAtom
-              }//if
-          }//subcell
-      }//FEEval iterator
-      for(std::map<unsigned int, std::vector<double>>::iterator it = d_nonLocalHamiltonianElectrostaticValue.begin(); it != d_nonLocalHamiltonianElectrostaticValue.end(); ++it)
+              }     // if
+          }         // subcell
+      }             // FEEval iterator
+    for (std::map<unsigned int, std::vector<double>>::iterator it =
+           d_nonLocalHamiltonianElectrostaticValue.begin();
+         it != d_nonLocalHamiltonianElectrostaticValue.end();
+         ++it)
       {
-        unsigned int atomId = it->first;
+        unsigned int        atomId  = it->first;
         std::vector<double> entries = it->second;
-        for(int i = 0; i < entries.size(); i++)
-          pcout<<entries[i]<<" ";
-        pcout<<std::endl;
+        for (int i = 0; i < entries.size(); i++)
+          pcout << entries[i] << " ";
+        pcout << std::endl;
       }
-
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -1056,8 +1066,7 @@ namespace dftfe
   {}
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)
-  template class pawClass<dataTypes::number,
-                           dftfe::utils::MemorySpace::DEVICE>;
+  template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>;
 #endif
 
 } // namespace dftfe

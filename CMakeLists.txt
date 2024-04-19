@@ -175,6 +175,7 @@ SET(TARGET_SRC
   ./src/atom/AtomCenteredSphericalFunctionCoreDensitySpline.cc
   ./src/atom/AtomCenteredSphericalFunctionLocalPotentialSpline.cc
   ./src/atom/AtomCenteredSphericalFunctionProjectorSpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionPAWProjectorSpline.cc
   ./src/pseudo/oncv/oncvClass.cc
   ./src/pseudo/paw/pawClass.cc
   ./src/pseudo/paw/pawClassEnergy.cc

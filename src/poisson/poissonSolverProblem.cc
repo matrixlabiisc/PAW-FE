@@ -345,9 +345,8 @@ namespace dftfe
 
 
                 for (unsigned int q = 0; q < fe_eval_density.n_q_points; ++q)
-                  rhoQuads[q][iSubCell] = tempVec[q] + (d_isCoreRhoVals ?
-                                            tempCoreVec[q] :
-                                            0.0);
+                  rhoQuads[q][iSubCell] =
+                    tempVec[q] + (d_isCoreRhoVals ? tempCoreVec[q] : 0.0);
               }
 
 

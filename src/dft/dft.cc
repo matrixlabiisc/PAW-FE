@@ -1355,9 +1355,9 @@ namespace dftfe
           interpoolcomm,
           interBandGroupComm);
         double scaleFactor = d_pawClassPtr->densityScalingFactor(atomLocations);
-            const double       charge =
-      totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
-        scaleRhoInQuadValues(scaleFactor/charge);
+        const double charge =
+          totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
+        scaleRhoInQuadValues(scaleFactor / charge);
       }
 
     d_isFirstFilteringCall.clear();
@@ -1446,9 +1446,9 @@ namespace dftfe
               interBandGroupComm);
             double scaleFactor =
               d_pawClassPtr->densityScalingFactor(atomLocations);
-                        const double       charge =
-      totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
-        scaleRhoInQuadValues(scaleFactor/charge);  
+            const double charge =
+              totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
+            scaleRhoInQuadValues(scaleFactor / charge);
           }
       }
     else
@@ -1575,9 +1575,9 @@ namespace dftfe
                   interBandGroupComm);
                 double scaleFactor =
                   d_pawClassPtr->densityScalingFactor(atomLocations);
-                            const double       charge =
-      totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
-        scaleRhoInQuadValues(scaleFactor/charge);
+                const double charge =
+                  totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
+                scaleRhoInQuadValues(scaleFactor / charge);
               }
           }
       }
@@ -2781,10 +2781,10 @@ namespace dftfe
             << "Poisson solve for total electrostatic potential (rhoIn+b): ";
         if (d_dftParamsPtr->isPseudopotential &&
             d_dftParamsPtr->pawPseudoPotential)
-        {
-          d_pawClassPtr->computeCompensationCharge(TypeOfField::In);
-          d_pawClassPtr->TotalCompensationCharge();
-        }  
+          {
+            d_pawClassPtr->computeCompensationCharge(TypeOfField::In);
+            d_pawClassPtr->TotalCompensationCharge();
+          }
         if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
             d_dftParamsPtr->floatingNuclearCharges and
             not d_dftParamsPtr->pinnedNodeForPBC)
@@ -2815,16 +2815,18 @@ namespace dftfe
             else
               {
                 d_phiTotalSolverProblemDevice.reinit(
-                  d_basisOperationsPtrElectroHost,//basisOperationsElectro
-                  d_phiTotRhoIn,// Phi(x)
-                  *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],//Constraint Matrix
-                  d_phiTotDofHandlerIndexElectro,//DofHandler
-                  d_densityQuadratureIdElectro,//DensityQuadrature Rule
-                  d_phiTotAXQuadratureIdElectro,// AX quadrature Rule
-                  d_atomNodeIdToChargeMap,//...
-                  d_bQuadValuesAllAtoms,//Compensation charge Quad
-                  d_smearedChargeQuadratureIdElectro,// Compensation charge Quad ID
-                  densityInQuadValuesCopy,//RhoIn
+                  d_basisOperationsPtrElectroHost, // basisOperationsElectro
+                  d_phiTotRhoIn,                   // Phi(x)
+                  *d_constraintsVectorElectro
+                    [d_phiTotDofHandlerIndexElectro], // Constraint Matrix
+                  d_phiTotDofHandlerIndexElectro,     // DofHandler
+                  d_densityQuadratureIdElectro,       // DensityQuadrature Rule
+                  d_phiTotAXQuadratureIdElectro,      // AX quadrature Rule
+                  d_atomNodeIdToChargeMap,            //...
+                  d_bQuadValuesAllAtoms, // Compensation charge Quad
+                  d_smearedChargeQuadratureIdElectro, // Compensation charge
+                                                      // Quad ID
+                  densityInQuadValuesCopy,            // RhoIn
                   d_BLASWrapperPtr,
                   true,
                   d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
@@ -2842,104 +2844,107 @@ namespace dftfe
           }
         else
           {
-            if(d_dftParamsPtr->pawPseudoPotential)
-            {
-              if (scfIter > 0)
-              d_phiTotalSolverProblem.reinit(
-                d_basisOperationsPtrElectroHost, //basisOperatorHost
-                d_phiTotRhoIn,//phi(x)
-                *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],//constraintMatrix
-                d_phiTotDofHandlerIndexElectro,//DofHandlerId
-                d_densityQuadratureIdElectro,//DensityQuadID
-                d_phiTotAXQuadratureIdElectro,//AXQuadID
-                d_atomNodeIdToChargeMap,//atoms
-                d_bQuadValuesAllAtoms,//COmpensationChargeQuad
-                d_smearedChargeQuadratureIdElectro, //CompensationCharge ID
-                densityInQuadValuesCopy,//Rho(x)
-                 d_dftParamsPtr->nonLinearCoreCorrection  ,//
-                 d_rhoCore ,//
-                false,//computeDiagonalA
-                false,//MeanValueContraint
-                d_dftParamsPtr->smearedNuclearCharges,//smearedNuclearCharges
-                true,//isRhoValues
-                false,//isGradSmeraedChargeRhs
-                0,//smeardChargeGradinetCompnoetId
-                false,//storesmeared
-                false,//reuseSmearedChargeRhs
-                d_dftParamsPtr->multipoleBoundaryConditions);
+            if (d_dftParamsPtr->pawPseudoPotential)
+              {
+                if (scfIter > 0)
+                  d_phiTotalSolverProblem.reinit(
+                    d_basisOperationsPtrElectroHost, // basisOperatorHost
+                    d_phiTotRhoIn,                   // phi(x)
+                    *d_constraintsVectorElectro
+                      [d_phiTotDofHandlerIndexElectro], // constraintMatrix
+                    d_phiTotDofHandlerIndexElectro,     // DofHandlerId
+                    d_densityQuadratureIdElectro,       // DensityQuadID
+                    d_phiTotAXQuadratureIdElectro,      // AXQuadID
+                    d_atomNodeIdToChargeMap,            // atoms
+                    d_bQuadValuesAllAtoms, // COmpensationChargeQuad
+                    d_smearedChargeQuadratureIdElectro, // CompensationCharge ID
+                    densityInQuadValuesCopy,            // Rho(x)
+                    d_dftParamsPtr->nonLinearCoreCorrection, //
+                    d_rhoCore,                               //
+                    false,                                   // computeDiagonalA
+                    false, // MeanValueContraint
+                    d_dftParamsPtr
+                      ->smearedNuclearCharges, // smearedNuclearCharges
+                    true,                      // isRhoValues
+                    false,                     // isGradSmeraedChargeRhs
+                    0,                         // smeardChargeGradinetCompnoetId
+                    false,                     // storesmeared
+                    false,                     // reuseSmearedChargeRhs
+                    d_dftParamsPtr->multipoleBoundaryConditions);
+                else
+                  d_phiTotalSolverProblem.reinit(
+                    d_basisOperationsPtrElectroHost,
+                    d_phiTotRhoIn,
+                    *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+                    d_phiTotDofHandlerIndexElectro,
+                    d_densityQuadratureIdElectro,
+                    d_phiTotAXQuadratureIdElectro,
+                    d_atomNodeIdToChargeMap,
+                    d_bQuadValuesAllAtoms,
+                    d_smearedChargeQuadratureIdElectro,
+                    densityInQuadValuesCopy,
+                    d_dftParamsPtr->nonLinearCoreCorrection, //
+                    d_rhoCore,                               //
+                    true,
+                    d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+                      d_dftParamsPtr->periodicZ &&
+                      !d_dftParamsPtr->pinnedNodeForPBC,
+                    d_dftParamsPtr->smearedNuclearCharges,
+                    true,
+                    false,
+                    0,
+                    false,
+                    false,
+                    d_dftParamsPtr->multipoleBoundaryConditions);
+              }
             else
-              d_phiTotalSolverProblem.reinit(
-                d_basisOperationsPtrElectroHost,
-                d_phiTotRhoIn,
-                *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-                d_phiTotDofHandlerIndexElectro,
-                d_densityQuadratureIdElectro,
-                d_phiTotAXQuadratureIdElectro,
-                d_atomNodeIdToChargeMap,
-                d_bQuadValuesAllAtoms,
-                d_smearedChargeQuadratureIdElectro,
-                densityInQuadValuesCopy,
-                d_dftParamsPtr->nonLinearCoreCorrection , //
-                d_rhoCore,//
-                true,
-                d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
-                  d_dftParamsPtr->periodicZ &&
-                  !d_dftParamsPtr->pinnedNodeForPBC,
-                d_dftParamsPtr->smearedNuclearCharges,
-                true,
-                false,
-                0,
-                false,
-                false,
-                d_dftParamsPtr->multipoleBoundaryConditions);
-            }
-            else
-            {
-              if (scfIter > 0)
-              d_phiTotalSolverProblem.reinit(
-                d_basisOperationsPtrElectroHost, //basisOperatorHost
-                d_phiTotRhoIn,//phi(x)
-                *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],//constraintMatrix
-                d_phiTotDofHandlerIndexElectro,//DofHandlerId
-                d_densityQuadratureIdElectro,//DensityQuadID
-                d_phiTotAXQuadratureIdElectro,//AXQuadID
-                d_atomNodeIdToChargeMap,//atoms
-                d_bQuadValuesAllAtoms,//COmpensationChargeQuad
-                d_smearedChargeQuadratureIdElectro, //CompensationCharge ID
-                densityInQuadValuesCopy,//Rho(x)
-                false,
-                false,
-                d_dftParamsPtr->smearedNuclearCharges,
-                true,
-                false,
-                0,
-                false,
-                true,
-                d_dftParamsPtr->multipoleBoundaryConditions);
-            else
-              d_phiTotalSolverProblem.reinit(
-                d_basisOperationsPtrElectroHost,
-                d_phiTotRhoIn,
-                *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-                d_phiTotDofHandlerIndexElectro,
-                d_densityQuadratureIdElectro,
-                d_phiTotAXQuadratureIdElectro,
-                d_atomNodeIdToChargeMap,
-                d_bQuadValuesAllAtoms,
-                d_smearedChargeQuadratureIdElectro,
-                densityInQuadValuesCopy,
-                true,
-                d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
-                  d_dftParamsPtr->periodicZ &&
-                  !d_dftParamsPtr->pinnedNodeForPBC,
-                d_dftParamsPtr->smearedNuclearCharges,
-                true,
-                false,
-                0,
-                true,
-                false,
-                d_dftParamsPtr->multipoleBoundaryConditions);
-            }
+              {
+                if (scfIter > 0)
+                  d_phiTotalSolverProblem.reinit(
+                    d_basisOperationsPtrElectroHost, // basisOperatorHost
+                    d_phiTotRhoIn,                   // phi(x)
+                    *d_constraintsVectorElectro
+                      [d_phiTotDofHandlerIndexElectro], // constraintMatrix
+                    d_phiTotDofHandlerIndexElectro,     // DofHandlerId
+                    d_densityQuadratureIdElectro,       // DensityQuadID
+                    d_phiTotAXQuadratureIdElectro,      // AXQuadID
+                    d_atomNodeIdToChargeMap,            // atoms
+                    d_bQuadValuesAllAtoms, // COmpensationChargeQuad
+                    d_smearedChargeQuadratureIdElectro, // CompensationCharge ID
+                    densityInQuadValuesCopy,            // Rho(x)
+                    false,
+                    false,
+                    d_dftParamsPtr->smearedNuclearCharges,
+                    true,
+                    false,
+                    0,
+                    false,
+                    true,
+                    d_dftParamsPtr->multipoleBoundaryConditions);
+                else
+                  d_phiTotalSolverProblem.reinit(
+                    d_basisOperationsPtrElectroHost,
+                    d_phiTotRhoIn,
+                    *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+                    d_phiTotDofHandlerIndexElectro,
+                    d_densityQuadratureIdElectro,
+                    d_phiTotAXQuadratureIdElectro,
+                    d_atomNodeIdToChargeMap,
+                    d_bQuadValuesAllAtoms,
+                    d_smearedChargeQuadratureIdElectro,
+                    densityInQuadValuesCopy,
+                    true,
+                    d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+                      d_dftParamsPtr->periodicZ &&
+                      !d_dftParamsPtr->pinnedNodeForPBC,
+                    d_dftParamsPtr->smearedNuclearCharges,
+                    true,
+                    false,
+                    0,
+                    true,
+                    false,
+                    d_dftParamsPtr->multipoleBoundaryConditions);
+              }
           }
 
         computing_timer.enter_subsection("phiTot solve");
@@ -3652,12 +3657,12 @@ namespace dftfe
                 << "Poisson solve for total electrostatic potential (rhoOut+b): ";
 
             computing_timer.enter_subsection("phiTot solve");
-        if (d_dftParamsPtr->isPseudopotential &&
-            d_dftParamsPtr->pawPseudoPotential)
-        {
-          d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
-          d_pawClassPtr->TotalCompensationCharge();
-        } 
+            if (d_dftParamsPtr->isPseudopotential &&
+                d_dftParamsPtr->pawPseudoPotential)
+              {
+                d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
+                d_pawClassPtr->TotalCompensationCharge();
+              }
 
             if (d_dftParamsPtr->multipoleBoundaryConditions)
               {
@@ -3718,51 +3723,51 @@ namespace dftfe
               }
             else
               {
-                if(d_dftParamsPtr->pawPseudoPotential)
-                                d_phiTotalSolverProblem.reinit(
-                  d_basisOperationsPtrElectroHost,
-                  d_phiTotRhoOut,
-                  *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-                  d_phiTotDofHandlerIndexElectro,
-                  d_densityQuadratureIdElectro,
-                  d_phiTotAXQuadratureIdElectro,
-                  d_atomNodeIdToChargeMap,
-                  d_bQuadValuesAllAtoms,
-                  d_smearedChargeQuadratureIdElectro,
-                  densityOutQuadValuesCopy,
-                  d_dftParamsPtr->nonLinearCoreCorrection ,//
-                  d_rhoCore,//
-                  false,
-                  false,
-                  d_dftParamsPtr->smearedNuclearCharges,
-                  true,
-                  false,
-                  0,
-                  false,
-                  true,
-                  d_dftParamsPtr->multipoleBoundaryConditions);
-                
+                if (d_dftParamsPtr->pawPseudoPotential)
+                  d_phiTotalSolverProblem.reinit(
+                    d_basisOperationsPtrElectroHost,
+                    d_phiTotRhoOut,
+                    *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+                    d_phiTotDofHandlerIndexElectro,
+                    d_densityQuadratureIdElectro,
+                    d_phiTotAXQuadratureIdElectro,
+                    d_atomNodeIdToChargeMap,
+                    d_bQuadValuesAllAtoms,
+                    d_smearedChargeQuadratureIdElectro,
+                    densityOutQuadValuesCopy,
+                    d_dftParamsPtr->nonLinearCoreCorrection, //
+                    d_rhoCore,                               //
+                    false,
+                    false,
+                    d_dftParamsPtr->smearedNuclearCharges,
+                    true,
+                    false,
+                    0,
+                    false,
+                    true,
+                    d_dftParamsPtr->multipoleBoundaryConditions);
+
                 else
                   d_phiTotalSolverProblem.reinit(
-                  d_basisOperationsPtrElectroHost,
-                  d_phiTotRhoOut,
-                  *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-                  d_phiTotDofHandlerIndexElectro,
-                  d_densityQuadratureIdElectro,
-                  d_phiTotAXQuadratureIdElectro,
-                  d_atomNodeIdToChargeMap,
-                  d_bQuadValuesAllAtoms,
-                  d_smearedChargeQuadratureIdElectro,
-                  densityOutQuadValuesCopy,
-                  false,
-                  false,
-                  d_dftParamsPtr->smearedNuclearCharges,
-                  true,
-                  false,
-                  0,
-                  false,
-                  true,
-                  d_dftParamsPtr->multipoleBoundaryConditions);
+                    d_basisOperationsPtrElectroHost,
+                    d_phiTotRhoOut,
+                    *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+                    d_phiTotDofHandlerIndexElectro,
+                    d_densityQuadratureIdElectro,
+                    d_phiTotAXQuadratureIdElectro,
+                    d_atomNodeIdToChargeMap,
+                    d_bQuadValuesAllAtoms,
+                    d_smearedChargeQuadratureIdElectro,
+                    densityOutQuadValuesCopy,
+                    false,
+                    false,
+                    d_dftParamsPtr->smearedNuclearCharges,
+                    true,
+                    false,
+                    0,
+                    false,
+                    true,
+                    d_dftParamsPtr->multipoleBoundaryConditions);
 
                 CGSolver.solve(d_phiTotalSolverProblem,
                                d_dftParamsPtr->absLinearSolverTolerance,
@@ -3928,10 +3933,10 @@ namespace dftfe
         computing_timer.enter_subsection("phiTot solve");
         if (d_dftParamsPtr->isPseudopotential &&
             d_dftParamsPtr->pawPseudoPotential)
-        {
-          d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
-          d_pawClassPtr->TotalCompensationCharge();
-        } 
+          {
+            d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
+            d_pawClassPtr->TotalCompensationCharge();
+          }
 
         if (d_dftParamsPtr->multipoleBoundaryConditions)
           {

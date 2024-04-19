@@ -741,14 +741,22 @@ namespace dftfe
                               projectorIndex_j] *
                           multipoleTable[alpha_i * numberOfRadialProjectors +
                                          alpha_j];
-                        pcout<<projectorIndex_i<<" "<<projectorIndex_j<<" "<< alpha_i<<" "<<alpha_j<<" "<< gaunt(lQuantumNo_i,
-                                lQuantumNo_j,
-                                0,
-                                mQuantumNo_i,
-                                mQuantumNo_j,
-                                0)<<" "<<Dij[projectorIndex_i * numberOfProjectors +
-                              projectorIndex_j] <<" "<<multipoleTable[alpha_i * numberOfRadialProjectors +
-                                         alpha_j]<<std::endl;               
+                        pcout
+                          << projectorIndex_i << " " << projectorIndex_j << " "
+                          << alpha_i << " " << alpha_j << " "
+                          << gaunt(lQuantumNo_i,
+                                   lQuantumNo_j,
+                                   0,
+                                   mQuantumNo_i,
+                                   mQuantumNo_j,
+                                   0)
+                          << " "
+                          << Dij[projectorIndex_i * numberOfProjectors +
+                                 projectorIndex_j]
+                          << " "
+                          << multipoleTable[alpha_i * numberOfRadialProjectors +
+                                            alpha_j]
+                          << std::endl;
                         projectorIndex_j++;
                       }
                   }
@@ -952,8 +960,7 @@ namespace dftfe
       d_BasisOperatorElectroHostPtr->nQuadsPerCell();
     const std::vector<unsigned int> &atomicNumber =
       d_atomicShapeFnsContainer->getAtomicNumbers();
-    const dftfe::utils::MemoryStorage<double,
-                                      dftfe::utils::MemorySpace::HOST>
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       JxwVector = d_BasisOperatorElectroHostPtr->JxW();
     for (std::map<dealii::CellId, std::vector<double>>::iterator it =
            d_bl0QuadValuesAllAtoms.begin();
@@ -983,7 +990,6 @@ namespace dftfe
   }
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)
-  template class pawClass<dataTypes::number,
-                           dftfe::utils::MemorySpace::DEVICE>;
+  template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>;
 #endif
 } // namespace dftfe

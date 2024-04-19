@@ -434,11 +434,10 @@ namespace dftfe
               d_lpspQuadratureIdElectro,
               d_smearedChargeQuadratureIdElectro,
               d_phiTotAXQuadratureIdElectro};
-            std::vector<dftfe::basis::UpdateFlags> updateFlags{
-              updateFlagsAll,
-              updateFlagsAll,
-              updateFlagsAll,
-              updateFlagsAll};
+            std::vector<dftfe::basis::UpdateFlags> updateFlags{updateFlagsAll,
+                                                               updateFlagsAll,
+                                                               updateFlagsAll,
+                                                               updateFlagsAll};
             d_basisOperationsPtrElectroHost->init(d_matrixFreeDataPRefined,
                                                   d_constraintsVectorElectro,
                                                   d_baseDofHandlerIndexElectro,

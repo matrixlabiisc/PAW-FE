@@ -26,6 +26,7 @@
 #include "AtomCenteredSphericalFunctionCoreDensitySpline.h"
 #include "AtomCenteredSphericalFunctionLocalPotentialSpline.h"
 #include "AtomCenteredSphericalFunctionProjectorSpline.h"
+#include "AtomCenteredSphericalFunctionPAWProjectorSpline.h"
 #include "AtomCenteredSphericalFunctionZeroPotentialSpline.h"
 #include "AtomCenteredSphericalFunctionContainer.h"
 #include "AtomicCenteredNonLocalOperator.h"
@@ -346,10 +347,10 @@ namespace dftfe
     std::map<unsigned int, std::vector<double>> d_deltaCij, d_deltaCijkl;
     std::map<unsigned int, std::vector<double>>
                               d_nonLocalHamiltonianElectrostaticValue;
-    unsigned int              d_nProjPerTask, d_nProjSqTotal;
+    unsigned int              d_nProjPerTask, d_nProjSqTotal, d_totalProjectors;
     std::vector<unsigned int> d_projectorStartIndex;
-
-    double d_TotalCompensationCharge;
+    std::vector<unsigned int> d_totalProjectorStartIndex;
+    double                    d_TotalCompensationCharge;
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
      * @param[in] atomLocations atomic Coordinates
@@ -590,8 +591,9 @@ namespace dftfe
     // Total Comepsantion charge field
     std::map<dealii::CellId, std::vector<double>> *d_bQuadValuesAllAtoms;
     // Total Compensation charge field only due to the g_0(r)Delta_0 component
-    std::map<dealii::CellId, std::vector<double>> d_bl0QuadValuesAllAtoms;
-
+    std::map<dealii::CellId, std::vector<double>>     d_bl0QuadValuesAllAtoms;
+    distributedCPUVec<ValueType>                      Pmatrix;
+    dftUtils::constraintMatrixInfo                    d_pawconstraintMatrixData;
     std::map<unsigned int, bool>                      d_atomTypeCoreFlagMap;
     bool                                              d_floatingNuclearCharges;
     int                                               d_verbosity;
