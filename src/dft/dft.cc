@@ -2856,7 +2856,7 @@ namespace dftfe
                 d_bQuadValuesAllAtoms,//COmpensationChargeQuad
                 d_smearedChargeQuadratureIdElectro, //CompensationCharge ID
                 densityInQuadValuesCopy,//Rho(x)
-                 true ,//
+                 d_dftParamsPtr->nonLinearCoreCorrection  ,//
                  d_rhoCore ,//
                 false,//computeDiagonalA
                 false,//MeanValueContraint
@@ -2879,7 +2879,7 @@ namespace dftfe
                 d_bQuadValuesAllAtoms,
                 d_smearedChargeQuadratureIdElectro,
                 densityInQuadValuesCopy,
-                true, //
+                d_dftParamsPtr->nonLinearCoreCorrection , //
                 d_rhoCore,//
                 true,
                 d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
@@ -3730,7 +3730,7 @@ namespace dftfe
                   d_bQuadValuesAllAtoms,
                   d_smearedChargeQuadratureIdElectro,
                   densityOutQuadValuesCopy,
-                  true,//
+                  d_dftParamsPtr->nonLinearCoreCorrection ,//
                   d_rhoCore,//
                   false,
                   false,
