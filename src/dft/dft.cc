@@ -2984,19 +2984,7 @@ namespace dftfe
           d_phiTotRhoIn,
           d_phitTotQuadPointsCompensation,
           dummy);
-        pcout << "Phitot L2norm: " << d_phiTotRhoIn.l2_norm() << std::endl;
-        //
-        // impose integral phi equals 0
-        //
-        /*
-        if(d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
-        d_dftParamsPtr->periodicZ && !d_dftParamsPtr->pinnedNodeForPBC)
-        {
-          if (d_dftParamsPtr->verbosity>=2)
-            pcout<<"Value of integPhiIn:
-        "<<totalCharge(d_dofHandlerPRefined,d_phiTotRhoIn)<<std::endl;
-        }
-        */
+
 
         computing_timer.leave_subsection("phiTot solve");
 

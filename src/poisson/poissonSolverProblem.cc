@@ -351,8 +351,6 @@ namespace dftfe
                   {
                     rhoQuads[q][iSubCell] =
                       tempVec[q] + (d_isCoreRhoVals ? tempCoreVec[q] : 0.0);
-                    // pcout<<"n(x): "<<q<<" "<<rhoQuads[q][iSubCell]<<"
-                    // "<<tempVec[q]<<std::endl;
                   }
               }
 
@@ -367,12 +365,6 @@ namespace dftfe
             for (unsigned int iSubCell = 0; iSubCell < numSubCells; ++iSubCell)
               NormVal += normValueVectorized[iSubCell];
           }
-        // pcout << "Poisson Total nTIlde integration: "
-        //       << dealii::Utilities::MPI::sum(NormVal, mpi_communicator)
-        //       << std::endl;
-        // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
-        //       for(int i = 0; i < rhs.locally_owned_size();i++)
-        // pcout<<"Rhs: "<<i<<" "<<rhs.local_element(i)<<std::endl;
       }
 
     // rhs contribution from atomic charge at fem nodes
@@ -449,12 +441,6 @@ namespace dftfe
                   fe_eval_sc.distribute_local_to_global(d_rhsSmearedCharge);
               }
           }
-        // pcout << "Poisson Total SmearedCharge integration: "
-        //       << dealii::Utilities::MPI::sum(NormVal, mpi_communicator)
-        //       << std::endl;
-        // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
-        //                 for(int i = 0; i < rhs.locally_owned_size();i++)
-        // pcout<<"Rhs: "<<i<<" "<<rhs.local_element(i)<<std::endl;
       }
     else if (d_smearedChargeValuesPtr != NULL && d_isGradSmearedChargeRhs)
       {
@@ -512,23 +498,20 @@ namespace dftfe
       }
 
     // MPI operation to sync data
-    // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
+
     rhs.compress(dealii::VectorOperation::add);
-    // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
+
     if (d_isReuseSmearedChargeRhs)
       rhs += d_rhsSmearedCharge;
-    // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
+
     if (d_isStoreSmearedChargeRhs)
       d_rhsSmearedCharge.compress(dealii::VectorOperation::add);
-    // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
+
     if (d_isMeanValueConstraintComputed)
       meanValueConstraintDistributeSlaveToMaster(rhs);
-    // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
+
     // FIXME: check if this is really required
     d_constraintMatrixPtr->set_zero(rhs);
-    // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
-    //   for(int i = 0; i < rhs.locally_owned_size();i++)
-    // pcout<<"Rhs: "<<i<<" "<<rhs.local_element(i)<<std::endl;
   }
 
   // Matrix-Free Jacobi preconditioner application

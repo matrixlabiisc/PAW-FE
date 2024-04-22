@@ -804,11 +804,7 @@ namespace dftfe
 #endif
                     } // node loop
               }       // k point loop
-            for (int iSize = 0; iSize < CMatrixEntriesTransposeAtomElem.size();
-                 iSize++)
-              pcout << CMatrixEntriesTransposeAtomElem[iSize] << " ";
-            pcout << std::endl;
-          } // non-trivial element loop
+          }           // non-trivial element loop
 
 
 
@@ -1673,7 +1669,7 @@ namespace dftfe
               d_atomCenteredSphericalFunctionContainer
                 ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
 
-            pcout << "UMatrix entries for iAtom: " << iAtom << std::endl;
+
             for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
                  alpha++)
               {
@@ -1684,12 +1680,6 @@ namespace dftfe
                       d_sphericalFunctionIdsNumberingMapCurrentProcess
                         .find(std::make_pair(atomId, alpha))
                         ->second);
-                for (int iWave = 0; iWave < d_numberWaveFunctions; iWave++)
-                  pcout
-                    << *(sphericalFunctionKetTimesVectorParFlattened.data() +
-                         localId * d_numberWaveFunctions + iWave)
-                    << " ";
-                pcout << std::endl;
                 std::transform(
                   sphericalFunctionKetTimesVectorParFlattened.begin() +
                     localId * d_numberWaveFunctions,
@@ -1942,13 +1932,6 @@ namespace dftfe
                       &one,
                       &d_sphericalFnTimesWavefunMatrix[atomId][0],
                       d_numberWaveFunctions);
-                    // pcout<<"Input of X: "<<iElem<<" "<<atomId<<std::endl;
-                    // for(int iSize = 0; iSize <
-                    // d_numberNodesPerElement*d_numberWaveFunctions; iSize++ )
-                    //   pcout<<X[(iElem - cellRange.first) *
-                    //   d_numberNodesPerElement *
-                    //      d_numberWaveFunctions + iSize]<<" ";
-                    pcout << std::endl;
 
                   } // iAtom
               }

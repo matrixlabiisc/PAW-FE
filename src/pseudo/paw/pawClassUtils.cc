@@ -46,16 +46,12 @@ namespace dftfe
     int flag3 = m == 0 ? 0 : 1;
     int flag  = flag1 + flag2 + flag3;
 
-    // pcout<<"Entering Gaunt Values"<<std::endl;
     if (flag < 2)
       {
         double gauntvalue = wigner::gaunt<double>(l_i, l_j, l, m_i, m_j, m);
         // double gauntvalue = gauntcomplex(l_i, l_j, l, m_i, m_j, m);
         if (flag == 0)
           {
-            /*if(std::fabs(gauntvalue) < 1E-7)
-            pcout<<"Gaunt0: "<<l_i<<" "<<l_j<<" "<<l<<" "<<m_i<<" "<<m_j<<"
-            "<<m<<std::endl; */
             return gauntvalue;
           }
         else
@@ -151,7 +147,6 @@ namespace dftfe
         return (Value);
       };
     double Q1 = simpsonIntegral(rminIndex, rmaxIndex, integrationValue);
-    // pcout << "Integral Error is: " << error << std::endl;
     IntOut += Q1;
     return (IntOut);
   }
@@ -182,8 +177,6 @@ namespace dftfe
         double IntegralResult = 0.0;
         for (unsigned int i = startIndex; i < EndIndex; i++)
           IntegralResult += simfact[i] * IntegrandValue(i);
-        // if(ir_last != startIndex)
-        //   pcout<<"DEBUG: Warning there is an issue here: "<<std::endl;
         double residual = 0.0;
         if ((EndIndex - startIndex) % 2 != 0)
           return (IntegralResult);
@@ -224,8 +217,6 @@ namespace dftfe
     std::vector<double> radL1(radial.size(), 0.0);
     std::vector<double> aa(radial.size(), 0.0);
     std::vector<double> bb(radial.size(), 0.0);
-    // pcout << "DEBUG: Rmin and Rmax" << rminIndex << " " << rmaxIndex << " "
-    //       << rmax << std::endl;
     for (int i = 1; i < radial.size(); i++)
       {
         double r   = radial[i];
@@ -254,8 +245,6 @@ namespace dftfe
       }
     if ((rmaxIndex - rminIndex) % 2 != 0)
       {
-        // pcout << "DEBUG Warning: Residual Term added in potential" <<
-        // std::endl;
         Integral1[rmaxIndex] =
           Integral1[rmaxIndex - 1] +
           1.0 / 3.0 *
@@ -272,9 +261,7 @@ namespace dftfe
 
     for (int i = (int)rminIndex; i < (int)radial.size(); i++)
       {
-        double r = radial[i];
-        // pcout << "DEBUG:" << i << " " << r << " " << Integral1[i] << " "
-        //       << Integral2[i] << std::endl;
+        double r     = radial[i];
         double Value = 0.0;
         if (r > 1E-10)
           {
@@ -343,8 +330,6 @@ namespace dftfe
       }
     if ((rmaxIndex - rminIndex) % 2 != 0)
       {
-        // pcout << "DEBUG Warning: Residual Term added in potential" <<
-        // std::endl;
         Integral1[rmaxIndex] =
           Integral1[rmaxIndex - 1] +
           1.0 / 3.0 *
@@ -360,8 +345,7 @@ namespace dftfe
 
     for (int i = (int)rminIndex; i < (int)radial.size(); i++)
       {
-        double r = radial[i];
-        // pcout<<i<<" "<<r<<" "<<Integral1[i]<<" "<<Integral2[i]<<std::endl;
+        double r     = radial[i];
         double Value = 0.0;
         if (r > 1E-10)
           {
@@ -644,7 +628,7 @@ namespace dftfe
     coeff[3] = 4.0 / 3.0;
     coeff[4] = -1.0 / 4.0;
     MPI_Barrier(d_mpiCommParent);
-    // pcout << "Checking Radial Derivative Values: " << std::endl;
+
     for (unsigned int i = 0; i < size - 4; i++)
       {
         double Value, derivativeValue, radialDensitySecondDerivative;
@@ -655,9 +639,6 @@ namespace dftfe
           rab[i];
         alglib::spline1ddiff(
           p1, r[i], Value, derivativeValue, radialDensitySecondDerivative);
-        // pcout << i << " " << r[i] << " " << Value << " " << derivativeValue
-        //       << " " << der[i] << std::endl;
-        // der[i] = derivativeValue;
       }
 
     return (der);

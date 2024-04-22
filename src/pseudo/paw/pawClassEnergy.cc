@@ -31,7 +31,6 @@ namespace dftfe
 
     double alpha = 1.0;
     double beta  = 1.0;
-    pcout << "DEBUG: Line 33 pawClassEnergy" << std::endl;
     d_BasisOperatorElectroHostPtr->reinit(
       0, 0, d_compensationChargeQuadratureIdElectro);
     const unsigned int numberNodesPerElement =
@@ -82,10 +81,6 @@ namespace dftfe
               &beta,
               d_nonLocalHamiltonianElectrostaticValue[atomId].data(),
               1);
-            // for(int iQuadpoint = 0; iQuadpoint < numberQuadraturePoints;
-            // iQuadpoint++) pcout<<"Phi(x): "<<iQuadpoint<<" "<<
-            // *(phiTotQuadValues.data() + elementIndex*numberQuadraturePoints +
-            // iQuadpoint)<<std::endl;
           }
       }
 
@@ -114,7 +109,6 @@ namespace dftfe
 
     double alpha = 1.0;
     double beta  = 1.0;
-    pcout << "DEBUG: Line 31 pawClassEnergy" << std::endl;
     d_BasisOperatorElectroHostPtr->reinit(
       0, 0, d_compensationChargeQuadratureIdElectro);
     const unsigned int numberNodesPerElement =
@@ -145,8 +139,7 @@ namespace dftfe
       d_compensationChargeQuadratureIdElectro);
     std::vector<double> phiValuesQuadPoints(numberQuadraturePoints, 0.0);
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
-    // pcout << "g_LPhi(bx): " << std::endl;
-    int iElem = 0;
+    int                                         iElem = 0;
     for (std::set<unsigned int>::iterator it =
            d_atomicShapeFnsContainer->d_feEvaluationMap.begin();
          it != d_atomicShapeFnsContainer->d_feEvaluationMap.end();
@@ -189,18 +182,6 @@ namespace dftfe
                     ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                 std::vector<double> gLValues =
                   d_gLValuesQuadPoints[std::make_pair(atomId, cellIndex)];
-                // for (int L = 0; L < NumTotalSphericalFunctions; L++)
-                //   {
-                //     for (int iQuadPoint = 0;
-                //          iQuadPoint < numberQuadraturePoints;
-                //          iQuadPoint++)
-                //       pcout
-                //         << iElem << " " << L << " "
-                //         << gLValues[L * numberQuadraturePoints + iQuadPoint]
-                //         << " " << tempVec[iQuadPoint] << " "
-                //         << *(phiValuesQuadPoints.data() + iQuadPoint)
-                //         << std::endl;
-                //   }
                 iElem++;
                 d_BLASWrapperHostPtr->xgemm(
                   'N',
@@ -403,7 +384,6 @@ namespace dftfe
                            &Beta2,
                            &atomDensityAllelectron[0],
                            &inc);
-                    // pcout<<"Line 2678"<<std::endl;
                     dgemm_(&transA,
                            &transB,
                            &inc,
@@ -454,7 +434,6 @@ namespace dftfe
                                        corrEnergyValPS[rpoint]);
                         double Value = rab[rpoint] * (Val1 - Val2) *
                                        pow(radialGrid[rpoint], 2);
-                        // pcout<<i<<" "<<Value<<std::endl;
                         return (Value);
                       };
 
@@ -540,9 +519,7 @@ namespace dftfe
 
 
 
-                    double quadwt = quad_weights[qpoint];
-                    // pcout << "Storing the Dij and its variants: " <<
-                    // std::endl;
+                    double              quadwt = quad_weights[qpoint];
                     std::vector<double> DijYij(numberOfProjectors *
                                                  numberOfProjectors,
                                                0.0);
@@ -552,8 +529,7 @@ namespace dftfe
                     std::vector<double> DijGradPhiYij(numberOfProjectors *
                                                         numberOfProjectors,
                                                       0.0);
-                    // pcout << "Dij and its other Values: " << std::endl;
-                    int projIndexI = 0;
+                    int                 projIndexI = 0;
                     for (int iProj = 0; iProj < numberOfRadialProjectors;
                          iProj++)
                       {
@@ -655,8 +631,6 @@ namespace dftfe
                     const unsigned int inc         = 1;
                     const double       Beta2       = 1.0;
                     // Computing Density for Libxc
-                    // pcout << "Starting LDA contribution term: " << std::endl;
-                    // MPI_Barrier(d_mpiCommParent);
                     // double TimerLDAStart = MPI_Wtime();
                     dgemm_(&transA,
                            &transB,
@@ -694,8 +668,6 @@ namespace dftfe
                     // double TimerGGA0Start = MPI_Wtime();
                     if (d_atomTypeCoreFlagMap[Znum])
                       {
-                        // pcout << "Starting Sigma Contribution part0" <<
-                        // std::endl;
                         dgemm_(&transA,
                                &transB,
                                &inc,
@@ -722,9 +694,6 @@ namespace dftfe
                                &Beta2,
                                &sigmaSmooth[0],
                                &inc);
-
-                        // pcout << "Finished Sigma Contribution part0" <<
-                        // std::endl;
                       }
                     // MPI_Barrier(d_mpiCommParent);
                     // timerGGA0Contribution += MPI_Wtime() - TimerGGA0Start;
@@ -814,8 +783,7 @@ namespace dftfe
                            &Beta2,
                            &sigmaSmooth[0],
                            &inc);
-                    // pcout << "Finished Sigma Contribution part1 B" <<
-                    // std::endl;
+
                     // MPI_Barrier(d_mpiCommParent);
                     // timerGGAAContribution += (MPI_Wtime() - TimerGGAAStart);
 
@@ -877,8 +845,7 @@ namespace dftfe
                       }
 
 
-                    // pcout << "Finished Sigma Contribution part2 A" <<
-                    // std::endl;
+
                     // Part2 of TensorContraction  for B
 
                     dgemm_(&transA,
@@ -909,8 +876,7 @@ namespace dftfe
                            &inc);
                     // MPI_Barrier(d_mpiCommParent);
                     // timerGGABContribution += (MPI_Wtime() - TimerGGABStart);
-                    // pcout << "Finished Sigma Contribution part2 B" <<
-                    // std::endl;
+
 
                     std::vector<double> tempAEcontributionC(
                       numberOfProjectorsSq * numberofValues, 0.0);
@@ -1042,7 +1008,6 @@ namespace dftfe
                                        corrEnergyValPS[rpoint]);
                         double Value = rab[rpoint] * (Val1 - Val2) *
                                        pow(radialGrid[rpoint], 2);
-                        // pcout<<i<<" "<<Value<<std::endl;
                         return (Value);
                       };
 
@@ -1128,8 +1093,6 @@ namespace dftfe
                   (exchangeEnergyValAE[rpoint] + corrEnergyValAE[rpoint]);
 
                 double Value = rab[rpoint] * (Val1)*pow(RadialMesh[rpoint], 2);
-                // pcout << rpoint << " " << RadialMesh[rpoint] << " "
-                //       << Value << std::endl;
                 return (Value);
               };
 
