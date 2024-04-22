@@ -40,7 +40,8 @@ namespace dftfe
      */
     AtomCenteredSphericalFunctionBessel(double       RcParameter,
                                         double       RmaxParameter,
-                                        unsigned int lParameter);
+                                        unsigned int lParameter,
+                                        double       normalizationConstant);
 
     double
     getRadialValue(double r) const override;

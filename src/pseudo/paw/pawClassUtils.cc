@@ -961,7 +961,8 @@ namespace dftfe
     const std::vector<unsigned int> &atomicNumber =
       d_atomicShapeFnsContainer->getAtomicNumbers();
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      JxwVector = d_BasisOperatorElectroHostPtr->JxW();
+                 JxwVector = d_BasisOperatorElectroHostPtr->JxW();
+    unsigned int iElem     = 0;
     for (std::map<dealii::CellId, std::vector<double>>::iterator it =
            d_bl0QuadValuesAllAtoms.begin();
          it != d_bl0QuadValuesAllAtoms.end();
@@ -978,7 +979,10 @@ namespace dftfe
             normValue +=
               Temp[q_point] *
               JxwVector[elementIndex * numberQuadraturePoints + q_point];
+            // pcout << iElem << " " << q_point << " " << Temp[q_point]
+            //       << std::endl;
           }
+        iElem++;
       }
 
 

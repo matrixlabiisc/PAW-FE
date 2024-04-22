@@ -170,7 +170,7 @@ namespace dftfe
         //   }
         (*d_bQuadValuesAllAtoms)[it->first] = ValueL0;
       }
-    pcout << "DEBUG: Line 170" << std::endl;
+    // pcout << "DEBUG: Line 170" << std::endl;
     const std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomicShapeFnsContainer->getAtomIdsInCurrentProcess();
 
@@ -292,6 +292,7 @@ namespace dftfe
         std::vector<double> tempCoeff(numberElementsInAtomCompactSupport *
                                         numberQuadraturePoints * numProjSq,
                                       0.0);
+        // pcout<<"TIJ ENTRIES: "<<std::endl;
         for (int iElemComp = 0; iElemComp < numberElementsInAtomCompactSupport;
              iElemComp++)
           {
@@ -305,6 +306,7 @@ namespace dftfe
                                                    0.0);
             // pcout<<"Size of gLValueQuadPoints: "<<numberQuadraturePoints*
             // NumTotalSphericalFunctions<<std::endl;
+
             for (unsigned int alpha = 0; alpha < NumRadialSphericalFunctions;
                  ++alpha)
               {
@@ -399,7 +401,7 @@ namespace dftfe
                                                   ->second;
                                             int l_j =
                                               projFnJ->getQuantumNumberl();
-                                            for (int m_j = l_j; m_j <= l_j;
+                                            for (int m_j = -l_j; m_j <= l_j;
                                                  m_j++)
                                               {
                                                 double multipolevalue =
@@ -416,11 +418,6 @@ namespace dftfe
                                                         m_i,
                                                         m_j,
                                                         mQuantumNumber);
-                                                if (std::fabs(multipolevalue) <
-                                                      1E-16 ||
-                                                    std::fabs(Cijl) < 1E-16)
-                                                  continue;
-
                                                 long unsigned int loc =
                                                   iElemComp *
                                                     (numberQuadraturePoints *
@@ -429,6 +426,23 @@ namespace dftfe
                                                   alpha_i * NumProjectors +
                                                   alpha_j;
                                                 // pcout<<loc<<" "<<alpha_i<<"
+                                                // "<<l_i<<" "<<alpha_j<<"
+                                                // "<<l_j<<"
+                                                // "<<lQuantumNumber<<"
+                                                // "<<m_i<<" "<<m_j<<"
+                                                // "<<mQuantumNumber<<"
+                                                // "<<iElemComp<<"
+                                                // "<<iQuadPoint<<"
+                                                // "<<multipolevalue<<"
+                                                // "<<Cijl<<std::endl;
+                                                bool flag = true;
+                                                if (std::fabs(multipolevalue) <
+                                                      1E-16 ||
+                                                    std::fabs(Cijl) < 1E-16)
+                                                  flag = false;
+
+
+                                                // pcout<<loc<<" "<<alpha_i<<"
                                                 // "<<alpha_j<<" "<<iElemComp<<"
                                                 // "<<lQuantumNumber *
                                                 //    NumRadialProjectors *
@@ -436,12 +450,29 @@ namespace dftfe
                                                 //  i * NumRadialProjectors +
                                                 //  j<<"
                                                 //  "<<iQuadPoint<<std::endl;
-                                                if (r <= RmaxAug)
-                                                  tempCoeff[loc] +=
-                                                    Cijl * multipolevalue *
-                                                    sphericalFunctionValue;
-                                                else
-                                                  tempCoeff[loc] += 0.0;
+                                                if (flag)
+                                                  {
+                                                    if (r <= RmaxAug)
+                                                      {
+                                                        tempCoeff[loc] +=
+                                                          Cijl *
+                                                          multipolevalue *
+                                                          sphericalFunctionValue;
+                                                        // pcout<<loc<<"
+                                                        // "<<alpha_i<<"
+                                                        // "<<alpha_j<<"
+                                                        // "<<iElemComp<<"
+                                                        // "<<iQuadPoint<<"
+                                                        // "<<Lindex<<"
+                                                        // "<<tempCoeff[loc]<<"
+                                                        // "<<Cijl<<"
+                                                        // "<<multipolevalue<<"
+                                                        // "<<sphericalHarmonicVal<<"
+                                                        // "<<radialVal<<std::endl;
+                                                      }
+                                                    else
+                                                      tempCoeff[loc] += 0.0;
+                                                  }
 
                                                 alpha_j++;
                                               } // m_j
@@ -473,7 +504,9 @@ namespace dftfe
           } // iElemComp
 
         d_ProductOfQijShapeFnAtQuadPoints[iAtom] = tempCoeff;
-
+        //         pcout<<"Tij Entries: "<<std::endl;
+        // for(int iSize = 0; iSize < tempCoeff.size(); iSize++)
+        //  pcout<< tempCoeff[iSize]<<std::endl;
 
       } // iAtom
   }

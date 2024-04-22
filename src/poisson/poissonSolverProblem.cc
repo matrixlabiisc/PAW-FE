@@ -315,9 +315,12 @@ namespace dftfe
           *d_matrixFreeDataPtr,
           d_matrixFreeVectorComponent,
           d_matrixFreeQuadratureComponentRhsDensity);
+        dealii::VectorizedArray<double> normValueVectorized =
+          dealii::make_vectorized_array(0.0);
 
         dealii::AlignedVector<dealii::VectorizedArray<double>> rhoQuads(
           fe_eval_density.n_q_points, dealii::make_vectorized_array(0.0));
+        double NormVal = 0.0;
         for (unsigned int macrocell = 0;
              macrocell < d_matrixFreeDataPtr->n_cell_batches();
              ++macrocell)
@@ -345,8 +348,12 @@ namespace dftfe
 
 
                 for (unsigned int q = 0; q < fe_eval_density.n_q_points; ++q)
-                  rhoQuads[q][iSubCell] =
-                    tempVec[q] + (d_isCoreRhoVals ? tempCoreVec[q] : 0.0);
+                  {
+                    rhoQuads[q][iSubCell] =
+                      tempVec[q] + (d_isCoreRhoVals ? tempCoreVec[q] : 0.0);
+                    // pcout<<"n(x): "<<q<<" "<<rhoQuads[q][iSubCell]<<"
+                    // "<<tempVec[q]<<std::endl;
+                  }
               }
 
 
@@ -356,7 +363,16 @@ namespace dftfe
               }
             fe_eval_density.integrate(true, false);
             fe_eval_density.distribute_local_to_global(rhs);
+            normValueVectorized = fe_eval_density.integrate_value();
+            for (unsigned int iSubCell = 0; iSubCell < numSubCells; ++iSubCell)
+              NormVal += normValueVectorized[iSubCell];
           }
+        // pcout << "Poisson Total nTIlde integration: "
+        //       << dealii::Utilities::MPI::sum(NormVal, mpi_communicator)
+        //       << std::endl;
+        // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
+        //       for(int i = 0; i < rhs.locally_owned_size();i++)
+        // pcout<<"Rhs: "<<i<<" "<<rhs.local_element(i)<<std::endl;
       }
 
     // rhs contribution from atomic charge at fem nodes
@@ -377,9 +393,6 @@ namespace dftfe
     else if (d_smearedChargeValuesPtr != NULL && !d_isGradSmearedChargeRhs &&
              !d_isReuseSmearedChargeRhs)
       {
-        // const unsigned int   num_quad_points_sc =
-        // d_matrixFreeDataPtr->get_quadrature(d_smearedChargeQuadratureId).size();
-
         dealii::FEEvaluation<3, -1> fe_eval_sc(*d_matrixFreeDataPtr,
                                                d_matrixFreeVectorComponent,
                                                d_smearedChargeQuadratureId);
@@ -388,6 +401,9 @@ namespace dftfe
 
         dealii::AlignedVector<dealii::VectorizedArray<double>> smearedbQuads(
           numQuadPointsSmearedb, dealii::make_vectorized_array(0.0));
+        dealii::VectorizedArray<double> normValueVectorized =
+          dealii::make_vectorized_array(0.0);
+        double NormVal = 0;
         for (unsigned int macrocell = 0;
              macrocell < d_matrixFreeDataPtr->n_cell_batches();
              ++macrocell)
@@ -424,11 +440,21 @@ namespace dftfe
                 fe_eval_sc.integrate(true, false);
 
                 fe_eval_sc.distribute_local_to_global(rhs);
+                normValueVectorized = fe_eval_sc.integrate_value();
 
+                for (unsigned int iSubCell = 0; iSubCell < numSubCells;
+                     ++iSubCell)
+                  NormVal += normValueVectorized[iSubCell];
                 if (d_isStoreSmearedChargeRhs)
                   fe_eval_sc.distribute_local_to_global(d_rhsSmearedCharge);
               }
           }
+        // pcout << "Poisson Total SmearedCharge integration: "
+        //       << dealii::Utilities::MPI::sum(NormVal, mpi_communicator)
+        //       << std::endl;
+        // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
+        //                 for(int i = 0; i < rhs.locally_owned_size();i++)
+        // pcout<<"Rhs: "<<i<<" "<<rhs.local_element(i)<<std::endl;
       }
     else if (d_smearedChargeValuesPtr != NULL && d_isGradSmearedChargeRhs)
       {
@@ -486,19 +512,23 @@ namespace dftfe
       }
 
     // MPI operation to sync data
+    // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
     rhs.compress(dealii::VectorOperation::add);
-
+    // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
     if (d_isReuseSmearedChargeRhs)
       rhs += d_rhsSmearedCharge;
-
+    // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
     if (d_isStoreSmearedChargeRhs)
       d_rhsSmearedCharge.compress(dealii::VectorOperation::add);
-
+    // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
     if (d_isMeanValueConstraintComputed)
       meanValueConstraintDistributeSlaveToMaster(rhs);
-
+    // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
     // FIXME: check if this is really required
     d_constraintMatrixPtr->set_zero(rhs);
+    // pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
+    //   for(int i = 0; i < rhs.locally_owned_size();i++)
+    // pcout<<"Rhs: "<<i<<" "<<rhs.local_element(i)<<std::endl;
   }
 
   // Matrix-Free Jacobi preconditioner application

@@ -81,15 +81,40 @@ namespace dftfe
               << std::endl;
         unsigned int lmaxAug = d_dftParamsPtr->noShapeFnsInPAW;
         double       rmaxAug = d_RmaxAug[*it];
+        char         shapeFnFile[256];
+        strcpy(shapeFnFile,
+               (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
+                "/shape_functions.dat")
+                 .c_str());
+        std::vector<std::vector<double>> shaveFnValues(0);
+        dftUtils::readFile(lmaxAug + 1, shaveFnValues, shapeFnFile);
+        std::vector<double> radialMesh   = d_radialMesh[*it];
+        std::vector<double> jacobianData = d_radialJacobianData[*it];
+        unsigned int        rmaxAugIndex = d_RmaxAugIndex[*it];
+        unsigned int        numValues    = radialMesh.size();
         for (unsigned int lQuantumNo = 0; lQuantumNo < lmaxAug; lQuantumNo++)
           {
+            double normalizationalizationConstant = 0.0;
+            std::function<double(const unsigned int &)> f =
+              [&](const unsigned int &i) {
+                double Value = jacobianData[i] *
+                               shaveFnValues[i][lQuantumNo + 1] *
+                               pow(radialMesh[i], lQuantumNo + 2);
+                return (Value);
+              };
+            pcout << "Computing Normalization Constant for ShapeFn:  "
+                  << lQuantumNo << " of Znum: " << Znum << " ";
+            normalizationalizationConstant =
+              simpsonIntegral(0, rmaxAugIndex + 1, f);
+            pcout << "Normalization Constant Value: "
+                  << normalizationalizationConstant << std::endl;
             if (shapeFnType == 0)
               {
                 // Bessel Function
                 pcout << "Bessel function: " << lQuantumNo << std::endl;
                 d_atomicShapeFnsMap[std::make_pair(Znum, lQuantumNo)] =
                   std::make_shared<AtomCenteredSphericalFunctionBessel>(
-                    rc, rmaxAug, lQuantumNo);
+                    rc, rmaxAug, lQuantumNo, normalizationalizationConstant);
               }
             else if (shapeFnType == 1)
               {
@@ -97,7 +122,7 @@ namespace dftfe
                 pcout << "Gauss function: " << lQuantumNo << std::endl;
                 d_atomicShapeFnsMap[std::make_pair(Znum, lQuantumNo)] =
                   std::make_shared<AtomCenteredSphericalFunctionGaussian>(
-                    rc, rmaxAug, lQuantumNo);
+                    rc, rmaxAug, lQuantumNo, normalizationalizationConstant);
               }
             else if (shapeFnType == 2)
               {
@@ -105,15 +130,10 @@ namespace dftfe
                 pcout << "sinc function: " << lQuantumNo << std::endl;
                 d_atomicShapeFnsMap[std::make_pair(Znum, lQuantumNo)] =
                   std::make_shared<AtomCenteredSphericalFunctionSinc>(
-                    rc, rmaxAug, lQuantumNo);
+                    rc, rmaxAug, lQuantumNo, normalizationalizationConstant);
               }
             else
               {
-                char shapeFnFile[256];
-                strcpy(shapeFnFile,
-                       (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
-                        "/shape_functions.dat")
-                         .c_str());
                 d_atomicShapeFnsMap[std::make_pair(Znum, lQuantumNo)] =
                   std::make_shared<
                     AtomCenteredSphericalFunctionProjectorSpline>(shapeFnFile,
@@ -126,10 +146,7 @@ namespace dftfe
                                                                   true);
               }
           }
-        std::vector<double> radialMesh   = d_radialMesh[*it];
-        std::vector<double> jacobianData = d_radialJacobianData[*it];
-        unsigned int        rmaxAugIndex = d_RmaxAugIndex[*it];
-        unsigned int        numValues    = radialMesh.size();
+
         std::vector<double> shapeFnGridData(lmaxAug * numValues, 0.0);
         for (unsigned int lQuantumNo = 0; lQuantumNo < lmaxAug; lQuantumNo++)
           {
@@ -1256,6 +1273,7 @@ namespace dftfe
                       radialDerivativeOfMeshData(radialMesh,
                                                  jacobianData,
                                                  psPhi);
+                    // pcout<<"Radial Data: "<<alpha<<std::endl;
                     for (int iRow = 0; iRow < meshSize; iRow++)
                       {
                         radialValuesAE[startIndex + iRow] = aePhi[iRow];
@@ -1264,6 +1282,9 @@ namespace dftfe
                           functionDerivativesAE[iRow];
                         radialDerivativePS[startIndex + iRow] =
                           functionDerivativesPS[iRow];
+                        // pcout<<iRow<<" "<< aePhi[iRow]<<" "<<psPhi[iRow]<<" "
+                        // <<functionDerivativesAE[iRow]<<"
+                        // "<<functionDerivativesPS[iRow]<<std::endl;
                       }
                     d_atomicProjectorFnsMap[std::make_pair(Znum, alpha)] =
                       std::make_shared<
@@ -1277,23 +1298,23 @@ namespace dftfe
                         true);
                     d_atomicAEPartialWaveFnsMap[std::make_pair(Znum, alpha)] =
                       std::make_shared<
-                        AtomCenteredSphericalFunctionProjectorSpline>(
+                        AtomCenteredSphericalFunctionPAWProjectorSpline>(
                         AEpartialWaveFile,
                         lQuantumNo,
                         0,
                         j,
                         noOfProjectors + 1,
-                        1E-12,
+                        d_RmaxAug[*it],
                         true);
                     d_atomicPSPartialWaveFnsMap[std::make_pair(Znum, alpha)] =
                       std::make_shared<
-                        AtomCenteredSphericalFunctionProjectorSpline>(
+                        AtomCenteredSphericalFunctionPAWProjectorSpline>(
                         PSpartialWaveFile,
                         lQuantumNo,
                         0,
                         j,
                         noOfProjectors + 1,
-                        1E-12,
+                        d_RmaxAug[*it],
                         true);
 
                     alpha++;
@@ -1787,10 +1808,10 @@ namespace dftfe
                            iProj * numShapeFunctions + shapeFnIndex] =
                             ValTempShapeFnContribution;
 
-                        pcout << shapeFnIndex << " " << iProj << " " << jProj
-                              << " "
-                              << "Debug2_0: PhitIPhiJgL: "
-                              << ValTempShapeFnContribution << std::endl;
+                        // pcout << shapeFnIndex << " " << iProj << " " << jProj
+                        //       << " "
+                        //       << "Debug2_0: PhitIPhiJgL: "
+                        //       << ValTempShapeFnContribution << std::endl;
                         shapeFnIndex++;
                       }
                   }
@@ -1943,8 +1964,8 @@ namespace dftfe
                         int    lmin =
                           std::min(std::abs(l_i - l_j), std::abs(l_k - l_l));
                         int lmax = std::max((l_i + l_j), (l_k + l_l));
-                        pcout << "Lmin and Lmax: " << lmin << " " << lmax
-                              << std::endl;
+                        // pcout << "Lmin and Lmax: " << lmin << " " << lmax
+                        //       << std::endl;
 
                         for (int lprojShapeFn = lmin; lprojShapeFn <= lmax;
                              lprojShapeFn++)
@@ -2042,11 +2063,12 @@ namespace dftfe
                                       } // mproj
                                     Delta_Cijkl[index] +=
                                       0.5 * TotalContribution;
-                                    pcout
-                                      << "DEBUG: Value Check: " << (TotalValue)
-                                      << " " << iProj << " " << jProj << " "
-                                      << kProj << " " << lProj << " "
-                                      << lprojShapeFn << std::endl;
+                                    // pcout
+                                    //   << "DEBUG: Value Check: " <<
+                                    //   (TotalValue)
+                                    //   << " " << iProj << " " << jProj << " "
+                                    //   << kProj << " " << lProj << " "
+                                    //   << lprojShapeFn << std::endl;
                                   }
 
                                 else
@@ -2314,6 +2336,7 @@ namespace dftfe
             if (!isGGA)
               {
                 double Yi, Yj;
+                numberofSphericalValues = 1;
                 for (int qpoint = 0; qpoint < numberofSphericalValues; qpoint++)
                   {
                     std::vector<double> atomDensityAllelectron =
@@ -2339,6 +2362,7 @@ namespace dftfe
                                                0.0);
 
                     int projIndexI = 0;
+                    pcout << "DijYij: " << std::endl;
                     for (int iProj = 0; iProj < numberOfRadialProjectors;
                          iProj++)
                       {
@@ -2380,7 +2404,7 @@ namespace dftfe
                                         quad_points[qpoint][1],
                                         lQuantumNo_j,
                                         mQuantumNumber_j,
-                                        Yi);
+                                        Yj);
 
                                     SphericalHarmonics[projIndexI *
                                                          numberOfProjectors +
@@ -2398,11 +2422,16 @@ namespace dftfe
                                       Yi * Yj *
                                       Dij[projIndexJ * numberOfProjectors +
                                           projIndexI];
+                                    pcout << DijYij[projIndexI *
+                                                      numberOfProjectors +
+                                                    projIndexJ]
+                                          << " ";
 
                                     projIndexJ++;
                                   } // mQuantumNumber_j
 
                               } // jProj
+                            pcout << std::endl;
                             projIndexI++;
                           } // mQuantumNumber_i
 
@@ -2490,8 +2519,10 @@ namespace dftfe
                     for (int i = 0; i < numberOfProjectors; i++)
                       {
                         // Proj J
+
                         for (int j = 0; j <= i; j++)
                           {
+                            // pcout<<"RADIAL INTEGRAL: "<<i<<" "<<j<<std::endl;
                             // Radial Integration
                             std::function<double(const unsigned int &)>
                               Integral = [&](const unsigned int &rpoint) {
@@ -2506,7 +2537,12 @@ namespace dftfe
                                                corrPotentialValPS[rpoint]);
                                 double Value = rab[rpoint] * (Val1 - Val2) *
                                                pow(RadialMesh[rpoint], 2);
-                                // pcout<<i<<" "<<Value<<std::endl;
+                                pcout << i << " " << Value << " "
+                                      << productOfPSpartialWfc[index] << " "
+                                      << productOfAEpartialWfc[index] << " "
+                                      << (exchangePotentialValAE[rpoint] +
+                                          corrPotentialValAE[rpoint])
+                                      << std::endl;
                                 return (std::fabs(RadialMesh[rpoint]) > 1E-8 ?
                                           Value :
                                           0.0);
@@ -2517,6 +2553,8 @@ namespace dftfe
                             Delta_Excij[i * numberOfProjectors + j] +=
                               RadialIntegral * quadwt * 4.0 * M_PI *
                               SphericalHarmonics[i * numberOfProjectors + j];
+                            // pcout<<i<<" "<<j<<" "<<RadialIntegral<<"
+                            // "<<quadwt<<" "<<std::endl;
                           } // Proj J
                       }     // Proj I
 
@@ -2579,7 +2617,7 @@ namespace dftfe
                   d_productOfAEpartialWfcValue[Znum];
 
 
-
+                // numberofSphericalValues = 1;
                 for (int qpoint = 0; qpoint < numberofSphericalValues; qpoint++)
                   {
                     std::vector<double> atomDensityAllelectron =
@@ -2598,6 +2636,11 @@ namespace dftfe
                       d_atomTypeCoreFlagMap[Znum] ?
                         d_gradCoreSqPS[Znum] :
                         std::vector<double>(numberofValues, 0.0);
+                    // pcout << "Sigma Values: " << std::endl;
+                    // for (int iPoint = 0; iPoint < numberofValues; iPoint++)
+                    //   pcout << iPoint << " " << sigmaAllElectron[iPoint] << "
+                    //   "
+                    //         << sigmaSmooth[iPoint] << std::endl;
                     std::vector<double> SphericalHarmonics(numberOfProjectors *
                                                              numberOfProjectors,
                                                            0.0);
@@ -2664,12 +2707,12 @@ namespace dftfe
                                         quad_points[qpoint][1],
                                         lQuantumNo_j,
                                         mQuantumNumber_j,
-                                        Yi);
+                                        Yj);
 
                                     std::vector<double> gradYj =
                                       derivativeOfRealSphericalHarmonic(
                                         lQuantumNo_j,
-                                        lQuantumNo_j,
+                                        mQuantumNumber_j,
                                         quad_points[qpoint][0],
                                         quad_points[qpoint][1]);
                                     SphericalHarmonics[projIndexI *
@@ -2706,6 +2749,27 @@ namespace dftfe
                                       Dij[projIndexI * numberOfProjectors +
                                           projIndexJ] *
                                       temp;
+                                    // pcout<<projIndexI<<" "<<projIndexJ<<"
+                                    // "<<DijYij[projIndexI * numberOfProjectors
+                                    // +
+                                    //        projIndexJ]<<"
+                                    //        "<<DijGradPhiYij[projIndexI *
+                                    //                 numberOfProjectors +
+                                    //               projIndexJ]<<"
+                                    //               "<<DijGradThetaYij[projIndexI
+                                    //               *
+                                    //                   numberOfProjectors +
+                                    //                 projIndexJ]<<"
+                                    //                 "<<GradPhiSphericalHarmonics
+                                    //   [projIndexI * numberOfProjectors +
+                                    //    projIndexJ]<<"
+                                    //    "<<GradThetaSphericalHarmonics
+                                    //   [projIndexI * numberOfProjectors +
+                                    //    projIndexJ]<<" "<<gradYj[0]<<"
+                                    //    "<<gradYj[1]<<"
+                                    //    "<<quad_points[qpoint][0]<<"
+                                    //    "<<quad_points[qpoint][1]<<"
+                                    //    "<<temp<<std::endl;
 
                                     projIndexJ++;
                                   } // mQuantumNumber_j
@@ -2790,6 +2854,11 @@ namespace dftfe
                                &Beta2,
                                &sigmaSmooth[0],
                                &inc);
+                        // pcout << "Sigma Values: " << std::endl;
+                        // for (int iPoint = 0; iPoint < numberofValues;
+                        // iPoint++)
+                        //   pcout << iPoint << " " << sigmaAllElectron[iPoint]
+                        //         << " " << sigmaSmooth[iPoint] << std::endl;
 
                         // pcout << "Finished Sigma Contribution part0" <<
                         // std::endl;
@@ -2882,6 +2951,11 @@ namespace dftfe
                            &Beta2,
                            &sigmaSmooth[0],
                            &inc);
+                    // pcout << "Sigma Values: " << std::endl;
+                    // for (int iPoint = 0; iPoint < numberofValues; iPoint++)
+                    //   pcout << iPoint << " " << sigmaAllElectron[iPoint] << "
+                    //   "
+                    //         << sigmaSmooth[iPoint] << std::endl;
                     // pcout << "Finished Sigma Contribution part1 B" <<
                     // std::endl;
                     // MPI_Barrier(d_mpiCommParent);
@@ -2973,6 +3047,11 @@ namespace dftfe
                            &Beta2,
                            &sigmaSmooth[0],
                            &inc);
+                    // pcout << "Sigma Values: " << std::endl;
+                    // for (int iPoint = 0; iPoint < numberofValues; iPoint++)
+                    //   pcout << iPoint << " " << sigmaAllElectron[iPoint] << "
+                    //   "
+                    //         << sigmaSmooth[iPoint] << std::endl;
                     // MPI_Barrier(d_mpiCommParent);
                     // timerGGABContribution += (MPI_Wtime() -
                     // TimerGGABStart);
@@ -3063,6 +3142,11 @@ namespace dftfe
                            &Beta2,
                            &sigmaSmooth[0],
                            &inc);
+                    // pcout << "Sigma Values: " << std::endl;
+                    // for (int iPoint = 0; iPoint < numberofValues; iPoint++)
+                    //   pcout << iPoint << " " << sigmaAllElectron[iPoint] << "
+                    //   "
+                    //         << sigmaSmooth[iPoint] << std::endl;
                     // MPI_Barrier(d_mpiCommParent);
                     // timerGGAContribution += MPI_Wtime() - TimerGGAStart;
                     // timerGGACContribution += MPI_Wtime() - TimerGGACStart;
@@ -3142,7 +3226,18 @@ namespace dftfe
                       rhoDataPS,
                       outputDerExchangeEnergyPS,
                       outputDerCorrEnergyPS);
-
+                    // for (int iPoint = 0; iPoint < numberofValues; iPoint++)
+                    //   pcout << iPoint << " " << atomDensitySmooth[iPoint] <<
+                    //   " "
+                    //         << atomDensityAllelectron[iPoint] << " "
+                    //         << sigmaSmooth[iPoint] << " "
+                    //         << sigmaAllElectron[iPoint] << " "
+                    //         << (exchangePotentialValAEfromSigma[iPoint] +
+                    //             corrPotentialValAEfromSigma[iPoint])
+                    //         << " "
+                    //         << (exchangePotentialValPSfromSigma[iPoint] +
+                    //             corrPotentialValPSfromSigma[iPoint])
+                    //         << std::endl;
 
                     for (int i = 0; i < numberOfProjectors; i++)
                       {
@@ -3169,7 +3264,7 @@ namespace dftfe
                                                      j];
                                 double Value = rab[rpoint] * (Val1 - Val2) *
                                                pow(RadialMesh[rpoint], 2);
-                                // pcout<<i<<" "<<Value<<std::endl;
+                                pcout << i << " " << Value << std::endl;
                                 return (std::fabs(RadialMesh[rpoint]) > 1E-8 ?
                                           Value :
                                           0.0);
@@ -3224,18 +3319,29 @@ namespace dftfe
                                    2 * tempPScontributionC[index] *
                                      GradPhiSphericalHarmonics
                                        [i * numberOfProjectors + j]);
-                                double Value = RadialMesh[rpoint] *
-                                               (Val1 - Val2) *
-                                               pow(rab[rpoint], 2);
-                                return (std::fabs(RadialMesh[rpoint]) > 1E-8 ?
-                                          Value :
-                                          0.0);
+                                double Value =
+                                  std::fabs(RadialMesh[rpoint]) > 1E-8 ?
+                                    rab[rpoint] * (Val1 - Val2) *
+                                      pow(RadialMesh[rpoint], 2) :
+                                    0.0;
+                                // pcout<<rpoint<<" "<<index<<"
+                                // "<<(exchangePotentialValPSfromSigma[rpoint] +
+                                // corrPotentialValPSfromSigma[rpoint])<<"
+                                // "<<(exchangePotentialValAEfromSigma[rpoint] +
+                                // corrPotentialValAEfromSigma[rpoint])<<"
+                                // "<<Value<<std::endl;
+                                return (Value);
                               };
 
                             double RadialIntegralGGA =
                               simpsonIntegral(0, RmaxIndex + 1, IntegralGGA);
                             Delta_ExcijSigma[i * numberOfProjectors + j] +=
                               RadialIntegralGGA * quadwt * 4.0 * M_PI;
+                            // pcout
+                            //   << "DeltaXCfrom Sigma: " << i << " " << j << "
+                            //   "
+                            //   << Delta_ExcijSigma[i * numberOfProjectors + j]
+                            //   << std::endl;
                           } // Proj J
                       }     // Proj I
 
@@ -3303,21 +3409,26 @@ namespace dftfe
                           2 * Delta_ExcijSigma[j * numberOfProjectors + i];
                         Delta_Excij[j * numberOfProjectors + i] = temp;
                         Delta_Excij[i * numberOfProjectors + j] = temp;
-                        // pcout
-                        //   << Delta_ExcijDensity[i * numberOfProjectors +
-                        //   j]
-                        //   << " "
-                        //   << 2 * Delta_ExcijSigma[i * numberOfProjectors
-                        //   + j]
-                        //   << " "
-                        //   << 2 * Delta_ExcijSigma[j * numberOfProjectors
-                        //   + i]
-                        //   << std::endl;
+                        pcout
+                          << Delta_ExcijDensity[i * numberOfProjectors + j]
+                          << " "
+                          << 2 * Delta_ExcijSigma[i * numberOfProjectors + j]
+                          << " "
+                          << 2 * Delta_ExcijSigma[j * numberOfProjectors + i]
+                          << std::endl;
                       } // else
                   }     // jProj
               }         // iProj
 
             d_ExchangeCorrelationEnergyCorrectionTerm[atomId] = Delta_Excij;
+            pcout << " Delta XC for iAtom: " << atomId << std::endl;
+            for (int iProj = 0; iProj < numberOfProjectors; iProj++)
+              {
+                for (int jProj = 0; jProj < numberOfProjectors; jProj++)
+                  pcout << Delta_Excij[iProj * numberOfProjectors + jProj]
+                        << " ";
+                pcout << std::endl;
+              }
 
 
           } // iAtom
@@ -3397,7 +3508,7 @@ namespace dftfe
                (d_dftfeScratchFolderName + "/z" + std::to_string(atomicNumber) +
                 "/" + "KineticEnergyij.dat")
                  .c_str());
-        std::cout << "DEBUG: Line 3233" << std::endl;
+        // std::cout << "DEBUG: Line 3233" << std::endl;
         std::vector<double> KineticEnergyij;
         dftUtils::readFile(KineticEnergyij, keFileName);
 
@@ -3443,11 +3554,12 @@ namespace dftfe
                           Tij[projIndex_i * numberOfProjectors + projIndex_j] =
                             KineticEnergyij[alpha_i * numberOfRadialProjectors +
                                             alpha_j];
-                        pcout
-                          << "DEBUG: " << alpha_i << " " << alpha_j << " "
-                          << projIndex_j << " " << projIndex_i << " "
-                          << Tij[projIndex_i * numberOfProjectors + projIndex_j]
-                          << std::endl;
+                        // pcout
+                        //   << "DEBUG: " << alpha_i << " " << alpha_j << " "
+                        //   << projIndex_j << " " << projIndex_i << " "
+                        //   << Tij[projIndex_i * numberOfProjectors +
+                        //   projIndex_j]
+                        //   << std::endl;
                         projIndex_j++;
                       } // mQuantumNo_j
                   }     // alpha_j
@@ -3464,7 +3576,7 @@ namespace dftfe
   void
   pawClass<ValueType, memorySpace>::computeRadialMultipoleData()
   {
-    pcout << "PAWClass Init: computing Multipole Table" << std::endl;
+    // pcout << "PAWClass Init: computing Multipole Table" << std::endl;
     const std::map<std::pair<unsigned int, unsigned int>,
                    std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       sphericalFunction =
@@ -3532,8 +3644,8 @@ namespace dftfe
                                      numberOfRadialProjectors +
                                    alpha_i * numberOfRadialProjectors +
                                    alpha_j] = Value;
-                    pcout << alpha_i << " " << alpha_j << " " << Value
-                          << std::endl;
+                    // pcout << alpha_i << " " << alpha_j << " " << Value
+                    //       << std::endl;
                   } // alpha_j
               }     // alpha_i
           }         // L
@@ -3774,6 +3886,10 @@ namespace dftfe
                             productOfPSpartialWfc[index] =
                               radialValPS_i * radialValPS_j;
                             projectorIndex_j++;
+                            pcout << index << " " << rPoint << " " << r << " "
+                                  << radialValAE_j << " " << radialValAE_i
+                                  << " " << productOfAEpartialWfc[index] << " "
+                                  << productOfPSpartialWfc[index] << std::endl;
                           } // mQuantumNo_j
                       }     // alpha_j
 
@@ -3835,7 +3951,7 @@ namespace dftfe
                  alpha++)
               {
                 std::shared_ptr<AtomCenteredSphericalFunctionBase> AEsphFn =
-                  d_atomicAEPartialWaveFnsMap.find(std::make_pair(Znum, alpha))
+                  d_atomicProjectorFnsMap.find(std::make_pair(Znum, alpha))
                     ->second;
                 int lQuantumNo = AEsphFn->getQuantumNumberl();
                 for (int mQuantumNo = -lQuantumNo; mQuantumNo <= lQuantumNo;
@@ -3848,6 +3964,7 @@ namespace dftfe
 
             for (int rpoint = 0; rpoint < radialMeshSize; rpoint++)
               {
+                double r = radialMesh[rpoint];
                 // CoreDensity Changes Pending
                 if (d_atomTypeCoreFlagMap[*it])
                   {
@@ -3900,6 +4017,15 @@ namespace dftfe
                           derWfcPS[alpha_j * radialMeshSize + rpoint];
                         productValDerAE[index] = DerAEij;
                         productValDerPS[index] = DerPSij;
+                        productValsAE[index] =
+                          r <= 1E-8 ? 0.0 : ValAEij / pow(r, 2);
+                        productValsPS[index] =
+                          r <= 1E-8 ? 0.0 : ValPSij / pow(r, 2);
+                        pcout << index << " " << r << " "
+                              << productValsAE[index] << " "
+                              << productValsPS[index] << " "
+                              << productValDerAE[index] << " "
+                              << productValDerPS[index] << std::endl;
                         for (int projectorIndex_k = 0;
                              projectorIndex_k < numberOfProjectors;
                              projectorIndex_k++)
@@ -4027,7 +4153,7 @@ namespace dftfe
         dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
                      projectorKetTimesVector;
         unsigned int previousSize = 0;
-        pcout << "DEBUG: Line 3863" << std::endl;
+        // pcout << "DEBUG: Line 3863" << std::endl;
         for (unsigned int kPoint = 0; kPoint < kPointWeights.size(); ++kPoint)
           {
             unsigned int numberOfRemainingElectrons = numberOfElectrons;
@@ -4039,7 +4165,7 @@ namespace dftfe
                 for (unsigned int jvec = 0; jvec < totalNumWaveFunctions;
                      jvec += BVec)
                   {
-                    pcout << "DEBUG: Line 3873" << std::endl;
+                    // pcout << "DEBUG: Line 3873" << std::endl;
                     const unsigned int currentBlockSize =
                       std::min(BVec, totalNumWaveFunctions - jvec);
                     flattenedArrayBlock =
@@ -4133,7 +4259,7 @@ namespace dftfe
                         d_nonLocalOperator
                           ->copyBackFromDistributedVectorToLocalDataStructure(
                             projectorKetTimesVector, partialOccupVec);
-                        pcout << "DEBUG: Line 3967" << std::endl;
+                        // pcout << "DEBUG: Line 3967" << std::endl;
                         computeDij(
                           false, jvec, currentBlockSize, spinIndex, kPoint);
                         // Call computeDij

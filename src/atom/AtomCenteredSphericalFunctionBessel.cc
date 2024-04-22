@@ -22,7 +22,8 @@ namespace dftfe
   AtomCenteredSphericalFunctionBessel::AtomCenteredSphericalFunctionBessel(
     double       RcParameter,
     double       RmaxParameter,
-    unsigned int lParameter)
+    unsigned int lParameter,
+    double       normalizationConstant)
   {
     d_lQuantumNumber = lParameter;
     d_Rc             = RcParameter;
@@ -39,29 +40,32 @@ namespace dftfe
                               7.7252518369375 / d_Rc,
                               9.095011330476355 / d_Rc};
 
-    auto f1 = [&](const double &x) {
-      if (std::fabs(x) <= 1E-12)
-        return (d_lQuantumNumber == 0 ? 1.0 : 0.0);
-      else if (x > std::min(d_Rc, d_cutOff))
-        return 0.0;
-      else
-        {
-          double alpha =
-            -q1[d_lQuantumNumber] / q2[d_lQuantumNumber] *
-            (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * d_Rc)) /
-            (std::sph_bessel(d_lQuantumNumber, q2[d_lQuantumNumber] * d_Rc));
-          double Value =
-            x > d_Rc ?
-              0.0 :
-              (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * x) +
-               alpha *
-                 (std::sph_bessel(d_lQuantumNumber, q2[d_lQuantumNumber] * x)));
-          return Value;
-        }
-    };
-    d_NormalizationConstant =
-      gauss_kronrod<double, 61>::integrate(f1, 0.0, d_cutOff, 15, 1e-12);
-    d_rMinVal = getRadialValue(0.0);
+    // auto f1 = [&](const double &x) {
+    //   if (std::fabs(x) <= 1E-12)
+    //     return (d_lQuantumNumber == 0 ? 1.0 : 0.0);
+    //   else if (x > std::min(d_Rc, d_cutOff))
+    //     return 0.0;
+    //   else
+    //     {
+    //       double alpha =
+    //         -q1[d_lQuantumNumber] / q2[d_lQuantumNumber] *
+    //         (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * d_Rc))
+    //         / (std::sph_bessel(d_lQuantumNumber, q2[d_lQuantumNumber] *
+    //         d_Rc));
+    //       double Value =
+    //         x > d_Rc ?
+    //           0.0 :
+    //           (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * x) +
+    //            alpha *
+    //              (std::sph_bessel(d_lQuantumNumber, q2[d_lQuantumNumber] *
+    //              x)));
+    //       return Value;
+    //     }
+    // };
+    // d_NormalizationConstant =
+    //   gauss_kronrod<double, 61>::integrate(f1, 0.0, d_cutOff, 15, 1e-12);
+    d_NormalizationConstant = normalizationConstant;
+    d_rMinVal               = getRadialValue(0.0);
   }
 
   double

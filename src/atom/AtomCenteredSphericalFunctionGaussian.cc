@@ -22,23 +22,25 @@ namespace dftfe
   AtomCenteredSphericalFunctionGaussian::AtomCenteredSphericalFunctionGaussian(
     double       RcParameter,
     double       RmaxParameter,
-    unsigned int lParameter)
+    unsigned int lParameter,
+    double       normalizationConstant)
   {
     d_lQuantumNumber = lParameter;
     d_Rc             = RcParameter;
     d_cutOff         = RmaxParameter;
-    using namespace boost::math::quadrature;
-    auto f1 = [&](const double &x) {
-      double Value = 0.0;
-      Value = pow(x, 2 * d_lQuantumNumber + 2) * std::exp(-pow((x / d_Rc), 2));
-      if (x >= d_cutOff)
-        return 0.0;
-      else
-        return Value;
-    };
-    d_NormalizationConstant =
-      gauss_kronrod<double, 61>::integrate(f1, 0.0, d_cutOff, 15, 1e-12);
-    d_rMinVal = getRadialValue(0.0);
+    // using namespace boost::math::quadrature;
+    // auto f1 = [&](const double &x) {
+    //   double Value = 0.0;
+    //   Value = pow(x, 2 * d_lQuantumNumber + 2) * std::exp(-pow((x / d_Rc),
+    //   2)); if (x >= d_cutOff)
+    //     return 0.0;
+    //   else
+    //     return Value;
+    // };
+    // d_NormalizationConstant =
+    //   gauss_kronrod<double, 61>::integrate(f1, 0.0, d_cutOff, 15, 1e-12);
+    d_NormalizationConstant = normalizationConstant;
+    d_rMinVal               = getRadialValue(0.0);
   }
 
   double

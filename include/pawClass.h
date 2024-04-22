@@ -261,6 +261,12 @@ namespace dftfe
       const unsigned int               dofHandlerId);
 
     void
+    evaluateNonLocalHamiltonianElectrostaticsValue(
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                phiTotQuadValues,
+      const unsigned int dofHandlerId);
+
+    void
     initialiseExchangeCorrelationEnergyCorrection(unsigned int s);
 
     void
