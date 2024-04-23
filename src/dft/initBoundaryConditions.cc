@@ -410,7 +410,8 @@ namespace dftfe
           std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues);
 
         d_basisOperationsPtrDevice->createScratchMultiVectors(1, 4);
-        d_basisOperationsPtrDevice->createScratchMultiVectors(BVec, 2);
+        d_basisOperationsPtrDevice->createScratchMultiVectors(
+          BVec, d_dftParamsPtr->overlapComputeCommunCheby ? 4 : 2);
       }
 #endif
 
