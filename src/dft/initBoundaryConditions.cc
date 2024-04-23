@@ -331,8 +331,12 @@ namespace dftfe
             d_basisOperationsPtrHost->computeCellStiffnessMatrix(
               d_feOrderPlusOneQuadratureId, 1, true, false);
             d_basisOperationsPtrHost->computeCellMassMatrix(
-              d_feOrderPlusOneQuadratureId, 1, true, true);
-            d_basisOperationsPtrHost->computeInverseSqrtMassVector(true, true);
+              d_feOrderPlusOneQuadratureId,
+              1,
+              true,
+              !d_dftParamsPtr->diagonalMassMatrix);
+            d_basisOperationsPtrHost->computeInverseSqrtMassVector(
+              true, !d_dftParamsPtr->diagonalMassMatrix);
           }
       }
     if (!d_dftParamsPtr->useDevice && recomputeBasisData)
@@ -392,11 +396,15 @@ namespace dftfe
               BVec, d_dftParamsPtr->overlapComputeCommunCheby ? 4 : 2);
             d_basisOperationsPtrDevice->computeCellStiffnessMatrix(
               d_feOrderPlusOneQuadratureId, 50, true, false);
-            if (std::is_same<dataTypes::number, std::complex<double>>::value)
+            if (std::is_same<dataTypes::number, std::complex<double>>::value ||
+                !d_dftParamsPtr->diagonalMassMatrix)
               d_basisOperationsPtrDevice->computeCellMassMatrix(
-                d_feOrderPlusOneQuadratureId, 50, true, true);
-            d_basisOperationsPtrDevice->computeInverseSqrtMassVector(true,
-                                                                     true);
+                d_feOrderPlusOneQuadratureId,
+                50,
+                true,
+                !d_dftParamsPtr->diagonalMassMatrix);
+            d_basisOperationsPtrDevice->computeInverseSqrtMassVector(
+              true, !d_dftParamsPtr->diagonalMassMatrix);
             unsigned int BVec2 =
               std::min(d_dftParamsPtr->wfcBlockSize, d_numEigenValues);
             if (BVec != BVec2)

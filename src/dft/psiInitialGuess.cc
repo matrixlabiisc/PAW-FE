@@ -53,24 +53,24 @@ namespace dftfe
     //
     char psiFile[256];
 
-    if (d_dftParamsPtr->isPseudopotential)
-      { // if(d_dftParamsPtr->pseudoProjector==2)
-        // sprintf(psiFile,
-        // "%s/data/electronicStructure/pseudoPotential/z%u/oncv/singleAtomData/psi%u%u.inp",
-        // DFTFE_PATH, Z, n, l); else
-        // sprintf(
-        //   psiFile,
-        //   "%s/data/electronicStructure/pseudoPotential/z%u/singleAtomData/psi%u%u.inp",
-        //   DFTFE_PATH,
-        //   Z,
-        //   n,
-        //   l);
-        strcpy(psiFile,
-               (d_dftfeScratchFolderName + "/z" + std::to_string(Z) + "/" +
-                "psi" + std::to_string(n) + std::to_string(l) + ".inp")
-                 .c_str());
-      }
-
+    if (d_dftParamsPtr->isPseudopotential && d_dftParamsPtr->pseudoTestsFlag)
+      // if(d_dftParamsPtr->pseudoProjector==2)
+      // sprintf(psiFile,
+      // "%s/data/electronicStructure/pseudoPotential/z%u/oncv/singleAtomData/psi%u%u.inp",
+      // DFTFE_PATH, Z, n, l); else
+      sprintf(
+        psiFile,
+        "%s/data/electronicStructure/pseudoPotential/z%u/singleAtomData/psi%u%u.inp",
+        DFTFE_PATH,
+        Z,
+        n,
+        l);
+    else if (d_dftParamsPtr->isPseudopotential &&
+             !d_dftParamsPtr->pseudoTestsFlag)
+      strcpy(psiFile,
+             (d_dftfeScratchFolderName + "/z" + std::to_string(Z) + "/" +
+              "psi" + std::to_string(n) + std::to_string(l) + ".inp")
+               .c_str());
     else
       sprintf(
         psiFile,
