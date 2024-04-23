@@ -817,6 +817,7 @@ namespace dftfe
 
         D_ij[typeOfField][atomId] = Dij;
       }
+    pcout << "DEBUG: Line 820 called " << std::endl;
     d_HamiltonianCouplingMatrixEntriesUpdated = false;
   }
 

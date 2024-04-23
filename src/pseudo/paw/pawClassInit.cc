@@ -723,6 +723,7 @@ namespace dftfe
             pcout << "----------------------------" << std::endl;
 
           } //*it
+        d_overlapCouplingMatrixEntriesUpdated = false;
       }
     else if (couplingtype == CouplingType::inversePawOverlapEntries)
       {
@@ -911,6 +912,7 @@ namespace dftfe
             pcout << "----------------------------" << std::endl;
 
           } // atomId
+        d_inverseCouplingMatrixEntriesUpdated = false;
       }
     else if (couplingtype == CouplingType::HamiltonianEntries)
       {
@@ -1032,11 +1034,14 @@ namespace dftfe
               } // alpha_i
 
             for (int iProj = 0; iProj < npjsq; iProj++)
-            {  LocalContribution[iProj] = KEContribution[iProj] +
-                                         C_ijcontribution[iProj] -
-                                         zeroPotentialAtom[iProj];
-              //pcout<<iProj<<" "<<KEContribution[iProj]<<" "<<C_ijcontribution[iProj]<<" "<<zeroPotentialAtom[iProj]<<" "<<LocalContribution[iProj]<<std::endl;
-            }
+              {
+                LocalContribution[iProj] = KEContribution[iProj] +
+                                           C_ijcontribution[iProj] -
+                                           zeroPotentialAtom[iProj];
+                // pcout<<iProj<<" "<<KEContribution[iProj]<<"
+                // "<<C_ijcontribution[iProj]<<" "<<zeroPotentialAtom[iProj]<<"
+                // "<<LocalContribution[iProj]<<std::endl;
+              }
 
             for (int i = 0; i < atomLists.size(); i++)
               {
@@ -1086,7 +1091,6 @@ namespace dftfe
                             //   deltaColoumbicEnergyDijVector[i * npjsq +
                             //                                 iProj] +=
                             //     CijklContribution[iProj];
-                            
                           }
 
                       } // Accessing locally owned atom in the current AtomList
@@ -1144,24 +1148,27 @@ namespace dftfe
                 d_atomicNonLocalPseudoPotentialConstants
                   [CouplingType::HamiltonianEntries][atomLists[i]] = ValueAtom;
                 pcout << "NonLocal Hamiltonian Matrix for iAtom: "
-                      << atomLists[i] << " " << d_atomicNonLocalPseudoPotentialConstants
-                  [CouplingType::HamiltonianEntries][atomLists[i]].size() << std::endl;
-                            pcout<<"Non Local Ham: "<<std::endl;
-            for(int iProj = 0; iProj < npjsq; iProj++)
-              pcout<<ValueAtom[iProj]<<std::endl;      
+                      << atomLists[i] << " "
+                      << d_atomicNonLocalPseudoPotentialConstants
+                           [CouplingType::HamiltonianEntries][atomLists[i]]
+                             .size()
+                      << std::endl;
+                pcout << "Non Local Ham: " << std::endl;
                 for (int iProj = 0; iProj < numberOfProjectorFns; iProj++)
                   {
                     for (int jProj = 0; jProj < numberOfProjectorFns; jProj++)
-                      pcout << d_atomicNonLocalPseudoPotentialConstants
-                                 [CouplingType::HamiltonianEntries]
-                                 [atomLists[i]][iProj * numberOfProjectorFns + jProj]
-                            << " ";
+                      pcout
+                        << d_atomicNonLocalPseudoPotentialConstants
+                             [CouplingType::HamiltonianEntries][atomLists[i]]
+                             [iProj * numberOfProjectorFns + jProj]
+                        << " ";
                     pcout << std::endl;
                   }
                 pcout << "----------------------------" << std::endl;
               } // i in atomList
 
           } // *it
+        d_HamiltonianCouplingMatrixEntriesUpdated = false;
       }
   }
 
@@ -3384,9 +3391,9 @@ namespace dftfe
         // std::cout << "DEBUG: Line 3233" << std::endl;
         std::vector<double> KineticEnergyij;
         dftUtils::readFile(KineticEnergyij, keFileName);
-       pcout<<"KEij entries: "<<std::endl;
-       for(int i = 0; i <KineticEnergyij.size(); i++ )
-        pcout<<KineticEnergyij[i]<<std::endl; 
+        pcout << "KEij entries: " << std::endl;
+        for (int i = 0; i < KineticEnergyij.size(); i++)
+          pcout << KineticEnergyij[i] << std::endl;
         const unsigned int numberOfProjectors =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(atomicNumber);
@@ -3403,27 +3410,28 @@ namespace dftfe
         for (unsigned int alpha_i = 0; alpha_i < numberOfRadialProjectors;
              alpha_i++)
           {
-            pcout<<"Alpha_i: "<<alpha_i<<std::endl;
+            pcout << "Alpha_i: " << alpha_i << std::endl;
             std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_i =
               sphericalFunction.find(std::make_pair(atomicNumber, alpha_i))
                 ->second;
-             int lQuantumNo_i = sphFn_i->getQuantumNumberl();
+            int lQuantumNo_i = sphFn_i->getQuantumNumberl();
             for (int mQuantumNo_i = -lQuantumNo_i; mQuantumNo_i <= lQuantumNo_i;
                  mQuantumNo_i++)
               {
-                pcout<<"DEBUG: "<<alpha_i<<" "<<lQuantumNo_i<<" "<<mQuantumNo_i<<std::endl;
+                pcout << "DEBUG: " << alpha_i << " " << lQuantumNo_i << " "
+                      << mQuantumNo_i << std::endl;
                 unsigned int projIndex_j = 0;
                 for (unsigned int alpha_j = 0;
                      alpha_j < numberOfRadialProjectors;
                      alpha_j++)
                   {
-                    
                     std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_j =
                       sphericalFunction
                         .find(std::make_pair(atomicNumber, alpha_j))
                         ->second;
-                   int lQuantumNo_j = sphFn_j->getQuantumNumberl();
-                    pcout<<"Alpha_j: "<<alpha_j<<" "<<lQuantumNo_j<<std::endl;
+                    int lQuantumNo_j = sphFn_j->getQuantumNumberl();
+                    pcout << "Alpha_j: " << alpha_j << " " << lQuantumNo_j
+                          << std::endl;
                     for (int mQuantumNo_j = -lQuantumNo_j;
                          mQuantumNo_j <= lQuantumNo_j;
                          mQuantumNo_j++)
@@ -3433,13 +3441,13 @@ namespace dftfe
                           Tij[projIndex_i * numberOfProjectors + projIndex_j] =
                             KineticEnergyij[alpha_i * numberOfRadialProjectors +
                                             alpha_j];
-                        pcout << alpha_i << " " << alpha_j << " " << projIndex_i
-                              << " " << projIndex_j << " " << (lQuantumNo_i ==
-                          lQuantumNo_j) << " " << (mQuantumNo_i ==
-                          mQuantumNo_j) << " "
-                                       << Tij[projIndex_i * numberOfProjectors +
-                                              projIndex_j]
-                                       << std::endl;
+                        pcout
+                          << alpha_i << " " << alpha_j << " " << projIndex_i
+                          << " " << projIndex_j << " "
+                          << (lQuantumNo_i == lQuantumNo_j) << " "
+                          << (mQuantumNo_i == mQuantumNo_j) << " "
+                          << Tij[projIndex_i * numberOfProjectors + projIndex_j]
+                          << std::endl;
                         projIndex_j++;
                       } // mQuantumNo_j
                   }     // alpha_j

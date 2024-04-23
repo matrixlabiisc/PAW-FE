@@ -58,8 +58,85 @@ namespace dftfe
             dftfe::utils::MemorySpace memorySpace>
   dataTypes::number
   dftClass<FEOrder, FEOrderElectro, memorySpace>::computeTraceXtHX(
-    unsigned int numberWaveFunctionsEstimate)
+    unsigned int numberWaveFunctions)
   {
+    if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+      {
+        std::vector<dataTypes::number> ProjHam, ProjS, projPawHam, ProjI;
+
+        // linearAlgebraOperations::XtHX(, ProjHam);
+        // linearAlgebraOperations::XtOX(, ProjS);
+        // linearAlgebraOperations::XtpawHX(, ProjPawHam);
+        unsigned int kPointIndex = 0;
+        unsigned int spinType    = 0;
+        linearAlgebraOperations::XtpawHX(
+          *d_kohnShamDFTOperatorPtr,
+          d_eigenVectorsFlattenedHost.data() +
+            ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
+              d_numEigenValues *
+              matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          d_numEigenValues,
+          matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          mpi_communicator,
+          interBandGroupComm,
+          *d_dftParamsPtr,
+          projPawHam);
+        linearAlgebraOperations::XtOX(
+          *d_kohnShamDFTOperatorPtr,
+          d_eigenVectorsFlattenedHost.data() +
+            ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
+              d_numEigenValues *
+              matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          d_numEigenValues,
+          matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          mpi_communicator,
+          interBandGroupComm,
+          *d_dftParamsPtr,
+          ProjS);
+        linearAlgebraOperations::XtHX(
+          *d_kohnShamDFTOperatorPtr,
+          d_eigenVectorsFlattenedHost.data() +
+            ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
+              d_numEigenValues *
+              matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          d_numEigenValues,
+          matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          mpi_communicator,
+          interBandGroupComm,
+          *d_dftParamsPtr,
+          ProjHam);
+        linearAlgebraOperations::XtIX(
+          *d_kohnShamDFTOperatorPtr,
+          d_eigenVectorsFlattenedHost.data() +
+            ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
+              d_numEigenValues *
+              matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          d_numEigenValues,
+          matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          mpi_communicator,
+          interBandGroupComm,
+          *d_dftParamsPtr,
+          ProjI);
+        // d_BLASWrapperHostPtr->xnrm2();
+        pcout << "XtIX: ";
+        for (int i = 0; i < d_numEigenValues; i++)
+          pcout << ProjI[i * d_numEigenValues + i] << " ";
+        pcout << std::endl;
+        pcout << "XtHX: ";
+        for (int i = 0; i < d_numEigenValues; i++)
+          pcout << ProjHam[i * d_numEigenValues + i] << " ";
+        pcout << std::endl;
+        pcout << "XtSX: ";
+        for (int i = 0; i < d_numEigenValues; i++)
+          pcout << ProjS[i * d_numEigenValues + i] << " ";
+        pcout << std::endl;
+        pcout << "XtpawHX: ";
+        for (int i = 0; i < d_numEigenValues; i++)
+          pcout << projPawHam[i * d_numEigenValues + i] << " ";
+        pcout << std::endl;
+      }
+    else
+      {}
     // //
     // // set up poisson solver
     // //

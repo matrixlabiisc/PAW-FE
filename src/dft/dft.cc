@@ -752,7 +752,7 @@ namespace dftfe
           << d_dftParamsPtr->pseudoPotentialFile << std::endl;
       }
 
-       int              nlccFlag = 0;
+    int              nlccFlag = 0;
     int              pawFlag  = 0;
     std::vector<int> pspFlags(2, 0);
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0 &&
@@ -832,12 +832,10 @@ namespace dftfe
 
 
 
-
-    if (d_dftParamsPtr->isPseudopotential == true && d_dftParamsPtr->pawPseudoPotential == false)
+    if (d_dftParamsPtr->isPseudopotential == true &&
+        d_dftParamsPtr->pawPseudoPotential == false)
       {
-        // pcout<<"dft.cc 827 ONCV Number of cells DEBUG:
-        // "<<basisOperationsPtrHost->nCells()<<std::endl;
-        pcout<<"Creating ONCV class pointer: "<<std::endl;
+        pcout << "Creating ONCV class pointer: " << std::endl;
         d_oncvClassPtr =
           std::make_shared<dftfe::oncvClass<dataTypes::number, memorySpace>>(
             mpi_communicator, // domain decomposition communicator
@@ -853,7 +851,7 @@ namespace dftfe
     else if (d_dftParamsPtr->isPseudopotential == true &&
              d_dftParamsPtr->pawPseudoPotential == true)
       {
-        pcout<<"Creating PAW class pointer: "<<std::endl;
+        pcout << "Creating PAW class pointer: " << std::endl;
         d_pawClassPtr =
           std::make_shared<dftfe::pawClass<dataTypes::number, memorySpace>>(
             mpi_communicator, // domain decomposition communicator
@@ -1435,10 +1433,8 @@ namespace dftfe
       {
         readPSI();
         initRho();
-        pcout << "DEBUG: Line 1420" << std::endl;
         if (d_dftParamsPtr->pawPseudoPotential)
           {
-            pcout << "DEBUG: Line 1423" << std::endl;
             d_pawClassPtr->computeDijFromPSIinitialGuess(
               &d_eigenVectorsFlattenedHost,
               numElectrons,
@@ -3032,7 +3028,6 @@ namespace dftfe
                 if (d_dftParamsPtr->isPseudopotential &&
                     d_dftParamsPtr->pawPseudoPotential)
                   {
-                    pcout << "DEBUG: Line 2969" << std::endl;
                     computing_timer.enter_subsection(
                       "Computing Non-Local Hamiltonian Entries");
                     computing_timer.enter_subsection(
@@ -3082,6 +3077,7 @@ namespace dftfe
                             pcout << "Beginning Chebyshev filter pass " << j + 1
                                   << " for spin " << s + 1 << std::endl;
                           }
+                        computeTraceXtHX(d_numEigenValues);
 
 #ifdef DFTFE_WITH_DEVICE
                         if constexpr (dftfe::utils::MemorySpace::DEVICE ==
@@ -3263,6 +3259,7 @@ namespace dftfe
                                 computing_timer.leave_subsection(
                                   "Hamiltonian Matrix Computation");
                               }
+                            computeTraceXtHX(d_numEigenValues);
 
 #ifdef DFTFE_WITH_DEVICE
                             if constexpr (dftfe::utils::MemorySpace::DEVICE ==
@@ -3375,7 +3372,6 @@ namespace dftfe
             if (d_dftParamsPtr->isPseudopotential &&
                 d_dftParamsPtr->pawPseudoPotential)
               {
-                pcout << "DEBUG: Line 3301" << std::endl;
                 computing_timer.enter_subsection(
                   "Computing Non-Local Hamiltonian Entries");
                 computing_timer.enter_subsection(
@@ -3418,7 +3414,7 @@ namespace dftfe
                         pcout << "Beginning Chebyshev filter pass " << j + 1
                               << std::endl;
                       }
-
+                    computeTraceXtHX(d_numEigenValues);
 
 #ifdef DFTFE_WITH_DEVICE
                     if constexpr (dftfe::utils::MemorySpace::DEVICE ==
@@ -3533,7 +3529,7 @@ namespace dftfe
                               "Hamiltonian Matrix Computation");
                           }
 
-
+                        computeTraceXtHX(d_numEigenValues);
 #ifdef DFTFE_WITH_DEVICE
                         if constexpr (dftfe::utils::MemorySpace::DEVICE ==
                                       memorySpace)
@@ -4828,7 +4824,8 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   const std::vector<std::vector<double>> &
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::getImageAtomLocationsCart() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getImageAtomLocationsCart()
+    const
   {
     return d_imagePositionsTrunc;
   }

@@ -897,6 +897,26 @@ namespace dftfe
          const dftParameters &                              dftParams,
          std::vector<dataTypes::number> &                   ProjOverlap);
 
+    void
+    XtpawHX(operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+            const dataTypes::number *                          X,
+            const unsigned int              numberWaveFunctions,
+            const unsigned int              numberDofs,
+            const MPI_Comm &                mpiCommDomain,
+            const MPI_Comm &                interBandGroupComm,
+            const dftParameters &           dftParams,
+            std::vector<dataTypes::number> &ProjpawHam);
+
+    void
+    XtIX(operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+         const dataTypes::number *                          X,
+         const unsigned int                                 numberWaveFunctions,
+         const unsigned int                                 numberDofs,
+         const MPI_Comm &                                   mpiCommDomain,
+         const MPI_Comm &                                   interBandGroupComm,
+         const dftParameters &                              dftParams,
+         std::vector<dataTypes::number> &                   ProjI);
+
     /**
      * @brief Compute projection of the operator into a subspace spanned by a given orthogonal basis HProjConj=X^{T}*HConj*XConj
      *

@@ -481,8 +481,6 @@ namespace dftfe
           {
             if (!d_HamiltonianCouplingMatrixEntriesUpdated)
               {
-                computeNonlocalPseudoPotentialConstants(
-                  CouplingType::HamiltonianEntries);
                 std::vector<ValueType> Entries;
                 dftfe::utils::MemoryStorage<ValueType,
                                             dftfe::utils::MemorySpace::HOST>
@@ -511,6 +509,7 @@ namespace dftfe
                 couplingEntriesHost.copyFrom(Entries);
                 d_couplingMatrixEntries[CouplingType::HamiltonianEntries] =
                   couplingEntriesHost;
+                pcout << "DEBUG: Line 514" << std::endl;
                 d_HamiltonianCouplingMatrixEntriesUpdated = true;
               }
           }

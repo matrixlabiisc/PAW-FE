@@ -1774,6 +1774,71 @@ namespace dftfe
                   }
               }
           }
+        else if (couplingtype == CouplingStructure::dense)
+          {
+            unsigned int       startIndex = 0;
+            const unsigned int inc        = 1;
+            const ValueType    alpha      = 1;
+            const ValueType    beta       = 0;
+            for (int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
+              {
+                const unsigned int atomId = atomIdsInProc[iAtom];
+                d_sphericalFnTimesWavefunMatrix[atomId].clear();
+
+                const unsigned int Znum = atomicNumber[atomId];
+                const unsigned int numberSphericalFunctions =
+                  d_atomCenteredSphericalFunctionContainer
+                    ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+                d_sphericalFnTimesWavefunMatrix[atomId].resize(
+                  numberSphericalFunctions * d_numberWaveFunctions, 0.0);
+                std::vector<ValueType> nonlocalConstantVmatrix(
+                  numberSphericalFunctions * numberSphericalFunctions, 0.0);
+                d_BLASWrapperPtr->xcopy(numberSphericalFunctions *
+                                          numberSphericalFunctions,
+                                        &couplingMatrix[startIndex],
+                                        1,
+                                        &nonlocalConstantVmatrix[0],
+                                        1);
+                std::vector<ValueType> inputMatrix(numberSphericalFunctions *
+                                                     d_numberWaveFunctions,
+                                                   0.0);
+
+                for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
+                     alpha++)
+                  {
+                    const unsigned int localId =
+                      sphericalFunctionKetTimesVectorParFlattened
+                        .getMPIPatternP2P()
+                        ->globalToLocal(
+                          d_sphericalFunctionIdsNumberingMapCurrentProcess
+                            .find(std::make_pair(atomId, alpha))
+                            ->second);
+                    d_BLASWrapperPtr->xcopy(
+                      d_numberWaveFunctions,
+                      sphericalFunctionKetTimesVectorParFlattened.begin() +
+                        localId * d_numberWaveFunctions,
+                      1,
+                      &inputMatrix[alpha * d_numberWaveFunctions],
+                      1);
+                  }
+                d_BLASWrapperPtr->xgemm(
+                  'N',
+                  'N',
+                  d_numberWaveFunctions,
+                  numberSphericalFunctions,
+                  numberSphericalFunctions,
+                  &alpha,
+                  &inputMatrix[0],
+                  d_numberWaveFunctions,
+                  &nonlocalConstantVmatrix[0],
+                  numberSphericalFunctions,
+                  &beta,
+                  &d_sphericalFnTimesWavefunMatrix[atomId][0],
+                  d_numberWaveFunctions);
+                startIndex +=
+                  numberSphericalFunctions * numberSphericalFunctions;
+              }
+          }
       }
 #if defined(DFTFE_WITH_DEVICE)
     else

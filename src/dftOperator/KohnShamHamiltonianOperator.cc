@@ -1083,6 +1083,7 @@ namespace dftfe
              d_dftParamsPtr->isPseudopotential)
       {
         // Approximate Entires option doe not exist for SX computation in PAW
+        pcout << "PAW call for SX: " << std::endl;
         src.updateGhostValues();
         d_basisOperationsPtr->distribute(src);
         const dataTypes::number scalarCoeffAlpha = scalarOX,
@@ -1335,6 +1336,7 @@ namespace dftfe
     else if (d_dftParamsPtr->isPseudopotential &&
              d_dftParamsPtr->pawPseudoPotential)
       {
+        // HX(src, 1.0, 0.0, 0.0, dst);
         HX(src, 1.0, 0.0, 0.0, d_tempBlockVectorPawSinvHX);
         d_cellWaveFunctionMatrixDst.setValue(0);
         d_BLASWrapperPtr->axpby(src.locallyOwnedSize() * src.numVectors(),
@@ -1415,7 +1417,8 @@ namespace dftfe
 
         // Finish adding to d_tempBlockVectorPawSinvHX
 
-        // Call ZeroOut host and and constraints on d_tempBlockVectorPawSinvHX
+        // Call ZeroOut host and and constraints on
+        // d_tempBlockVectorPawSinvHX
         d_basisOperationsPtr
           ->d_constraintInfo[d_basisOperationsPtr->d_dofHandlerID]
           .distribute_slave_to_master(d_tempBlockVectorPawSinvHX);
