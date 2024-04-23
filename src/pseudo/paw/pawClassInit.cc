@@ -1035,16 +1035,8 @@ namespace dftfe
             {  LocalContribution[iProj] = KEContribution[iProj] +
                                          C_ijcontribution[iProj] -
                                          zeroPotentialAtom[iProj];
-              pcout<<iProj<<" "<<KEContribution[iProj]<<" "<<C_ijcontribution[iProj]<<" "<<zeroPotentialAtom[iProj]<<" "<<LocalContribution[iProj]<<std::endl;
+              //pcout<<iProj<<" "<<KEContribution[iProj]<<" "<<C_ijcontribution[iProj]<<" "<<zeroPotentialAtom[iProj]<<" "<<LocalContribution[iProj]<<std::endl;
             }
-            pcout << "Hij Local contribution: " << std::endl;
-            for (int i = 0; i < numberOfProjectorFns; i++)
-              {
-                for (int j = 0; j < numberOfProjectorFns; j++)
-                  pcout << LocalContribution[i * numberOfProjectorFns + j]
-                        << " ";
-                pcout << std::endl;
-              }
 
             for (int i = 0; i < atomLists.size(); i++)
               {
