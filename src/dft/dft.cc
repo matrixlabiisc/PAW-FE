@@ -830,20 +830,14 @@ namespace dftfe
                                           d_numEigenValuesRR);
       }
 
-    // convert pseudopotential files in upf format to dftfe format
-    if (d_dftParamsPtr->verbosity >= 1)
-      {
-        pcout
-          << std::endl
-          << "Reading Pseudo-potential data for each atom from the list given in : "
-          << d_dftParamsPtr->pseudoPotentialFile << std::endl;
-      }
 
 
-    if (d_dftParamsPtr->isPseudopotential == true)
+
+    if (d_dftParamsPtr->isPseudopotential == true && d_dftParamsPtr->pawPseudoPotential == false)
       {
         // pcout<<"dft.cc 827 ONCV Number of cells DEBUG:
         // "<<basisOperationsPtrHost->nCells()<<std::endl;
+        pcout<<"Creating ONCV class pointer: "<<std::endl;
         d_oncvClassPtr =
           std::make_shared<dftfe::oncvClass<dataTypes::number, memorySpace>>(
             mpi_communicator, // domain decomposition communicator
@@ -859,6 +853,7 @@ namespace dftfe
     else if (d_dftParamsPtr->isPseudopotential == true &&
              d_dftParamsPtr->pawPseudoPotential == true)
       {
+        pcout<<"Creating PAW class pointer: "<<std::endl;
         d_pawClassPtr =
           std::make_shared<dftfe::pawClass<dataTypes::number, memorySpace>>(
             mpi_communicator, // domain decomposition communicator
