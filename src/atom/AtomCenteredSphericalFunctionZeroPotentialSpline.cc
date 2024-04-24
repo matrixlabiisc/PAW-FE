@@ -28,10 +28,12 @@ namespace dftfe
     std::vector<std::vector<double>> radialFunctionData(0);
     unsigned int                     fileReadFlag =
       dftUtils::readPsiFile(2, radialFunctionData, filename);
-    d_DataPresent = fileReadFlag;
-    d_cutOff      = 0.0;
-    d_rMin        = 0.0;
-    if (fileReadFlag)
+    d_DataPresent = fileReadFlag == 1 ? true : false;
+    if (!d_DataPresent)
+      std::cout << "Warning file not present: " << filename << std::endl;
+    d_cutOff = 0.0;
+    d_rMin   = 0.0;
+    if (fileReadFlag == 1)
       {
         unsigned int        numRows = radialFunctionData.size() - 1;
         std::vector<double> xData(numRows), yData(numRows);
@@ -42,7 +44,7 @@ namespace dftfe
             xData[irow] = radialFunctionData[irow][0];
             yData[irow] = radialFunctionData[irow][1];
 
-            if ((yData[irow]) > truncationTol)
+            if (std::fabs(yData[irow]) > truncationTol)
               maxRowId = irow;
           }
 
@@ -64,7 +66,8 @@ namespace dftfe
                            0.0,
                            d_radialSplineObject);
         d_cutOff = xData[maxRowId];
-        d_rMin   = xData[0];
+        std::cout << "Cutoff Radius: " << d_cutOff << std::endl;
+        d_rMin = xData[0];
       }
   }
 

@@ -70,7 +70,6 @@ namespace dftfe
                                   quadrature_formula,
                                   dealii::update_quadrature_points);
     const unsigned int  n_q_points = quadrature_formula.size();
-
     //
     // get number of global charges
     //
@@ -123,7 +122,7 @@ namespace dftfe
                     dealii::Point<3> quadPoint = fe_values.quadrature_point(q);
                     dealii::Tensor<1, 3, double> diff = quadPoint - atom;
                     double distanceToAtom = quadPoint.distance(atom);
-                    double value;
+                    double value          = 0.0;
                     if (distanceToAtom <=
                         outerMostPointZeroPotential[atomLocations[iAtom][0]])
                       {
@@ -176,8 +175,7 @@ namespace dftfe
 
 
 
-                    double value, radialDensityFirstDerivative,
-                      radialDensitySecondDerivative;
+                    double value = 0.0;
                     if (distanceToAtom <=
                         outerMostPointZeroPotential[atomLocations[masterAtomId]
                                                                  [0]])

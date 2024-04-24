@@ -1366,7 +1366,7 @@ namespace dftfe
                  .c_str());
         for (unsigned int i = 0; i < d_nOMPThreads; i++)
           d_atomicZeroPotVector[i][*it] =
-            std::make_shared<AtomCenteredSphericalFunctionCoreDensitySpline>(
+            std::make_shared<AtomCenteredSphericalFunctionZeroPotentialSpline>(
               LocalDataFile, 1E-12, true);
         std::vector<std::vector<double>> zeroPotentialData(0);
         dftUtils::readFile(2, zeroPotentialData, LocalDataFile);
@@ -1453,6 +1453,7 @@ namespace dftfe
     unsigned int threadId = omp_get_thread_num();
     double Value = d_atomicZeroPotVector[threadId][Znum]->getRadialValue(rad);
     Value /= sqrt(4 * M_PI);
+    // pcout<<rad<<" "<<Value<<std::endl;
     return (Value);
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>

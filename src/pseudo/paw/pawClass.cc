@@ -496,13 +496,20 @@ namespace dftfe
                     unsigned int numberSphericalFunctions =
                       d_atomicProjectorFnsContainer
                         ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
-                    for (unsigned int alpha = 0;
-                         alpha < numberSphericalFunctions;
-                         alpha++)
+                    for (unsigned int alpha_i = 0;
+                         alpha_i < numberSphericalFunctions;
+                         alpha_i++)
                       {
-                        double V = d_atomicNonLocalPseudoPotentialConstants
-                          [CouplingType::HamiltonianEntries][atomId][alpha];
-                        Entries.push_back(V);
+                        for (unsigned int alpha_j = 0;
+                             alpha_j < numberSphericalFunctions;
+                             alpha_j++)
+                          {
+                            unsigned int index =
+                              alpha_i * numberSphericalFunctions + alpha_j;
+                            double V = d_atomicNonLocalPseudoPotentialConstants
+                              [CouplingType::HamiltonianEntries][atomId][index];
+                            Entries.push_back(V);
+                          }
                       }
                   }
                 couplingEntriesHost.resize(Entries.size());
@@ -532,13 +539,20 @@ namespace dftfe
                     unsigned int numberSphericalFunctions =
                       d_atomicProjectorFnsContainer
                         ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
-                    for (unsigned int alpha = 0;
-                         alpha < numberSphericalFunctions;
-                         alpha++)
+                    for (unsigned int alpha_i = 0;
+                         alpha_i < numberSphericalFunctions;
+                         alpha_i++)
                       {
-                        double V = d_atomicNonLocalPseudoPotentialConstants
-                          [CouplingType::pawOverlapEntries][Zno][alpha];
-                        Entries.push_back(V);
+                        for (unsigned int alpha_j = 0;
+                             alpha_j < numberSphericalFunctions;
+                             alpha_j++)
+                          {
+                            unsigned int index =
+                              alpha_i * numberSphericalFunctions + alpha_j;
+                            double V = d_atomicNonLocalPseudoPotentialConstants
+                              [CouplingType::pawOverlapEntries][Zno][index];
+                            Entries.push_back(V);
+                          }
                       }
                   }
                 couplingEntriesHost.resize(Entries.size());
@@ -568,14 +582,21 @@ namespace dftfe
                     unsigned int numberSphericalFunctions =
                       d_atomicProjectorFnsContainer
                         ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
-                    for (unsigned int alpha = 0;
-                         alpha < numberSphericalFunctions;
-                         alpha++)
+                    for (unsigned int alpha_i = 0;
+                         alpha_i < numberSphericalFunctions;
+                         alpha_i++)
                       {
-                        double V = d_atomicNonLocalPseudoPotentialConstants
-                          [CouplingType::inversePawOverlapEntries][atomId]
-                          [alpha];
-                        Entries.push_back(V);
+                        for (unsigned int alpha_j = 0;
+                             alpha_j < numberSphericalFunctions;
+                             alpha_j++)
+                          {
+                            unsigned int index =
+                              alpha_i * numberSphericalFunctions + alpha_j;
+                            double V = d_atomicNonLocalPseudoPotentialConstants
+                              [CouplingType::inversePawOverlapEntries][atomId]
+                              [index];
+                            Entries.push_back(V);
+                          }
                       }
                   }
                 couplingEntriesHost.resize(Entries.size());

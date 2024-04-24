@@ -603,8 +603,10 @@ namespace dftfe
           d_basisOperationsPtrHost->JxWBasisData().data() +
           iCell * nQuadsPerCell;
         for (unsigned int iQuad = 0; iQuad < nQuadsPerCell; ++iQuad)
-          d_VeffExtPotJxWHost[iCell * nQuadsPerCell + iQuad] =
-            temp[iQuad] * cellJxWPtr[iQuad];
+          {
+            d_VeffExtPotJxWHost[iCell * nQuadsPerCell + iQuad] =
+              temp[iQuad] * cellJxWPtr[iQuad];
+          }
       }
 
 #if defined(DFTFE_WITH_DEVICE)

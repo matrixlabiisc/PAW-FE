@@ -2295,7 +2295,9 @@ namespace dftfe
         computingTimerStandard.leave_subsection("Nuclear self-potential solve");
         computing_timer.leave_subsection("Nuclear self-potential solve");
 
-        if ((d_dftParamsPtr->isPseudopotential ||
+        if ((d_dftParamsPtr->isPseudopotential &&
+             !d_dftParamsPtr->pawPseudoPotential) ||
+            (!d_dftParamsPtr->isPseudopotential &&
              d_dftParamsPtr->smearedNuclearCharges))
           {
             computingTimerStandard.enter_subsection("Init local PSP");
