@@ -217,8 +217,8 @@ namespace dftfe
   {
     d_BasisOperatorElectroHostPtr->reinit(
       0, 0, d_compensationChargeQuadratureIdElectro);
-
-    const unsigned int numberNodesPerElement =
+    std::vector<double> IntegralValue(8, 0.0);
+    const unsigned int  numberNodesPerElement =
       d_BasisOperatorElectroHostPtr->nDofsPerCell();
     std::vector<dealii::types::global_dof_index> cellGlobalDofIndices(
       numberNodesPerElement);
@@ -450,7 +450,12 @@ namespace dftfe
                                               numberQuadraturePoints +
                                             iQuadPoint] *
                                   sphericalFunctionValue;
-
+                                IntegralValue[Lindex] +=
+                                  sphericalFunctionValue *
+                                  JxwVector[elementIndex *
+                                              numberQuadraturePoints +
+                                            iQuadPoint] *
+                                  pow(r, lQuantumNumber) * sphericalHarmonicVal;
                               } // inside r <= Rmax
 
 
@@ -469,6 +474,13 @@ namespace dftfe
 
 
       } // iAtom
+    for (int L = 0; L < IntegralValue.size(); L++)
+      {
+        double value =
+          dealii::Utilities::MPI::sum(IntegralValue[L], d_mpiCommParent);
+        pcout << "PAW: Integral of the shapefn " << L << " is: " << value << " "
+              << " with error: " << (value - atomicNumber.size()) << std::endl;
+      }
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>

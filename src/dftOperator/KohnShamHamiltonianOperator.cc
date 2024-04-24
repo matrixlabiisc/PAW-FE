@@ -1340,7 +1340,7 @@ namespace dftfe
       {
         // HX(src, 1.0, 0.0, 0.0, dst);
         HX(src, 1.0, 0.0, 0.0, d_tempBlockVectorPawSinvHX);
-        d_cellWaveFunctionMatrixDst.setValue(0);
+
         d_BLASWrapperPtr->axpby(src.locallyOwnedSize() * src.numVectors(),
                                 scalarX,
                                 src.data(),
@@ -1395,6 +1395,7 @@ namespace dftfe
         for (unsigned int iCell = 0; iCell < numCells;
              iCell += d_cellsBlockSizeHX)
           {
+            d_cellWaveFunctionMatrixDst.setValue(0);
             std::pair<unsigned int, unsigned int> cellRange(
               iCell, std::min(iCell + d_cellsBlockSizeHX, numCells));
             if (hasNonlocalComponents)
@@ -1426,7 +1427,7 @@ namespace dftfe
           .distribute_slave_to_master(d_tempBlockVectorPawSinvHX);
         d_tempBlockVectorPawSinvHX.accumulateAddLocallyOwned();
         d_tempBlockVectorPawSinvHX.zeroOutGhosts();
-        dst.add(1.0, d_tempBlockVectorPawSinvHX);
+        dst.add(scalarHX, d_tempBlockVectorPawSinvHX);
         dst.zeroOutGhosts();
       }
   }
