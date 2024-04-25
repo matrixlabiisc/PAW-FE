@@ -1113,9 +1113,19 @@ namespace dftfe
       } // *it
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
-  double
-  pawClass<ValueType, memorySpace>::computeTotalDeltaEnergy()
-  {}
+  std::vector<double>
+  pawClass<ValueType, memorySpace>::getDeltaEnergy()
+  {
+    std::vector<double> dETerms(5, 0.0);
+    // 0Th Term is Delta ZeroijDij
+    // 1st Term is Delta KEijDij
+    // 2nd Term is Delta CijDij + Delta CijklDIjDkl + DeltaC0
+    // 4th Termis is Delta CijDij + Delta CijklDIjDkl + DeltaC0val
+    // 5th Term is Delta Exc
+    // 6th termis \Delta Hij Dij
+
+    return dETerms;
+  }
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>;

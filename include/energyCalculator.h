@@ -140,12 +140,14 @@ namespace dftfe
       const std::vector<std::vector<double>> &localVselfs,
       const std::map<dealii::CellId, std::vector<double>> &pseudoLocValues,
       const std::map<dealii::types::global_dof_index, double>
-        &                atomElectrostaticNodeIdToChargeMap,
-      const unsigned int numberGlobalAtoms,
-      const unsigned int lowerBoundKindex,
-      const unsigned int scfConverged,
-      const bool         print,
-      const bool         smearedNuclearCharges = false);
+        &                  atomElectrostaticNodeIdToChargeMap,
+      const unsigned int   numberGlobalAtoms,
+      const unsigned int   lowerBoundKindex,
+      const unsigned int   scfConverged,
+      const bool           print,
+      const bool           smearedNuclearCharges    = false,
+      const bool           isPAWpseudopotential     = false,
+      std::vector<double> pseudopotentialConstants = std::vector<double>());
 
 
     void

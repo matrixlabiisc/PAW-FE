@@ -281,11 +281,8 @@ namespace dftfe
 
 
 
-    double
-    computeTotalDeltaEnergy();
-
-    double
-    computeDijResidualNorm();
+    std::vector<double>
+    getDijWeights();
 
     std::vector<double>
     DijVectorForMixing(TypeOfField typeOfField);
@@ -310,7 +307,17 @@ namespace dftfe
       const MPI_Comm &           interBandGroupComm);
 
     void
-    chargeNeutrality(double integralRhoValue,TypeOfField typeOfField, bool computeCompCharge = true);  
+    chargeNeutrality(double      integralRhoValue,
+                     TypeOfField typeOfField,
+                     bool        computeCompCharge = true);
+
+    void
+    fillDijMatrix(TypeOfField                typeOfField,
+                  const std::vector<double> &DijVector,
+                  const MPI_Comm &           interpoolcomm,
+                  const MPI_Comm &           interBandGroupComm);
+    std::vector<double>
+    getDeltaEnergy();
 
   private:
     void

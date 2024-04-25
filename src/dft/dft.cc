@@ -2374,12 +2374,13 @@ namespace dftfe
         if (d_dftParamsPtr->pawPseudoPotential)
           {
             dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-              Dij_InVector;
-            Dij_InVector.resize(
-              d_pawClassPtr->DijVectorForMixing(TypeOfField::In).size(), 1.0);
+                                Dij_MassVector;
+            std::vector<double> Weights = d_pawClassPtr->getDijWeights();
+            Dij_MassVector.resize(Weights.size());
+            Dij_MassVector.copyFrom(Weights);
             d_mixingScheme.addMixingVariable(
               mixingVariable::DijMatrix,
-              Dij_InVector,
+              Dij_MassVector,
               true, // call MPI REDUCE while computing dot products
               d_dftParamsPtr->mixingParameter,
               d_dftParamsPtr->adaptAndersonMixingParameter);
@@ -2408,12 +2409,13 @@ namespace dftfe
         if (d_dftParamsPtr->pawPseudoPotential)
           {
             dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-              Dij_InVector;
-            Dij_InVector.resize(
-              d_pawClassPtr->DijVectorForMixing(TypeOfField::In).size(), 1.0);
+                                Dij_MassVector;
+            std::vector<double> Weights = d_pawClassPtr->getDijWeights();
+            Dij_MassVector.resize(Weights.size());
+            Dij_MassVector.copyFrom(Weights);
             d_mixingScheme.addMixingVariable(
               mixingVariable::DijMatrix,
-              Dij_InVector,
+              Dij_MassVector,
               true, // call MPI REDUCE while computing dot products
               d_dftParamsPtr->mixingParameter,
               d_dftParamsPtr->adaptAndersonMixingParameter);
@@ -2601,6 +2603,10 @@ namespace dftfe
                     d_mixingScheme.mixVariable(mixingVariable::DijMatrix,
                                                Dij_in.data(),
                                                Dij_in.size());
+                    d_pawClassPtr->fillDijMatrix(TypeOfField::In,
+                                                 Dij_in,
+                                                 interpoolcomm,
+                                                 interBandGroupComm);
                   }
               }
             else if (d_dftParamsPtr->mixingMethod == "ANDERSON")
@@ -2726,6 +2732,10 @@ namespace dftfe
                     d_mixingScheme.mixVariable(mixingVariable::DijMatrix,
                                                Dij_in.data(),
                                                Dij_in.size());
+                    d_pawClassPtr->fillDijMatrix(TypeOfField::In,
+                                                 Dij_in,
+                                                 interpoolcomm,
+                                                 interBandGroupComm);
                   }
                 if (d_dftParamsPtr->verbosity >= 1)
                   for (unsigned int iComp = 0; iComp < norms.size(); ++iComp)
@@ -2780,7 +2790,10 @@ namespace dftfe
             d_dftParamsPtr->pawPseudoPotential)
           {
             d_pawClassPtr->computeCompensationCharge(TypeOfField::In);
-            d_pawClassPtr->chargeNeutrality(totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]),TypeOfField::In,false);
+            d_pawClassPtr->chargeNeutrality(
+              totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]),
+              TypeOfField::In,
+              false);
           }
         if (d_dftParamsPtr->verbosity >= 2)
           pcout
@@ -3644,11 +3657,13 @@ namespace dftfe
           {
             pcout << std::endl
                   << "number of electrons: " << integralRhoValue << std::endl;
-            if(d_dftParamsPtr->pawPseudoPotential)
+            if (d_dftParamsPtr->pawPseudoPotential)
               {
                 d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
-                d_pawClassPtr->chargeNeutrality(integralRhoValue,TypeOfField::Out,false);
-              }      
+                d_pawClassPtr->chargeNeutrality(integralRhoValue,
+                                                TypeOfField::Out,
+                                                false);
+              }
           }
 
         if (d_dftParamsPtr->verbosity >= 1 &&
@@ -3673,7 +3688,10 @@ namespace dftfe
                 d_dftParamsPtr->pawPseudoPotential)
               {
                 d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
-                d_pawClassPtr->chargeNeutrality(totalCharge(d_dofHandlerRhoNodal, d_densityOutQuadValues[0]),TypeOfField::Out,false);
+                d_pawClassPtr->chargeNeutrality(
+                  totalCharge(d_dofHandlerRhoNodal, d_densityOutQuadValues[0]),
+                  TypeOfField::Out,
+                  false);
               }
 
             if (d_dftParamsPtr->multipoleBoundaryConditions)
@@ -3736,7 +3754,7 @@ namespace dftfe
             else
               {
                 if (d_dftParamsPtr->pawPseudoPotential)
-                     d_phiTotalSolverProblem.reinit(
+                  d_phiTotalSolverProblem.reinit(
                     d_basisOperationsPtrElectroHost,
                     d_phiTotRhoOut,
                     *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
@@ -3845,13 +3863,18 @@ namespace dftfe
               d_bQuadValuesAllAtoms,
               d_bCellNonTrivialAtomIds,
               d_localVselfs,
-              d_pseudoVLoc,
+              d_dftParamsPtr->pawPseudoPotential ? d_zeroPotential :
+                                                   d_pseudoVLoc,
               d_atomNodeIdToChargeMap,
               atomLocations.size(),
               lowerBoundKindex,
               0,
               d_dftParamsPtr->verbosity >= 0 ? true : false,
-              d_dftParamsPtr->smearedNuclearCharges);
+              d_dftParamsPtr->smearedNuclearCharges,
+              d_dftParamsPtr->pawPseudoPotential,
+              d_dftParamsPtr->pawPseudoPotential ?
+                d_pawClassPtr->getDeltaEnergy() :
+                std::vector<double>());
             if (d_dftParamsPtr->verbosity == 1)
               pcout << "Total energy  : " << totalEnergy << std::endl;
           }
@@ -3949,7 +3972,10 @@ namespace dftfe
             d_dftParamsPtr->pawPseudoPotential)
           {
             d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
-            d_pawClassPtr->chargeNeutrality(totalCharge(d_dofHandlerRhoNodal, d_densityOutQuadValues[0]),TypeOfField::Out,false);
+            d_pawClassPtr->chargeNeutrality(
+              totalCharge(d_dofHandlerRhoNodal, d_densityOutQuadValues[0]),
+              TypeOfField::Out,
+              false);
           }
 
         if (d_dftParamsPtr->multipoleBoundaryConditions)
@@ -4011,26 +4037,56 @@ namespace dftfe
           }
         else
           {
-            d_phiTotalSolverProblem.reinit(
-              d_basisOperationsPtrElectroHost,
-              d_phiTotRhoOut,
-              *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-              d_phiTotDofHandlerIndexElectro,
-              d_densityQuadratureIdElectro,
-              d_phiTotAXQuadratureIdElectro,
-              d_atomNodeIdToChargeMap,
-              d_bQuadValuesAllAtoms,
-              d_smearedChargeQuadratureIdElectro,
-              densityOutQuadValuesCopy,
-              false,
-              false,
-              d_dftParamsPtr->smearedNuclearCharges,
-              true,
-              false,
-              0,
-              false,
-              true,
-              d_dftParamsPtr->multipoleBoundaryConditions);
+            if (d_dftParamsPtr->pawPseudoPotential)
+              {
+                d_phiTotalSolverProblem.reinit(
+                  d_basisOperationsPtrElectroHost, // basisOperatorHost
+                  d_phiTotRhoOut,                  // phi(x)
+                  *d_constraintsVectorElectro
+                    [d_phiTotDofHandlerIndexElectro], // constraintMatrix
+                  d_phiTotDofHandlerIndexElectro,     // DofHandlerId
+                  d_densityQuadratureIdElectro,       // DensityQuadID
+                  d_phiTotAXQuadratureIdElectro,      // AXQuadID
+                  d_atomNodeIdToChargeMap,            // atoms
+                  d_bQuadValuesAllAtoms,              // COmpensationChargeQuad
+                  d_smearedChargeQuadratureIdElectro, // CompensationCharge ID
+                  densityOutQuadValuesCopy,           // Rho(x)
+                  d_dftParamsPtr->nonLinearCoreCorrection, //
+                  d_rhoCore,                               //
+                  false,                                   // computeDiagonalA
+                  false,                                   // MeanValueContraint
+                  d_dftParamsPtr
+                    ->smearedNuclearCharges, // smearedNuclearCharges
+                  true,                      // isRhoValues
+                  false,                     // isGradSmeraedChargeRhs
+                  0,                         // smeardChargeGradinetCompnoetId
+                  false,                     // storesmeared
+                  false,                     // reuseSmearedChargeRhs
+                  d_dftParamsPtr->multipoleBoundaryConditions);
+              }
+            else
+              {
+                d_phiTotalSolverProblem.reinit(
+                  d_basisOperationsPtrElectroHost,
+                  d_phiTotRhoOut,
+                  *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+                  d_phiTotDofHandlerIndexElectro,
+                  d_densityQuadratureIdElectro,
+                  d_phiTotAXQuadratureIdElectro,
+                  d_atomNodeIdToChargeMap,
+                  d_bQuadValuesAllAtoms,
+                  d_smearedChargeQuadratureIdElectro,
+                  densityOutQuadValuesCopy,
+                  false,
+                  false,
+                  d_dftParamsPtr->smearedNuclearCharges,
+                  true,
+                  false,
+                  0,
+                  false,
+                  true,
+                  d_dftParamsPtr->multipoleBoundaryConditions);
+              }
 
             CGSolver.solve(d_phiTotalSolverProblem,
                            d_dftParamsPtr->absLinearSolverTolerance,
@@ -4084,13 +4140,16 @@ namespace dftfe
       d_bQuadValuesAllAtoms,
       d_bCellNonTrivialAtomIds,
       d_localVselfs,
-      d_pseudoVLoc,
+      d_dftParamsPtr->pawPseudoPotential ? d_zeroPotential : d_pseudoVLoc,
       d_atomNodeIdToChargeMap,
       atomLocations.size(),
       lowerBoundKindex,
       1,
       d_dftParamsPtr->verbosity >= 0 ? true : false,
-      d_dftParamsPtr->smearedNuclearCharges);
+      d_dftParamsPtr->smearedNuclearCharges,
+      d_dftParamsPtr->pawPseudoPotential,
+      d_dftParamsPtr->pawPseudoPotential ? d_pawClassPtr->getDeltaEnergy() :
+                                           std::vector<double>());
 
     d_groundStateEnergy = totalEnergy;
 

@@ -1064,18 +1064,20 @@ namespace dftfe
                 double functionValue;
                 if (factor <= 0.0)
                   {
-                    double temp2  = 1.0 / (1.0 + exp(factor));
-                    functionValue = (2.0 - d_dftParamsPtr->spinPolarized)*temp2;
+                    double temp2 = 1.0 / (1.0 + exp(factor));
+                    functionValue =
+                      (2.0 - d_dftParamsPtr->spinPolarized) * temp2;
                   }
                 else
                   {
                     double temp2  = 1.0 / (1.0 + exp(-factor));
-                    functionValue = (2.0 - d_dftParamsPtr->spinPolarized) * exp(-factor) * temp2;
+                    functionValue = (2.0 - d_dftParamsPtr->spinPolarized) *
+                                    exp(-factor) * temp2;
                   }
                 if (functionValue > 1e-3)
                   highestOccupiedState = i;
               }
-            for (unsigned int i = 0; i < highestOccupiedState; i++)
+            for (unsigned int i = 0; i <= highestOccupiedState; i++)
               {
                 if (residualNormWaveFunctionsAllkPoints[kPoint][i] >
                     maxHighestOccupiedStateResNorm)

@@ -476,31 +476,19 @@ namespace dftfe
     return (RSH);
   }
 
-  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
-  double
-  pawClass<ValueType, memorySpace>::computeDijResidualNorm()
-  {
-    std::vector<double> DijResidual = DijVectorForMixing(TypeOfField::Residual);
-    double              normsq      = 0.0;
-    for (int index = 0; index < DijResidual.size(); index++)
-      normsq = DijResidual[index] * DijResidual[index];
-    MPI_Allreduce(
-      MPI_IN_PLACE, &normsq, 1, MPI_DOUBLE, MPI_SUM, d_mpiCommParent);
-    return (std::sqrt(normsq));
-  }
+
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   std::vector<double>
   pawClass<ValueType, memorySpace>::DijVectorForMixing(TypeOfField typeOfField)
   {
-    std::vector<double> DijVector(d_nProjPerTask * d_nProjPerTask, 0.0);
-    unsigned int        index = 0;
+    std::vector<unsigned int> atomicNumber =
+      d_atomicProjectorFnsContainer->getAtomicNumbers();
+    std::vector<double> DijVector;
     for (unsigned int iAtom = 0; iAtom < d_LocallyOwnedAtomId.size(); iAtom++)
       {
-        unsigned int              atomId = d_LocallyOwnedAtomId[iAtom];
-        std::vector<unsigned int> atomicNumber =
-          d_atomicProjectorFnsContainer->getAtomicNumbers();
-        unsigned int Znum = atomicNumber[atomId];
+        unsigned int atomId = d_LocallyOwnedAtomId[iAtom];
+        unsigned int Znum   = atomicNumber[atomId];
         unsigned int numProj =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
@@ -511,44 +499,6 @@ namespace dftfe
         unsigned int numRadProj =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
-        std::vector<double> multipoleTable = d_multipole[Znum];
-
-        std::vector<double> multipoleTableVal(numProj * numProj, 0.0);
-        int                 projectorIndex_i = 0;
-        for (int alpha_i = 0; alpha_i < numRadProj; alpha_i++)
-          {
-            std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_i =
-              sphericalFunction.find(std::make_pair(Znum, alpha_i))->second;
-            int lQuantumNo_i = sphFn_i->getQuantumNumberl();
-            for (int mQuantumNo_i = -lQuantumNo_i; mQuantumNo_i <= lQuantumNo_i;
-                 mQuantumNo_i++)
-              {
-                int projectorIndex_j = 0;
-                for (int alpha_j = 0; alpha_j < numRadProj; alpha_j++)
-                  {
-                    std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_j =
-                      sphericalFunction.find(std::make_pair(Znum, alpha_j))
-                        ->second;
-                    int lQuantumNo_j = sphFn_j->getQuantumNumberl();
-                    for (int mQuantumNo_j = -lQuantumNo_j;
-                         mQuantumNo_j <= lQuantumNo_j;
-                         mQuantumNo_j++)
-                      {
-                        multipoleTableVal[projectorIndex_i * numProj +
-                                          projectorIndex_j] =
-                          multipoleTable[alpha_i * numRadProj + alpha_j] *
-                          gaunt(lQuantumNo_i,
-                                lQuantumNo_j,
-                                0,
-                                mQuantumNo_i,
-                                mQuantumNo_j,
-                                0);
-                        projectorIndex_j++;
-                      }
-                  }
-                projectorIndex_i++;
-              }
-          }
 
         std::vector<double> Dij_in  = D_ij[TypeOfField::In][atomId];
         std::vector<double> Dij_out = D_ij[TypeOfField::Out][atomId];
@@ -558,11 +508,7 @@ namespace dftfe
               {
                 for (int jProj = 0; jProj < numProj; jProj++)
                   {
-                    DijVector[index] =
-                      std::sqrt(4 * M_PI) *
-                      multipoleTableVal[iProj * numProj + jProj] *
-                      Dij_in[iProj * numProj + jProj];
-                    index++;
+                    DijVector.push_back(Dij_in[iProj * numProj + jProj]);
                   }
               }
           }
@@ -572,11 +518,7 @@ namespace dftfe
               {
                 for (int jProj = 0; jProj < numProj; jProj++)
                   {
-                    DijVector[index] =
-                      std::sqrt(4 * M_PI) *
-                      multipoleTableVal[iProj * numProj + jProj] *
-                      Dij_out[iProj * numProj + jProj];
-                    index++;
+                    DijVector.push_back(Dij_out[iProj * numProj + jProj]);
                   }
               }
           }
@@ -586,12 +528,8 @@ namespace dftfe
               {
                 for (int jProj = 0; jProj < numProj; jProj++)
                   {
-                    DijVector[index] =
-                      std::sqrt(4 * M_PI) *
-                      multipoleTableVal[iProj * numProj + jProj] *
-                      (Dij_out[iProj * numProj + jProj] -
-                       Dij_in[iProj * numProj + jProj]);
-                    index++;
+                    DijVector.push_back(Dij_out[iProj * numProj + jProj] -
+                                        Dij_in[iProj * numProj + jProj]);
                   }
               }
           }
@@ -994,16 +932,135 @@ namespace dftfe
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  pawClass<ValueType, memorySpace>::chargeNeutrality(double integralRhoValue,TypeOfField typeOfField, bool computeCompCharge)
+  pawClass<ValueType, memorySpace>::chargeNeutrality(double integralRhoValue,
+                                                     TypeOfField typeOfField,
+                                                     bool computeCompCharge)
   {
-    if(computeCompCharge)
+    if (computeCompCharge)
       computeCompensationCharge(typeOfField);
     double integralCompCharge = TotalCompensationCharge();
-    pcout<<"----------------------------------------------------"<<std::endl;
-    pcout<<"Integral nTilde: "<<integralRhoValue<<std::endl;
-    pcout<<"Inegral Comp charge: "<<integralCompCharge<<std::endl;
-    pcout<<"Charge Neutrality error: "<<(integralRhoValue+integralCompCharge)<<std::endl;
-    pcout<<"----------------------------------------------------"<<std::endl;
+    pcout << "----------------------------------------------------"
+          << std::endl;
+    pcout << "Integral nTilde: " << integralRhoValue << std::endl;
+    pcout << "Inegral Comp charge: " << integralCompCharge << std::endl;
+    pcout << "Charge Neutrality error: "
+          << (integralRhoValue + integralCompCharge) << std::endl;
+    pcout << "----------------------------------------------------"
+          << std::endl;
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::fillDijMatrix(
+    TypeOfField                typeOfField,
+    const std::vector<double> &DijVector,
+    const MPI_Comm &           interpoolcomm,
+    const MPI_Comm &           interBandGroupComm)
+  {
+    std::vector<unsigned int> atomicNumber =
+      d_atomicProjectorFnsContainer->getAtomicNumbers();
+    for (int iAtom = 0; iAtom < atomicNumber.size(); iAtom++)
+      {
+        unsigned int Znum   = atomicNumber[iAtom];
+        unsigned int atomId = iAtom;
+        unsigned int numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        D_ij[typeOfField][atomId] =
+          std::vector<double>(numberOfProjectors * numberOfProjectors, 0.0);
+      }
+    const std::vector<unsigned int> ownedAtomIds =
+      d_nonLocalOperator->getOwnedAtomIdsInCurrentProcessor();
+    std::vector<double> DijTotalVector(d_nProjSqTotal, 0.0);
+    if (ownedAtomIds.size() > 0)
+      {
+        unsigned int index = 0;
+        for (int iAtom = 0; iAtom < ownedAtomIds.size(); iAtom++)
+          {
+            unsigned int atomId = ownedAtomIds[iAtom];
+            unsigned int Znum   = atomicNumber[atomId];
+            unsigned int numberOfProjectors =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+            std::vector<double> Dij(numberOfProjectors * numberOfProjectors,
+                                    0.0);
+            for (unsigned int i = 0; i < numberOfProjectors; i++)
+              {
+                for (unsigned int j = 0; j < numberOfProjectors; j++)
+                  {
+                    Dij[i * numberOfProjectors + j] = DijVector[index];
+                    index++;
+                  }
+              }
+            D_ij[typeOfField][atomId] = Dij;
+          }
+      }
+    communicateDijAcrossAllProcessors(typeOfField,
+                                      interpoolcomm,
+                                      interBandGroupComm);
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  std::vector<double>
+  pawClass<ValueType, memorySpace>::getDijWeights()
+  {
+    std::vector<double> weights;
+    for (unsigned int iAtom = 0; iAtom < d_LocallyOwnedAtomId.size(); iAtom++)
+      {
+        unsigned int              atomId = d_LocallyOwnedAtomId[iAtom];
+        std::vector<unsigned int> atomicNumber =
+          d_atomicProjectorFnsContainer->getAtomicNumbers();
+        unsigned int Znum = atomicNumber[atomId];
+        unsigned int numProj =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        const std::map<std::pair<unsigned int, unsigned int>,
+                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+          sphericalFunction =
+            d_atomicProjectorFnsContainer->getSphericalFunctions();
+        unsigned int numRadProj =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
+        std::vector<double> multipoleTable = d_multipole[Znum];
+
+        std::vector<double> multipoleTableVal(numProj * numProj, 0.0);
+        int                 projectorIndex_i = 0;
+        for (int alpha_i = 0; alpha_i < numRadProj; alpha_i++)
+          {
+            std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_i =
+              sphericalFunction.find(std::make_pair(Znum, alpha_i))->second;
+            int lQuantumNo_i = sphFn_i->getQuantumNumberl();
+            for (int mQuantumNo_i = -lQuantumNo_i; mQuantumNo_i <= lQuantumNo_i;
+                 mQuantumNo_i++)
+              {
+                int projectorIndex_j = 0;
+                for (int alpha_j = 0; alpha_j < numRadProj; alpha_j++)
+                  {
+                    std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn_j =
+                      sphericalFunction.find(std::make_pair(Znum, alpha_j))
+                        ->second;
+                    int lQuantumNo_j = sphFn_j->getQuantumNumberl();
+                    for (int mQuantumNo_j = -lQuantumNo_j;
+                         mQuantumNo_j <= lQuantumNo_j;
+                         mQuantumNo_j++)
+                      {
+                        weights.push_back(
+                          multipoleTable[alpha_i * numRadProj + alpha_j] *
+                          gaunt(lQuantumNo_i,
+                                lQuantumNo_j,
+                                0,
+                                mQuantumNo_i,
+                                mQuantumNo_j,
+                                0) *
+                          sqrt(4 * M_PI));
+                        projectorIndex_j++;
+                      }
+                  }
+                projectorIndex_i++;
+              }
+          }
+      }
+    return weights;
   }
 
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;

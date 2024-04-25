@@ -657,7 +657,7 @@ namespace dftfe
 #endif
     const ValueType beta  = 0.0;
     const ValueType alpha = 1.0;
-    pcout << "COmputing DIJ" << std::endl;
+    pcout << "Computing DIJ" << std::endl;
     for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
       {
         const unsigned int atomId = atomIdsInProcessor[iAtom];

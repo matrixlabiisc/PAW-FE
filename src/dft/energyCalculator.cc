@@ -475,12 +475,14 @@ namespace dftfe
     const std::vector<std::vector<double>> &localVselfs,
     const std::map<dealii::CellId, std::vector<double>> &pseudoLocValues,
     const std::map<dealii::types::global_dof_index, double>
-      &                atomElectrostaticNodeIdToChargeMap,
-    const unsigned int numberGlobalAtoms,
-    const unsigned int lowerBoundKindex,
-    const unsigned int scfConverged,
-    const bool         print,
-    const bool         smearedNuclearCharges)
+      &                  atomElectrostaticNodeIdToChargeMap,
+    const unsigned int   numberGlobalAtoms,
+    const unsigned int   lowerBoundKindex,
+    const unsigned int   scfConverged,
+    const bool           print,
+    const bool           smearedNuclearCharges,
+    const bool           isPAWpseudopotential,
+    std::vector<double> pseudopotentialConstants)
   {
     const dealii::ConditionalOStream scout(
       std::cout,
@@ -558,8 +560,9 @@ namespace dftfe
     double energy = -potentialTimesRho + exchangeEnergy + correlationEnergy +
                     electrostaticEnergyTotPot;
 
-    const double nuclearElectrostaticEnergy =
-      internal::nuclearElectrostaticEnergyLocal(
+    double nuclearElectrostaticEnergy = 0.0;
+    if (!isPAWpseudopotential)
+      nuclearElectrostaticEnergy = internal::nuclearElectrostaticEnergyLocal(
         phiTotRhoOut,
         localVselfs,
         smearedbValues,
