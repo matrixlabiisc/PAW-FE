@@ -814,10 +814,27 @@ namespace dftfe
                 index++;
               }
           }
+        pcout << "---------------MATRIX METHOD ------------------------"
+              << std::endl;
+
+
+        pcout << "------------------------------------------------------------"
+              << std::endl;
+        pcout << "D_ij of atom: " << atomId << " with Z:" << Znum << std::endl;
+        int numberProjectorFunctions = numberOfProjectors;
+        for (int i = 0; i < numberProjectorFunctions; i++)
+          {
+            for (int j = 0; j < numberProjectorFunctions; j++)
+              pcout << Dij[i * numberProjectorFunctions + j] << " ";
+            pcout << std::endl;
+          }
+        pcout << "------------------------------------------------------------"
+              << std::endl;
+
 
         D_ij[typeOfField][atomId] = Dij;
       }
-    pcout << "DEBUG: Line 820 called " << std::endl;
+
     d_HamiltonianCouplingMatrixEntriesUpdated = false;
   }
 
@@ -945,9 +962,10 @@ namespace dftfe
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
                  JxwVector = d_BasisOperatorElectroHostPtr->JxW();
     unsigned int iElem     = 0;
+
     for (std::map<dealii::CellId, std::vector<double>>::iterator it =
-           d_bl0QuadValuesAllAtoms.begin();
-         it != d_bl0QuadValuesAllAtoms.end();
+           (*d_bQuadValuesAllAtoms).begin();
+         it != (*d_bQuadValuesAllAtoms).end();
          ++it)
       {
         const dealii::CellId      cellId = it->first;

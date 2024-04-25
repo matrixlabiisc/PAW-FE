@@ -874,7 +874,8 @@ namespace dftfe
       // Writing zero_potential.dat
       std::fstream file;
       file.open(file_path_out + "/zeroPotential.dat", std::ios::out);
-      file << std::setprecision(17);
+      file << std::fixed
+           << std::setprecision(std::numeric_limits<double>::max_digits10);
       if (file.is_open())
         {
           for (int l = 0; l < radial_coord.size(); l++)
@@ -993,7 +994,8 @@ namespace dftfe
       // Writing Pseudo Valence Density File
       std::fstream file;
       file.open(file_path_out + "/pseudo_valence_density.dat", std::ios::out);
-      file << std::setprecision(17);
+      file << std::fixed
+           << std::setprecision(std::numeric_limits<double>::max_digits10);
       if (file.is_open())
         {
           for (int l = 0; l < radial_coord.size(); l++)
@@ -1095,12 +1097,7 @@ namespace dftfe
                 }
             }
         }
-      // for(int i=0; i<beta_index.size(); i++){
-      //     std::cout<<std::endl;
-      //     for(int j=0; j<beta_index[i].size(); j++){
-      //         std::cout<<beta_index[i][j]<<" ";
-      //     }
-      // }
+
       // Extracting radial coordinates
       std::vector<double>      radial_coord;
       std::vector<std::string> radial_tag;
@@ -1126,7 +1123,8 @@ namespace dftfe
 
           std::fstream file;
           file.open(file_path_out + proj_str, std::ios::out);
-          file << std::setprecision(17);
+          file << std::fixed
+               << std::setprecision(std::numeric_limits<double>::max_digits10);
           if (file.is_open())
             {
               for (int l = 0; l < radial_coord.size(); l++)
@@ -1262,7 +1260,8 @@ namespace dftfe
 
           std::fstream file;
           file.open(file_path_out + proj_str, std::ios::out);
-          file << std::setprecision(17);
+          file << std::fixed
+               << std::setprecision(std::numeric_limits<double>::max_digits10);
           if (file.is_open())
             {
               for (int l = 0; l < radial_coord.size(); l++)
@@ -1398,7 +1397,8 @@ namespace dftfe
 
           std::fstream file;
           file.open(file_path_out + proj_str, std::ios::out);
-          file << std::setprecision(17);
+          file << std::fixed
+               << std::setprecision(std::numeric_limits<double>::max_digits10);
           if (file.is_open())
             {
               for (int l = 0; l < radial_coord.size(); l++)
@@ -1572,7 +1572,8 @@ namespace dftfe
       // Writing to the file
       std::fstream file;
       file.open(file_path_out + "/shape_functions.dat", std::ios::out);
-      file << std::setprecision(17);
+      file << std::fixed
+           << std::setprecision(std::numeric_limits<double>::max_digits10);
       if (file.is_open())
         {
           for (int l = 0; l < radial_coord.size(); l++)
@@ -1609,7 +1610,8 @@ namespace dftfe
       // Writing derivatives.dat
       std::fstream file;
       file.open(file_path_out + "/derivatives.dat", std::ios::out);
-      file << std::setprecision(17);
+      file << std::fixed
+           << std::setprecision(std::numeric_limits<double>::max_digits10);
       if (file.is_open())
         {
           for (int l = 0; l < radial_coord.size(); l++)
@@ -1707,7 +1709,9 @@ namespace dftfe
                       // Writing psi_nl.inp
                       std::fstream file;
                       file.open(file_path_out + orb_str, std::ios::out);
-                      file << std::setprecision(17);
+                      file << std::fixed
+                           << std::setprecision(
+                                std::numeric_limits<double>::max_digits10);
                       if (file.is_open())
                         {
                           for (int l = 0; l < radial_coord.size(); l++)
@@ -1845,7 +1849,8 @@ namespace dftfe
       std::fstream file;
       file_path_out.append("/PseudoAtomDat");
       file.open(file_path_out, std::ios::out);
-      file << std::setprecision(17);
+      file << std::fixed
+           << std::setprecision(std::numeric_limits<double>::max_digits10);
 
       if (file.is_open())
         {

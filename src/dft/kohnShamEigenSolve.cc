@@ -56,7 +56,7 @@ namespace dftfe
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
-  dataTypes::number
+  void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::computeTraceXtHX(
     unsigned int numberWaveFunctions)
   {
@@ -290,8 +290,6 @@ namespace dftfe
     //   {
     //     trXtHX += ProjHam[d_numEigenValues * i + i];
     //   }
-
-    // return trXtHX;
   }
 
   template <unsigned int              FEOrder,

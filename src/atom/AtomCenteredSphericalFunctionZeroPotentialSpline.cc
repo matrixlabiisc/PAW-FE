@@ -66,7 +66,7 @@ namespace dftfe
                            0.0,
                            d_radialSplineObject);
         d_cutOff = xData[maxRowId];
-        std::cout << "Cutoff Radius: " << d_cutOff << std::endl;
+        // std::cout << "Cutoff Radius: " << d_cutOff << std::endl;
         d_rMin = xData[0];
       }
   }

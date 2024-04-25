@@ -44,6 +44,9 @@ namespace dftfe
     const std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomicShapeFnsContainer->getAtomIdsInCurrentProcess();
     d_nonLocalHamiltonianElectrostaticValue.clear();
+    // std::cout<<"DEBUG: Line 47: "<<d_this_mpi_process<<"
+    // "<<atomIdsInCurrentProcess.size()<<std::endl;
+    // MPI_Barrier(d_mpiCommParent);
     for (unsigned int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
          iAtom++)
       {
@@ -84,17 +87,17 @@ namespace dftfe
           }
       }
 
-    for (std::map<unsigned int, std::vector<double>>::iterator it =
-           d_nonLocalHamiltonianElectrostaticValue.begin();
-         it != d_nonLocalHamiltonianElectrostaticValue.end();
-         ++it)
-      {
-        unsigned int        atomId  = it->first;
-        std::vector<double> entries = it->second;
-        for (int i = 0; i < entries.size(); i++)
-          pcout << entries[i] << " ";
-        pcout << std::endl;
-      }
+    // for (std::map<unsigned int, std::vector<double>>::iterator it =
+    //        d_nonLocalHamiltonianElectrostaticValue.begin();
+    //      it != d_nonLocalHamiltonianElectrostaticValue.end();
+    //      ++it)
+    //   {
+    //     unsigned int        atomId  = it->first;
+    //     std::vector<double> entries = it->second;
+    //     for (int i = 0; i < entries.size(); i++)
+    //       pcout << entries[i] << " ";
+    //     pcout << std::endl;
+    //   }
   }
 
 

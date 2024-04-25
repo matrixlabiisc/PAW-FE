@@ -2330,7 +2330,6 @@ namespace dftfe
     // solve
     //
     computing_timer.enter_subsection("scf solve");
-
     double firstScfChebyTol =
       d_dftParamsPtr->restrictToOnePass ?
         1e+4 :
@@ -2456,6 +2455,7 @@ namespace dftfe
     pcout << std::endl;
     if (d_dftParamsPtr->verbosity == 0)
       pcout << "Starting SCF iterations...." << std::endl;
+
     while ((norm > d_dftParamsPtr->selfConsistentSolverTolerance) &&
            (scfIter < d_dftParamsPtr->numSCFIterations))
       {
@@ -2776,16 +2776,16 @@ namespace dftfe
         //
         // phiTot with rhoIn
         //
-        if (d_dftParamsPtr->verbosity >= 2)
-          pcout
-            << std::endl
-            << "Poisson solve for total electrostatic potential (rhoIn+b): ";
         if (d_dftParamsPtr->isPseudopotential &&
             d_dftParamsPtr->pawPseudoPotential)
           {
             d_pawClassPtr->computeCompensationCharge(TypeOfField::In);
             d_pawClassPtr->TotalCompensationCharge();
           }
+        if (d_dftParamsPtr->verbosity >= 2)
+          pcout
+            << std::endl
+            << "Poisson solve for total electrostatic potential (rhoIn+b): ";
         if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
             d_dftParamsPtr->floatingNuclearCharges and
             not d_dftParamsPtr->pinnedNodeForPBC)
@@ -3211,7 +3211,6 @@ namespace dftfe
                             if (d_dftParamsPtr->isPseudopotential &&
                                 d_dftParamsPtr->pawPseudoPotential)
                               {
-                                pcout << "DEBUG Line 3145" << std::endl;
                                 computing_timer.enter_subsection(
                                   "Computing Non-Local Hamiltonian Entries");
                                 computing_timer.enter_subsection(

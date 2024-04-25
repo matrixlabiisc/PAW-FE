@@ -594,20 +594,28 @@ namespace dftfe
 #endif
     d_VeffExtPotJxWHost.resize(nCells * nQuadsPerCell);
 
-    for (unsigned int iCell = 0; iCell < nCells; ++iCell)
+    if (externalPotCorrValues.size() > 0)
       {
-        const auto &temp =
-          externalPotCorrValues.find(d_basisOperationsPtrHost->cellID(iCell))
-            ->second;
-        const double *cellJxWPtr =
-          d_basisOperationsPtrHost->JxWBasisData().data() +
-          iCell * nQuadsPerCell;
-        for (unsigned int iQuad = 0; iQuad < nQuadsPerCell; ++iQuad)
+        for (unsigned int iCell = 0; iCell < nCells; ++iCell)
           {
-            d_VeffExtPotJxWHost[iCell * nQuadsPerCell + iQuad] =
-              temp[iQuad] * cellJxWPtr[iQuad];
+            const auto &temp = externalPotCorrValues
+                                 .find(d_basisOperationsPtrHost->cellID(iCell))
+                                 ->second;
+            if (externalPotCorrValues.find(d_basisOperationsPtrHost->cellID(
+                  iCell)) != externalPotCorrValues.end())
+              {
+                const double *cellJxWPtr =
+                  d_basisOperationsPtrHost->JxWBasisData().data() +
+                  iCell * nQuadsPerCell;
+                for (unsigned int iQuad = 0; iQuad < nQuadsPerCell; ++iQuad)
+                  {
+                    d_VeffExtPotJxWHost[iCell * nQuadsPerCell + iQuad] =
+                      temp[iQuad] * cellJxWPtr[iQuad];
+                  }
+              }
           }
       }
+
 
 #if defined(DFTFE_WITH_DEVICE)
     d_VeffExtPotJxW.resize(d_VeffExtPotJxWHost.size());
@@ -1085,7 +1093,6 @@ namespace dftfe
              d_dftParamsPtr->isPseudopotential)
       {
         // Approximate Entires option doe not exist for SX computation in PAW
-        pcout << "PAW call for SX: " << std::endl;
         src.updateGhostValues();
         d_basisOperationsPtr->distribute(src);
         const dataTypes::number scalarCoeffAlpha = scalarOX,

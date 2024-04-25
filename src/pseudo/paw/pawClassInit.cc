@@ -917,6 +917,7 @@ namespace dftfe
     else if (couplingtype == CouplingType::HamiltonianEntries)
       {
         // initialiseExchangeCorrelationEnergyCorrection(s);
+        MPI_Barrier(d_mpiCommParent);
         unsigned int       one     = 1;
         const char         transA  = 'N';
         const char         transB  = 'N';
@@ -1099,19 +1100,20 @@ namespace dftfe
                   d_nonLocalHamiltonianElectrostaticValue[atomLists[i]];
                 std::vector<double> NonLocalElectorstaticsContributions(npjsq,
                                                                         0.0);
-                dgemm_(&transA,
-                       &transB,
-                       &inc,
-                       &npjsq,
-                       &noOfShapeFns,
-                       &alpha,
-                       &nonLocalElectrostatics[0],
-                       &inc,
-                       &FullMultipoleTable[0],
-                       &noOfShapeFns,
-                       &beta,
-                       &NonLocalElectorstaticsContributions[0],
-                       &inc);
+                if (nonLocalElectrostatics.size() > 0)
+                  dgemm_(&transA,
+                         &transB,
+                         &inc,
+                         &npjsq,
+                         &noOfShapeFns,
+                         &alpha,
+                         &nonLocalElectrostatics[0],
+                         &inc,
+                         &FullMultipoleTable[0],
+                         &noOfShapeFns,
+                         &beta,
+                         &NonLocalElectorstaticsContributions[0],
+                         &inc);
                 for (int iProj = 0; iProj < npjsq; iProj++)
                   {
                     NonLocalComputedContributions[i * npjsq + iProj] +=
@@ -3389,7 +3391,7 @@ namespace dftfe
                (d_dftfeScratchFolderName + "/z" + std::to_string(atomicNumber) +
                 "/" + "KineticEnergyij.dat")
                  .c_str());
-        // std::cout << "DEBUG: Line 3233" << std::endl;
+
         std::vector<double> KineticEnergyij;
         dftUtils::readFile(KineticEnergyij, keFileName);
         pcout << "KEij entries: " << std::endl;
@@ -3419,8 +3421,8 @@ namespace dftfe
             for (int mQuantumNo_i = -lQuantumNo_i; mQuantumNo_i <= lQuantumNo_i;
                  mQuantumNo_i++)
               {
-                pcout << "DEBUG: " << alpha_i << " " << lQuantumNo_i << " "
-                      << mQuantumNo_i << std::endl;
+                // pcout << "DEBUG: " << alpha_i << " " << lQuantumNo_i << " "
+                //       << mQuantumNo_i << std::endl;
                 unsigned int projIndex_j = 0;
                 for (unsigned int alpha_j = 0;
                      alpha_j < numberOfRadialProjectors;
@@ -3636,6 +3638,9 @@ namespace dftfe
   pawClass<ValueType, memorySpace>::createAtomTypesList(
     const std::vector<std::vector<double>> &atomLocations)
   {
+    d_nProjPerTask    = 0;
+    d_nProjSqTotal    = 0;
+    d_totalProjectors = 0;
     pcout << "Creating Atom Type List " << std::endl;
     for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
          it != d_atomTypes.end();
@@ -3680,8 +3685,7 @@ namespace dftfe
         d_nProjPerTask += d_atomicProjectorFnsContainer
                             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
       }
-    d_nProjSqTotal    = 0;
-    d_totalProjectors = 0;
+
     for (unsigned int i = 0; i < atomicNumber.size(); i++)
       {
         unsigned int Znum = atomicNumber[i];

@@ -241,6 +241,8 @@ namespace dftfe
   poissonSolverProblem<FEOrder, FEOrderElectro>::computeRhs(
     distributedCPUVec<double> &rhs)
   {
+    int this_process;
+    MPI_Comm_rank(mpi_communicator, &this_process);
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
     rhs.reinit(*d_xPtr);
     rhs = 0;
@@ -390,56 +392,65 @@ namespace dftfe
                                                d_matrixFreeVectorComponent,
                                                d_smearedChargeQuadratureId);
 
+
         const unsigned int numQuadPointsSmearedb = fe_eval_sc.n_q_points;
-
-        dealii::AlignedVector<dealii::VectorizedArray<double>> smearedbQuads(
-          numQuadPointsSmearedb, dealii::make_vectorized_array(0.0));
-        dealii::VectorizedArray<double> normValueVectorized =
-          dealii::make_vectorized_array(0.0);
-        double NormVal = 0;
-        for (unsigned int macrocell = 0;
-             macrocell < d_matrixFreeDataPtr->n_cell_batches();
-             ++macrocell)
+        if (d_smearedChargeValuesPtr->size() > 0)
           {
-            std::fill(smearedbQuads.begin(),
-                      smearedbQuads.end(),
-                      dealii::make_vectorized_array(0.0));
-            bool               isMacroCellTrivial = true;
-            const unsigned int numSubCells =
-              d_matrixFreeDataPtr->n_active_entries_per_cell_batch(macrocell);
-            for (unsigned int iSubCell = 0; iSubCell < numSubCells; ++iSubCell)
+            dealii::AlignedVector<dealii::VectorizedArray<double>>
+                                            smearedbQuads(numQuadPointsSmearedb,
+                            dealii::make_vectorized_array(0.0));
+            dealii::VectorizedArray<double> normValueVectorized =
+              dealii::make_vectorized_array(0.0);
+            double NormVal = 0;
+            for (unsigned int macrocell = 0;
+                 macrocell < d_matrixFreeDataPtr->n_cell_batches();
+                 ++macrocell)
               {
-                subCellPtr = d_matrixFreeDataPtr->get_cell_iterator(
-                  macrocell, iSubCell, d_matrixFreeVectorComponent);
-                dealii::CellId             subCellId = subCellPtr->id();
-                const std::vector<double> &tempVec =
-                  d_smearedChargeValuesPtr->find(subCellId)->second;
-                if (tempVec.size() == 0)
-                  continue;
-
-                for (unsigned int q = 0; q < numQuadPointsSmearedb; ++q)
-                  smearedbQuads[q][iSubCell] = tempVec[q];
-
-                isMacroCellTrivial = false;
-              }
-
-            if (!isMacroCellTrivial)
-              {
-                fe_eval_sc.reinit(macrocell);
-                for (unsigned int q = 0; q < fe_eval_sc.n_q_points; ++q)
-                  {
-                    fe_eval_sc.submit_value(smearedbQuads[q], q);
-                  }
-                fe_eval_sc.integrate(true, false);
-
-                fe_eval_sc.distribute_local_to_global(rhs);
-                normValueVectorized = fe_eval_sc.integrate_value();
-
+                std::fill(smearedbQuads.begin(),
+                          smearedbQuads.end(),
+                          dealii::make_vectorized_array(0.0));
+                bool               isMacroCellTrivial = true;
+                const unsigned int numSubCells =
+                  d_matrixFreeDataPtr->n_active_entries_per_cell_batch(
+                    macrocell);
                 for (unsigned int iSubCell = 0; iSubCell < numSubCells;
                      ++iSubCell)
-                  NormVal += normValueVectorized[iSubCell];
-                if (d_isStoreSmearedChargeRhs)
-                  fe_eval_sc.distribute_local_to_global(d_rhsSmearedCharge);
+                  {
+                    subCellPtr = d_matrixFreeDataPtr->get_cell_iterator(
+                      macrocell, iSubCell, d_matrixFreeVectorComponent);
+                    dealii::CellId            subCellId = subCellPtr->id();
+                    const std::vector<double> tempVec =
+                      d_smearedChargeValuesPtr->find(subCellId)->second;
+                    if (d_smearedChargeValuesPtr->find(subCellId) ==
+                        d_smearedChargeValuesPtr->end())
+                      continue;
+                    if (tempVec.size() != numQuadPointsSmearedb)
+                      std::cout << "Issue mismatch: " << tempVec.size() << " "
+                                << this_mpi_process << std::endl;
+                    for (unsigned int q = 0; q < numQuadPointsSmearedb; ++q)
+                      smearedbQuads[q][iSubCell] = tempVec[q];
+
+                    isMacroCellTrivial = false;
+                  }
+
+                if (!isMacroCellTrivial)
+                  {
+                    fe_eval_sc.reinit(macrocell);
+                    for (unsigned int q = 0; q < fe_eval_sc.n_q_points; ++q)
+                      {
+                        fe_eval_sc.submit_value(smearedbQuads[q], q);
+                      }
+                    fe_eval_sc.integrate(true, false);
+
+                    fe_eval_sc.distribute_local_to_global(rhs);
+                    normValueVectorized = fe_eval_sc.integrate_value();
+
+                    for (unsigned int iSubCell = 0; iSubCell < numSubCells;
+                         ++iSubCell)
+                      NormVal += normValueVectorized[iSubCell];
+                    if (d_isStoreSmearedChargeRhs)
+                      fe_eval_sc.distribute_local_to_global(d_rhsSmearedCharge);
+                  }
               }
           }
       }

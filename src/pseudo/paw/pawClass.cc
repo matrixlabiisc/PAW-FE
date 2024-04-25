@@ -80,7 +80,7 @@ namespace dftfe
             std::vector<double> &quadvalues =
               d_bl0QuadValuesAllAtoms[d_BasisOperatorElectroHostPtr->cellID(
                 elementIndex)];
-            if (quadvalues.size() != numberQuadraturePoints)
+            if (quadvalues.size() == 0)
               quadvalues.resize(numberQuadraturePoints, 0.0);
             for (int iImageAtomCount = 0; iImageAtomCount < imageIdsSize;
                  ++iImageAtomCount)
@@ -153,26 +153,30 @@ namespace dftfe
       d_atomicShapeFnsContainer->getAtomicNumbers();
     const unsigned int one = 1;
     (*d_bQuadValuesAllAtoms).clear();
-    for (std::map<dealii::CellId, std::vector<double>>::iterator it =
-           d_bl0QuadValuesAllAtoms.begin();
-         it != d_bl0QuadValuesAllAtoms.end();
-         ++it)
+
+    MPI_Barrier(d_mpiCommParent);
+    if (d_bl0QuadValuesAllAtoms.size() > 0)
       {
-        std::vector<double> &ValueL0 = it->second;
-        std::vector<double>  Temp;
-        (*d_bQuadValuesAllAtoms).find(it->first)->second.clear();
-        // for (unsigned int q_point = 0; q_point < numberQuadraturePoints;
-        //      q_point++)
-        //   {
-        //     Temp.push_back(ValueL0[q_point]);
-        //   }
-        (*d_bQuadValuesAllAtoms)[it->first] = ValueL0;
+        for (std::map<dealii::CellId, std::vector<double>>::iterator it =
+               d_bl0QuadValuesAllAtoms.begin();
+             it != d_bl0QuadValuesAllAtoms.end();
+             ++it)
+          {
+            std::vector<double> &ValueL0 = it->second;
+            std::vector<double>  Temp;
+            (*d_bQuadValuesAllAtoms).find(it->first)->second.clear();
+            // for (unsigned int q_point = 0; q_point < numberQuadraturePoints;
+            //      q_point++)
+            //   {
+            //     Temp.push_back(ValueL0[q_point]);
+            //   }
+            (*d_bQuadValuesAllAtoms)[it->first] = ValueL0;
+          }
       }
+    MPI_Barrier(d_mpiCommParent);
     const std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomicShapeFnsContainer->getAtomIdsInCurrentProcess();
-
-
-
+    MPI_Barrier(d_mpiCommParent);
     for (unsigned int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
          iAtom++)
       {
@@ -197,8 +201,9 @@ namespace dftfe
             const unsigned int elementIndex =
               elementIndexesInAtomCompactSupport[iElem];
             std::vector<double> &quadvalues =
-              (*d_bQuadValuesAllAtoms)[d_BasisOperatorElectroHostPtr->cellID(
-                elementIndex)];
+              (*d_bQuadValuesAllAtoms)
+                .find(d_BasisOperatorElectroHostPtr->cellID(elementIndex))
+                ->second;
             for (unsigned int q_point = 0; q_point < numberQuadraturePoints;
                  ++q_point)
               {
@@ -210,6 +215,7 @@ namespace dftfe
 
           } // iElem
       }     // iAtom loop
+    MPI_Barrier(d_mpiCommParent);
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
@@ -694,24 +700,8 @@ namespace dftfe
           tempDij.data(),
           D_ij[isDijOut ? TypeOfField::Out : TypeOfField::In][atomId].data(),
           [](auto &p, auto &q) { return p + dftfe::utils::realPart(q); });
-        pcout << "DEBUG: PAW DijIn size: " << D_ij[TypeOfField::In].size()
-              << std::endl;
-        pcout << "---------------MATRIX METHOD ------------------------"
-              << std::endl;
-
-
-        pcout << "------------------------------------------------------------"
-              << std::endl;
-        pcout << "D_ij of atom: " << atomId << " with Z:" << Znum << std::endl;
-        int numberProjectorFunctions    = numberSphericalFunctions;
-        std::vector<ValueType> tempD_ij = tempDij;
-        for (int i = 0; i < numberProjectorFunctions; i++)
-          {
-            for (int j = 0; j < numberProjectorFunctions; j++)
-              pcout << tempD_ij[i * numberProjectorFunctions + j] << " ";
-            pcout << std::endl;
-          }
-        pcout << "------------------------------------------------------------"
+        pcout << "DEBUG: PAW Dij size: "
+              << D_ij[isDijOut ? TypeOfField::Out : TypeOfField::In].size()
               << std::endl;
       }
   }

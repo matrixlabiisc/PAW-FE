@@ -573,7 +573,8 @@ namespace dftfe
             if (atomSupportInElement(cellIndex))
               {
                 d_feEvaluationMap.insert(cell);
-                // std::cout<<"Cell: "<<cell<<std::endl;
+                std::cout << "Cell: " << cell << " " << cellIndex << " "
+                          << std::endl;
               }
           }
       }
