@@ -188,19 +188,10 @@ namespace dftfe
                   &(basisOperationsPtr->getMultiVector(currentBlockSize, 0));
                 if (dftParams.pawPseudoPotential)
                   {
-                    if constexpr (dftfe::utils::MemorySpace::DEVICE ==
-                                  memorySpace)
-                      {
                         pawClassPtr->getNonLocalOperator()
                           ->initialiseFlattenedDataStructure(
                             currentBlockSize, projectorKetTimesVector);
-                        //  pawClassPtr->getNonLocalOperator()->initialiseCellWaveFunctionPointers(
-                        //   d_cellWaveFunctionMatrixSrc);
-                      }
-                    else
-                      pawClassPtr->getNonLocalOperator()
-                        ->initialiseFlattenedDataStructure(
-                          currentBlockSize, projectorKetTimesVector);
+
                   }
 
                 if ((jvec + currentBlockSize) <=
