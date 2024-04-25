@@ -2780,7 +2780,7 @@ namespace dftfe
             d_dftParamsPtr->pawPseudoPotential)
           {
             d_pawClassPtr->computeCompensationCharge(TypeOfField::In);
-            d_pawClassPtr->TotalCompensationCharge();
+            d_pawClassPtr->chargeNeutrality(totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]),TypeOfField::In,false);
           }
         if (d_dftParamsPtr->verbosity >= 2)
           pcout
@@ -3644,6 +3644,11 @@ namespace dftfe
           {
             pcout << std::endl
                   << "number of electrons: " << integralRhoValue << std::endl;
+            if(d_dftParamsPtr->pawPseudoPotential)
+              {
+                d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
+                d_pawClassPtr->chargeNeutrality(integralRhoValue,TypeOfField::Out,false);
+              }      
           }
 
         if (d_dftParamsPtr->verbosity >= 1 &&
@@ -3668,7 +3673,7 @@ namespace dftfe
                 d_dftParamsPtr->pawPseudoPotential)
               {
                 d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
-                d_pawClassPtr->TotalCompensationCharge();
+                d_pawClassPtr->chargeNeutrality(totalCharge(d_dofHandlerRhoNodal, d_densityOutQuadValues[0]),TypeOfField::Out,false);
               }
 
             if (d_dftParamsPtr->multipoleBoundaryConditions)
@@ -3731,7 +3736,7 @@ namespace dftfe
             else
               {
                 if (d_dftParamsPtr->pawPseudoPotential)
-                  d_phiTotalSolverProblem.reinit(
+                     d_phiTotalSolverProblem.reinit(
                     d_basisOperationsPtrElectroHost,
                     d_phiTotRhoOut,
                     *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
@@ -3745,13 +3750,15 @@ namespace dftfe
                     d_dftParamsPtr->nonLinearCoreCorrection, //
                     d_rhoCore,                               //
                     false,
-                    false,
+                    d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+                      d_dftParamsPtr->periodicZ &&
+                      !d_dftParamsPtr->pinnedNodeForPBC,
                     d_dftParamsPtr->smearedNuclearCharges,
                     true,
                     false,
                     0,
                     false,
-                    true,
+                    false,
                     d_dftParamsPtr->multipoleBoundaryConditions);
 
                 else
@@ -3942,7 +3949,7 @@ namespace dftfe
             d_dftParamsPtr->pawPseudoPotential)
           {
             d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
-            d_pawClassPtr->TotalCompensationCharge();
+            d_pawClassPtr->chargeNeutrality(totalCharge(d_dofHandlerRhoNodal, d_densityOutQuadValues[0]),TypeOfField::Out,false);
           }
 
         if (d_dftParamsPtr->multipoleBoundaryConditions)

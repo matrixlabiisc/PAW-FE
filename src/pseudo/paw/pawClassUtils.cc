@@ -992,6 +992,20 @@ namespace dftfe
           << std::endl;
     return d_TotalCompensationCharge;
   }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::chargeNeutrality(double integralRhoValue,TypeOfField typeOfField, bool computeCompCharge)
+  {
+    if(computeCompCharge)
+      computeCompensationCharge(typeOfField);
+    double integralCompCharge = TotalCompensationCharge();
+    pcout<<"----------------------------------------------------"<<std::endl;
+    pcout<<"Integral nTilde: "<<integralRhoValue<<std::endl;
+    pcout<<"Inegral Comp charge: "<<integralCompCharge<<std::endl;
+    pcout<<"Charge Neutrality error: "<<(integralRhoValue+integralCompCharge)<<std::endl;
+    pcout<<"----------------------------------------------------"<<std::endl;
+  }
+
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>;

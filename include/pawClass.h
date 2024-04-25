@@ -309,6 +309,9 @@ namespace dftfe
       const MPI_Comm &           interpoolcomm,
       const MPI_Comm &           interBandGroupComm);
 
+    void
+    chargeNeutrality(double integralRhoValue,TypeOfField typeOfField, bool computeCompCharge = true);  
+
   private:
     void
     createAtomTypesList(const std::vector<std::vector<double>> &atomLocations);
