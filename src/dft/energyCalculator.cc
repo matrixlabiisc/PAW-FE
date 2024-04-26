@@ -198,6 +198,204 @@ namespace dftfe
         }
     }
 
+
+    void
+    printPAWEnergyValence(const double       bandEnergy,
+                          const double       totalkineticEnergy,
+                          const double       totalexchangeCorrelationEnergy,
+                          const double       totalElectrostaticEnergy,
+                          const double       dispersionEnergy,
+                          const double       totalEnergy,
+                          const unsigned int numberAtoms,
+                          const dealii::ConditionalOStream &pcout,
+                          const bool                        reproducibleOutput,
+                          const bool                        isPseudo,
+                          const unsigned int                verbosity,
+                          const dftParameters &             dftParams)
+    {
+      if (reproducibleOutput)
+        {
+          const double bandEnergyTrunc =
+            std::floor(1000000000 * (bandEnergy)) / 1000000000.0;
+          const double totalkineticEnergyTrunc =
+            std::floor(1000000000 * (totalkineticEnergy)) / 1000000000.0;
+          const double totalexchangeCorrelationEnergyTrunc =
+            std::floor(1000000000 * (totalexchangeCorrelationEnergy)) /
+            1000000000.0;
+          const double totalElectrostaticEnergyTrunc =
+            std::floor(1000000000 * (totalElectrostaticEnergy)) / 1000000000.0;
+          const double totalEnergyTrunc =
+            std::floor(1000000000 * (totalEnergy)) / 1000000000.0;
+          const double totalEnergyPerAtomTrunc =
+            std::floor(1000000000 * (totalEnergy / numberAtoms)) / 1000000000.0;
+
+          pcout << std::endl << "Energy computations (Hartree) " << std::endl;
+          pcout << "-------------------" << std::endl;
+          if (dftParams.useMixedPrecCGS_O || dftParams.useMixedPrecCGS_SR ||
+              dftParams.useMixedPrecCheby)
+            pcout << std::setw(25) << "Total energy"
+                  << ": " << std::fixed << std::setprecision(6) << std::setw(20)
+                  << totalEnergyTrunc << std::endl;
+          else
+            pcout << std::setw(25) << "Total energy"
+                  << ": " << std::fixed << std::setprecision(8) << std::setw(20)
+                  << totalEnergyTrunc << std::endl;
+        }
+      else
+        {
+          pcout << std::endl;
+          char bufferEnergy[200];
+          pcout << "Energy computations (Hartree)\n";
+          pcout
+            << "-------------------------------------------------------------------------------\n";
+          sprintf(bufferEnergy, "%-52s:%25.16e\n", "Band energy", bandEnergy);
+          pcout << bufferEnergy;
+          if (verbosity >= 2)
+            {
+              sprintf(bufferEnergy,
+                      "%-52s:%25.16e\n",
+                      "Kinetic energy Valence",
+                      totalkineticEnergy);
+              pcout << bufferEnergy;
+            }
+
+          sprintf(bufferEnergy,
+                  "%-52s:%25.16e\n",
+                  "Exchange-Correlation energy Valence",
+                  totalexchangeCorrelationEnergy);
+          pcout << bufferEnergy;
+          pcout << bufferEnergy;
+          if (verbosity >= 2)
+            {
+              sprintf(bufferEnergy,
+                      "%-52s:%25.16e\n",
+                      "Electrostatics energy Valence",
+                      totalElectrostaticEnergy);
+              pcout << bufferEnergy;
+            }
+
+          if (dftParams.dc_dispersioncorrectiontype != 0)
+            {
+              sprintf(bufferEnergy,
+                      "%-52s:%25.16e\n",
+                      "Dispersion energy",
+                      dispersionEnergy);
+              pcout << bufferEnergy;
+            }
+          sprintf(bufferEnergy,
+                  "%-52s:%25.16e\n",
+                  "Total internal energy Valence",
+                  totalEnergy);
+          pcout << bufferEnergy;
+          sprintf(bufferEnergy,
+                  "%-52s:%25.16e\n",
+                  "Total internal energy per atom",
+                  totalEnergy / numberAtoms);
+          pcout << bufferEnergy;
+          pcout
+            << "-------------------------------------------------------------------------------\n";
+        }
+    }
+
+
+    void
+    printPAWEnergyTotal(const double       bandEnergy,
+                        const double       totalkineticEnergy,
+                        const double       totalexchangeCorrelationEnergy,
+                        const double       totalElectrostaticEnergy,
+                        const double       dispersionEnergy,
+                        const double       totalEnergy,
+                        const unsigned int numberAtoms,
+                        const dealii::ConditionalOStream &pcout,
+                        const bool                        reproducibleOutput,
+                        const bool                        isPseudo,
+                        const unsigned int                verbosity,
+                        const dftParameters &             dftParams)
+    {
+      if (reproducibleOutput)
+        {
+          const double bandEnergyTrunc =
+            std::floor(1000000000 * (bandEnergy)) / 1000000000.0;
+          const double totalkineticEnergyTrunc =
+            std::floor(1000000000 * (totalkineticEnergy)) / 1000000000.0;
+          const double totalexchangeCorrelationEnergyTrunc =
+            std::floor(1000000000 * (totalexchangeCorrelationEnergy)) /
+            1000000000.0;
+          const double totalElectrostaticEnergyTrunc =
+            std::floor(1000000000 * (totalElectrostaticEnergy)) / 1000000000.0;
+          const double totalEnergyTrunc =
+            std::floor(1000000000 * (totalEnergy)) / 1000000000.0;
+          const double totalEnergyPerAtomTrunc =
+            std::floor(1000000000 * (totalEnergy / numberAtoms)) / 1000000000.0;
+
+          pcout << std::endl << "Energy computations (Hartree) " << std::endl;
+          pcout << "-------------------" << std::endl;
+          if (dftParams.useMixedPrecCGS_O || dftParams.useMixedPrecCGS_SR ||
+              dftParams.useMixedPrecCheby)
+            pcout << std::setw(25) << "Total energy"
+                  << ": " << std::fixed << std::setprecision(6) << std::setw(20)
+                  << totalEnergyTrunc << std::endl;
+          else
+            pcout << std::setw(25) << "Total energy"
+                  << ": " << std::fixed << std::setprecision(8) << std::setw(20)
+                  << totalEnergyTrunc << std::endl;
+        }
+      else
+        {
+          pcout << std::endl;
+          char bufferEnergy[200];
+          pcout << "Energy computations (Hartree)\n";
+          pcout
+            << "-------------------------------------------------------------------------------\n";
+          sprintf(bufferEnergy, "%-52s:%25.16e\n", "Band energy", bandEnergy);
+          pcout << bufferEnergy;
+          if (verbosity >= 2)
+            {
+              sprintf(bufferEnergy,
+                      "%-52s:%25.16e\n",
+                      "Kinetic energy Total",
+                      totalkineticEnergy);
+              pcout << bufferEnergy;
+            }
+
+          sprintf(bufferEnergy,
+                  "%-52s:%25.16e\n",
+                  "Exchange-Correlation energy Total",
+                  totalexchangeCorrelationEnergy);
+          pcout << bufferEnergy;
+          pcout << bufferEnergy;
+          if (verbosity >= 2)
+            {
+              sprintf(bufferEnergy,
+                      "%-52s:%25.16e\n",
+                      "Electrostatics energy Total",
+                      totalElectrostaticEnergy);
+              pcout << bufferEnergy;
+            }
+
+          if (dftParams.dc_dispersioncorrectiontype != 0)
+            {
+              sprintf(bufferEnergy,
+                      "%-52s:%25.16e\n",
+                      "Dispersion energy",
+                      dispersionEnergy);
+              pcout << bufferEnergy;
+            }
+          sprintf(bufferEnergy,
+                  "%-52s:%25.16e\n",
+                  "Total internal energy",
+                  totalEnergy);
+          pcout << bufferEnergy;
+          sprintf(bufferEnergy,
+                  "%-52s:%25.16e\n",
+                  "Total internal energy per atom",
+                  totalEnergy / numberAtoms);
+          pcout << bufferEnergy;
+          pcout
+            << "-------------------------------------------------------------------------------\n";
+        }
+    }
+
     double
     localBandEnergy(const std::vector<std::vector<double>> &eigenValues,
                     const std::vector<double> &             kPointWeights,
@@ -374,6 +572,44 @@ namespace dftfe
       return 0.5 * (phiContribution - vSelfContribution);
     }
 
+    double
+    nuclearElectrostaticEnergyLocal(
+      const distributedCPUVec<double> &                    phiTotRhoOut,
+      const std::map<dealii::CellId, std::vector<double>> &smearedbValues,
+      const dealii::DoFHandler<3> &dofHandlerElectrostatic,
+      const dealii::Quadrature<3> &quadratureElectrostatic,
+      const dealii::Quadrature<3> &quadratureSmearedCharge)
+    {
+      double              phiContribution = 0.0;
+      dealii::FEValues<3> fe_values(dofHandlerElectrostatic.get_fe(),
+                                    quadratureSmearedCharge,
+                                    dealii::update_values |
+                                      dealii::update_JxW_values);
+      const unsigned int  n_q_points = quadratureSmearedCharge.size();
+      dealii::DoFHandler<3>::active_cell_iterator
+        cell = dofHandlerElectrostatic.begin_active(),
+        endc = dofHandlerElectrostatic.end();
+
+      for (; cell != endc; ++cell)
+        if (cell->is_locally_owned())
+          {
+            const std::vector<double> &bQuadValuesCell =
+              smearedbValues.find(cell->id())->second;
+            fe_values.reinit(cell);
+
+            std::vector<double> tempPhiTot(n_q_points);
+            fe_values.get_function_values(phiTotRhoOut, tempPhiTot);
+
+            double temp = 0;
+            for (unsigned int q = 0; q < n_q_points; ++q)
+              temp += tempPhiTot[q] * bQuadValuesCell[q] * fe_values.JxW(q);
+
+            phiContribution += temp;
+          }
+
+      return 0.5 * (phiContribution);
+    }
+
 
     double
     computeRepulsiveEnergy(
@@ -475,13 +711,13 @@ namespace dftfe
     const std::vector<std::vector<double>> &localVselfs,
     const std::map<dealii::CellId, std::vector<double>> &pseudoLocValues,
     const std::map<dealii::types::global_dof_index, double>
-      &                  atomElectrostaticNodeIdToChargeMap,
-    const unsigned int   numberGlobalAtoms,
-    const unsigned int   lowerBoundKindex,
-    const unsigned int   scfConverged,
-    const bool           print,
-    const bool           smearedNuclearCharges,
-    const bool           isPAWpseudopotential,
+      &                 atomElectrostaticNodeIdToChargeMap,
+    const unsigned int  numberGlobalAtoms,
+    const unsigned int  lowerBoundKindex,
+    const unsigned int  scfConverged,
+    const bool          print,
+    const bool          smearedNuclearCharges,
+    const bool          isPAWpseudopotential,
     std::vector<double> pseudopotentialConstants)
   {
     const dealii::ConditionalOStream scout(
@@ -574,6 +810,17 @@ namespace dftfe
           smearedChargeQuadratureIDElectro),
         atomElectrostaticNodeIdToChargeMap,
         smearedNuclearCharges);
+    else
+      {
+        nuclearElectrostaticEnergy = internal::nuclearElectrostaticEnergyLocal(
+          phiTotRhoOut,
+          smearedbValues,
+          basisOperationsPtrElectro->getDofHandler(),
+          basisOperationsPtrElectro->matrixFreeData().get_quadrature(
+            densityQuadratureIDElectro),
+          basisOperationsPtrElectro->matrixFreeData().get_quadrature(
+            smearedChargeQuadratureIDElectro));
+      }
 
     // sum over all processors
     double totalEnergy = dealii::Utilities::MPI::sum(energy, mpi_communicator);
@@ -587,6 +834,10 @@ namespace dftfe
       dealii::Utilities::MPI::sum(electrostaticEnergyTotPot, mpi_communicator);
     double totalNuclearElectrostaticEnergy =
       dealii::Utilities::MPI::sum(nuclearElectrostaticEnergy, mpi_communicator);
+
+    if (isPAWpseudopotential)
+      totalEnergy += -pseudopotentialConstants[7] - pseudopotentialConstants[0];
+
 
     double d_energyDispersion = 0;
     if (d_dftParams.dc_dispersioncorrectiontype != 0)
@@ -603,28 +854,66 @@ namespace dftfe
 
     totalEnergy += totalNuclearElectrostaticEnergy;
 
-    const double allElectronElectrostaticEnergy =
+    double allElectronElectrostaticEnergy =
       (totalelectrostaticEnergyPot + totalNuclearElectrostaticEnergy);
+    if (isPAWpseudopotential)
+      allElectronElectrostaticEnergy += -pseudopotentialConstants[0];
 
 
     double totalkineticEnergy = -totalpotentialTimesRho + bandEnergy;
+    if (isPAWpseudopotential)
+      totalkineticEnergy += -pseudopotentialConstants[7];
 
     // output
-    if (print)
+    if (!isPAWpseudopotential)
       {
-        internal::printEnergy(bandEnergy,
-                              totalkineticEnergy,
-                              totalexchangeEnergy,
-                              totalcorrelationEnergy,
-                              allElectronElectrostaticEnergy,
-                              d_energyDispersion,
-                              totalEnergy,
-                              numberGlobalAtoms,
-                              pcout,
-                              d_dftParams.reproducible_output,
-                              d_dftParams.isPseudopotential,
-                              d_dftParams.verbosity,
-                              d_dftParams);
+        if (print)
+          {
+            internal::printEnergy(bandEnergy,
+                                  totalkineticEnergy,
+                                  totalexchangeEnergy,
+                                  totalcorrelationEnergy,
+                                  allElectronElectrostaticEnergy,
+                                  d_energyDispersion,
+                                  totalEnergy,
+                                  numberGlobalAtoms,
+                                  pcout,
+                                  d_dftParams.reproducible_output,
+                                  d_dftParams.isPseudopotential,
+                                  d_dftParams.verbosity,
+                                  d_dftParams);
+          }
+      }
+    else
+      {
+        internal::printPAWEnergyTotal(
+          bandEnergy,
+          totalkineticEnergy + pseudopotentialConstants[1],
+          totalexchangeEnergy + totalcorrelationEnergy +
+            pseudopotentialConstants[5],
+          allElectronElectrostaticEnergy + pseudopotentialConstants[3],
+          d_energyDispersion,
+          totalEnergy,
+          numberGlobalAtoms,
+          pcout,
+          d_dftParams.reproducible_output,
+          d_dftParams.isPseudopotential,
+          d_dftParams.verbosity,
+          d_dftParams);
+        internal::printPAWEnergyValence(
+          bandEnergy,
+          totalkineticEnergy + pseudopotentialConstants[2],
+          totalexchangeEnergy + totalcorrelationEnergy +
+            pseudopotentialConstants[6],
+          allElectronElectrostaticEnergy + pseudopotentialConstants[4],
+          d_energyDispersion,
+          totalEnergy,
+          numberGlobalAtoms,
+          pcout,
+          d_dftParams.reproducible_output,
+          d_dftParams.isPseudopotential,
+          d_dftParams.verbosity,
+          d_dftParams);
       }
 
     return totalEnergy;

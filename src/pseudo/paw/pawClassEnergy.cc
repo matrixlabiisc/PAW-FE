@@ -1116,13 +1116,121 @@ namespace dftfe
   std::vector<double>
   pawClass<ValueType, memorySpace>::getDeltaEnergy()
   {
-    std::vector<double> dETerms(5, 0.0);
     // 0Th Term is Delta ZeroijDij
     // 1st Term is Delta KEijDij
     // 2nd Term is Delta CijDij + Delta CijklDIjDkl + DeltaC0
-    // 4th Termis is Delta CijDij + Delta CijklDIjDkl + DeltaC0val
+    // 4th Term is is Delta CijDij + Delta CijklDIjDkl + DeltaC0val
     // 5th Term is Delta Exc
-    // 6th termis \Delta Hij Dij
+    // 6th Term is Delta Exc valence
+    // 7th termis \Delta Hij Dij
+
+    std::vector<double> dETerms(8, 0.0);
+    double              totalZeroPotentialContribution              = 0.0;
+    double              totalKineticEnergyContribution              = 0.0;
+    double              totalKineticEnergyContributionValence       = 0.0;
+    double              totalColEnergyContribution                  = 0.0;
+    double              totalColValenceEnergyContribution           = 0.0;
+    double              totalExchangeCorrelationContribution        = 0.0;
+    double              totalExchangeCorrelationValenceContribution = 0.0;
+    double              nonLocalHamiltonianContribution             = 0.0;
+    const std::vector<unsigned int> &atomicNumber =
+      d_atomicShapeFnsContainer->getAtomicNumbers();
+    totalExchangeCorrelationContribution =
+      computeDeltaExchangeCorrelationEnergy(
+        totalExchangeCorrelationValenceContribution);
+    for (int iAtom = 0; iAtom < atomicNumber.size(); iAtom++)
+      {
+        unsigned int       Znum   = atomicNumber[iAtom];
+        unsigned int       atomId = iAtom;
+        const unsigned int numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        const unsigned int numberOfRadialProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
+        std::vector<double> Dij_in   = D_ij[TypeOfField::In][atomId];
+        std::vector<double> Dij_out  = D_ij[TypeOfField::Out][atomId];
+        std::vector<double> Zeroij   = d_zeroPotentialij[Znum];
+        std::vector<double> KEij     = d_KineticEnergyCorrectionTerm[Znum];
+        std::vector<double> Cij      = d_deltaCij[Znum];
+        std::vector<double> Cijkl    = d_deltaCijkl[Znum];
+        std::vector<double> deltaHij = d_atomicNonLocalPseudoPotentialConstants
+          [CouplingType::HamiltonianEntries][atomId];
+        double C                               = d_deltaC[Znum];
+        double Cvalence                        = d_deltaValenceC[Znum];
+        double KEcontribution                  = 0.0;
+        double XCContribution                  = 0.0;
+        double ZeroPotentialContribution       = 0.0;
+        double ColoumbContribution             = 0.0;
+        double ColoumbContributionValence      = 0.0;
+        double nonLocalHamiltonianContribution = 0.0;
+        for (int iProj = 0; iProj < numberOfProjectors; iProj++)
+          {
+            for (int jProj = 0; jProj < numberOfProjectors; jProj++)
+              {
+                nonLocalHamiltonianContribution +=
+                  Dij_in[iProj * numberOfProjectors + jProj] *
+                  deltaHij[iProj * numberOfProjectors + jProj];
+                KEcontribution += Dij_out[iProj * numberOfProjectors + jProj] *
+                                  KEij[iProj * numberOfProjectors + jProj];
+                ZeroPotentialContribution +=
+                  Dij_out[iProj * numberOfProjectors + jProj] *
+                  Zeroij[iProj * numberOfProjectors + jProj];
+                ColoumbContribution +=
+                  Dij_out[iProj * numberOfProjectors + jProj] *
+                  Cij[iProj * numberOfProjectors + jProj];
+                double CijkContribution = 0.0;
+                for (int lProj = 0; lProj < numberOfProjectors; lProj++)
+                  {
+                    for (int kProj = 0; kProj < numberOfProjectors; kProj++)
+                      {
+                        unsigned int index =
+                          pow(numberOfProjectors, 3) * iProj +
+                          pow(numberOfProjectors, 2) * jProj +
+                          numberOfProjectors * kProj + lProj;
+                        CijkContribution +=
+                          Dij_out[kProj * numberOfProjectors + lProj] *
+                          Cijkl[index];
+                      }
+                  }
+                ColoumbContribution +=
+                  CijkContribution *
+                  Dij_out[iProj * numberOfProjectors + jProj];
+              }
+          }
+        ColoumbContributionValence = ColoumbContribution;
+        ColoumbContribution += C;
+        ColoumbContributionValence += Cvalence;
+
+        totalZeroPotentialContribution += ZeroPotentialContribution;
+        totalKineticEnergyContribution +=
+          KEcontribution + d_coreKE.find(Znum)->second;
+        totalKineticEnergyContributionValence += KEcontribution;
+        totalColEnergyContribution += ColoumbContribution;
+        totalColValenceEnergyContribution += ColoumbContributionValence;
+        nonLocalHamiltonianContribution += nonLocalHamiltonianContribution;
+
+
+
+      } // iAtom
+    // 0Th Term is Delta ZeroijDij
+    // 1st Term is Delta KEijDij
+    // 2nd Term is Delta KE valence
+    // 3rd Term is Delta CijDij + Delta CijklDIjDkl + DeltaC0
+    // 4th Term is is Delta CijDij + Delta CijklDIjDkl + DeltaC0val
+    // 5th Term is Delta Exc
+    // 6th Term is Delta Exc valence
+    // 7th termis \Delta Hij Dij
+    dETerms[0] = totalZeroPotentialContribution;
+    dETerms[1] = totalKineticEnergyContribution;
+    dETerms[2] = totalKineticEnergyContributionValence;
+    dETerms[3] = totalColEnergyContribution;
+    dETerms[4] = totalColValenceEnergyContribution;
+    dETerms[5] = totalExchangeCorrelationContribution;
+    dETerms[6] = totalExchangeCorrelationValenceContribution;
+    dETerms[7] = nonLocalHamiltonianContribution;
+
+
 
     return dETerms;
   }

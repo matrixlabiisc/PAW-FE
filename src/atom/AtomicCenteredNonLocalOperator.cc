@@ -2002,8 +2002,10 @@ namespace dftfe
                       &one,
                       &d_sphericalFnTimesWavefunMatrix[atomId][0],
                       d_numberWaveFunctions);
-                    // std::cout<<"CtX for iElem: "<<iElem<<" "<<d_this_mpi_process<<std::endl;
-                    // for(int itemp = 0; itemp < d_sphericalFnTimesWavefunMatrix[atomId].size(); itemp++)
+                    // std::cout<<"CtX for iElem: "<<iElem<<"
+                    // "<<d_this_mpi_process<<std::endl; for(int itemp = 0;
+                    // itemp < d_sphericalFnTimesWavefunMatrix[atomId].size();
+                    // itemp++)
                     //   std::cout<<d_sphericalFnTimesWavefunMatrix[atomId][itemp]<<std::endl;
                     // std::cout<<"--------"<<std::endl;
 
