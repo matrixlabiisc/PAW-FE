@@ -593,8 +593,11 @@ namespace dftfe
       for (; cell != endc; ++cell)
         if (cell->is_locally_owned())
           {
-            const std::vector<double> &bQuadValuesCell =
+            if(smearedbValues.find(cell->id()) != smearedbValues.end())
+            {
+              const std::vector<double> &bQuadValuesCell =
               smearedbValues.find(cell->id())->second;
+             
             fe_values.reinit(cell);
 
             std::vector<double> tempPhiTot(n_q_points);
@@ -605,6 +608,7 @@ namespace dftfe
               temp += tempPhiTot[q] * bQuadValuesCell[q] * fe_values.JxW(q);
 
             phiContribution += temp;
+            }
           }
 
       return 0.5 * (phiContribution);

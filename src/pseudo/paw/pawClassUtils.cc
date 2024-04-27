@@ -969,15 +969,14 @@ namespace dftfe
         D_ij[typeOfField][atomId] =
           std::vector<double>(numberOfProjectors * numberOfProjectors, 0.0);
       }
-    const std::vector<unsigned int> ownedAtomIds =
-      d_nonLocalOperator->getOwnedAtomIdsInCurrentProcessor();
+
     std::vector<double> DijTotalVector(d_nProjSqTotal, 0.0);
-    if (ownedAtomIds.size() > 0)
+    if (d_LocallyOwnedAtomId.size() > 0)
       {
         unsigned int index = 0;
-        for (int iAtom = 0; iAtom < ownedAtomIds.size(); iAtom++)
+        for (int iAtom = 0; iAtom < d_LocallyOwnedAtomId.size(); iAtom++)
           {
-            unsigned int atomId = ownedAtomIds[iAtom];
+            unsigned int atomId = d_LocallyOwnedAtomId[iAtom];
             unsigned int Znum   = atomicNumber[atomId];
             unsigned int numberOfProjectors =
               d_atomicProjectorFnsContainer
