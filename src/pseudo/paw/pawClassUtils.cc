@@ -484,10 +484,12 @@ namespace dftfe
   {
     std::vector<unsigned int> atomicNumber =
       d_atomicProjectorFnsContainer->getAtomicNumbers();
+    const std::vector<unsigned int> ownedAtomIds =
+      d_nonLocalOperator->getOwnedAtomIdsInCurrentProcessor();
     std::vector<double> DijVector;
-    for (unsigned int iAtom = 0; iAtom < d_LocallyOwnedAtomId.size(); iAtom++)
+    for (unsigned int iAtom = 0; iAtom < ownedAtomIds.size(); iAtom++)
       {
-        unsigned int atomId = d_LocallyOwnedAtomId[iAtom];
+        unsigned int atomId = ownedAtomIds[iAtom];
         unsigned int Znum   = atomicNumber[atomId];
         unsigned int numProj =
           d_atomicProjectorFnsContainer
@@ -534,6 +536,9 @@ namespace dftfe
               }
           }
       }
+    std::cout << "Size of Dij vector in processor: " << d_this_mpi_process
+              << " " << DijVector.size() << std::endl;
+    MPI_Barrier(d_mpiCommParent);
     return (DijVector);
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -973,13 +978,15 @@ namespace dftfe
           std::vector<double>(numberOfProjectors * numberOfProjectors, 0.0);
       }
 
-    std::vector<double> DijTotalVector(d_nProjSqTotal, 0.0);
-    if (d_LocallyOwnedAtomId.size() > 0)
+    // std::vector<double> DijTotalVector(d_nProjSqTotal, 0.0);
+    const std::vector<unsigned int> ownedAtomIds =
+      d_nonLocalOperator->getOwnedAtomIdsInCurrentProcessor();
+    if (ownedAtomIds.size() > 0)
       {
         unsigned int index = 0;
-        for (int iAtom = 0; iAtom < d_LocallyOwnedAtomId.size(); iAtom++)
+        for (int iAtom = 0; iAtom < ownedAtomIds.size(); iAtom++)
           {
-            unsigned int atomId = d_LocallyOwnedAtomId[iAtom];
+            unsigned int atomId = ownedAtomIds[iAtom];
             unsigned int Znum   = atomicNumber[atomId];
             unsigned int numberOfProjectors =
               d_atomicProjectorFnsContainer
@@ -1006,10 +1013,12 @@ namespace dftfe
   std::vector<double>
   pawClass<ValueType, memorySpace>::getDijWeights()
   {
-    std::vector<double> weights;
-    for (unsigned int iAtom = 0; iAtom < d_LocallyOwnedAtomId.size(); iAtom++)
+    std::vector<double>             weights;
+    const std::vector<unsigned int> ownedAtomIds =
+      d_nonLocalOperator->getOwnedAtomIdsInCurrentProcessor();
+    for (unsigned int iAtom = 0; iAtom < ownedAtomIds.size(); iAtom++)
       {
-        unsigned int              atomId = d_LocallyOwnedAtomId[iAtom];
+        unsigned int              atomId = ownedAtomIds[iAtom];
         std::vector<unsigned int> atomicNumber =
           d_atomicProjectorFnsContainer->getAtomicNumbers();
         unsigned int Znum = atomicNumber[atomId];
@@ -1062,6 +1071,9 @@ namespace dftfe
               }
           }
       }
+    std::cout << "Size of Dij Weights in procs: " << d_this_mpi_process << " "
+              << weights.size() << std::endl;
+    MPI_Barrier(d_mpiCommParent);
     return weights;
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -1071,8 +1083,8 @@ namespace dftfe
   {
     d_BasisOperatorHostPtr->reinit(0, 0, d_densityQuadratureId);
 
-    const dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
-                 JxwVector     = d_BasisOperatorHostPtr->JxW();
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+                 JxwVector     = d_BasisOperatorHostPtr->JxWBasisData();
     unsigned int numQuadPoints = d_BasisOperatorHostPtr->nQuadsPerCell();
     MPI_Barrier(d_mpiCommParent);
     double totalCoreDensity = 0.0;
