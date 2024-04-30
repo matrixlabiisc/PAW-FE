@@ -403,6 +403,8 @@ namespace dftfe
           } // cell locally owned check
 
       } // cell loop
+    if (d_dftParamsPtr->pawPseudoPotential)
+      d_pawClassPtr->computeIntegralCoreDensity(d_rhoCore);
   }
 #include "dft.inst.cc"
 } // namespace dftfe

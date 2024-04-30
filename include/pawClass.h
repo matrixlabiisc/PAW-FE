@@ -319,6 +319,10 @@ namespace dftfe
     std::vector<double>
     getDeltaEnergy();
 
+    void
+    computeIntegralCoreDensity(
+      const std::map<dealii::CellId, std::vector<double>> &rhoCore);
+
   private:
     void
     createAtomTypesList(const std::vector<std::vector<double>> &atomLocations);
@@ -367,6 +371,8 @@ namespace dftfe
     std::vector<unsigned int> d_projectorStartIndex;
     std::vector<unsigned int> d_totalProjectorStartIndex;
     double                    d_TotalCompensationCharge;
+    double d_integralCoreDensity, d_integrealCoreDensityRadial;
+    std::map<unsigned int, double> d_integralCoreDensityPerAtom;
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
      * @param[in] atomLocations atomic Coordinates

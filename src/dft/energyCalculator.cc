@@ -593,22 +593,22 @@ namespace dftfe
       for (; cell != endc; ++cell)
         if (cell->is_locally_owned())
           {
-            if(smearedbValues.find(cell->id()) != smearedbValues.end())
-            {
-              const std::vector<double> &bQuadValuesCell =
-              smearedbValues.find(cell->id())->second;
-             
-            fe_values.reinit(cell);
+            if (smearedbValues.find(cell->id()) != smearedbValues.end())
+              {
+                const std::vector<double> &bQuadValuesCell =
+                  smearedbValues.find(cell->id())->second;
 
-            std::vector<double> tempPhiTot(n_q_points);
-            fe_values.get_function_values(phiTotRhoOut, tempPhiTot);
+                fe_values.reinit(cell);
 
-            double temp = 0;
-            for (unsigned int q = 0; q < n_q_points; ++q)
-              temp += tempPhiTot[q] * bQuadValuesCell[q] * fe_values.JxW(q);
+                std::vector<double> tempPhiTot(n_q_points);
+                fe_values.get_function_values(phiTotRhoOut, tempPhiTot);
 
-            phiContribution += temp;
-            }
+                double temp = 0;
+                for (unsigned int q = 0; q < n_q_points; ++q)
+                  temp += tempPhiTot[q] * bQuadValuesCell[q] * fe_values.JxW(q);
+
+                phiContribution += temp;
+              }
           }
 
       return 0.5 * (phiContribution);

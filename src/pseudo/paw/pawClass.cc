@@ -68,8 +68,9 @@ namespace dftfe
         dealii::Point<3> nuclearCoordinates(atomCoordinates[3 * atomId + 0],
                                             atomCoordinates[3 * atomId + 1],
                                             atomCoordinates[3 * atomId + 2]);
-        double           dL0     = d_DeltaL0coeff[Znum];
-        double           RmaxAug = d_RmaxAug[Znum];
+        double           dL0 = d_DeltaL0coeff[Znum];
+        pcout << "Delta dL0: " << dL0 << " Znum: " << Znum << std::endl;
+        double RmaxAug = d_RmaxAug[Znum];
 
         for (int iElemComp = 0; iElemComp < numberElementsInAtomCompactSupport;
              iElemComp++)

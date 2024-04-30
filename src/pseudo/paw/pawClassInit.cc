@@ -261,10 +261,11 @@ namespace dftfe
             d_radialCoreDerAE[*it] = std::vector<double>(numValues, 0.0);
             d_radialCoreDerPS[*it] = std::vector<double>(numValues, 0.0);
           }
-        d_atomCoreDensityAE[*it] = radialAECoreDensity;
-        d_atomCoreDensityPS[*it] = radialPSCoreDensity;
-        double charge            = double(*it) / sqrt(4.0 * M_PI);
-        d_DeltaL0coeff[*it]      = -charge;
+        d_atomCoreDensityAE[*it]          = radialAECoreDensity;
+        d_atomCoreDensityPS[*it]          = radialPSCoreDensity;
+        double charge                     = double(*it) / sqrt(4.0 * M_PI);
+        d_DeltaL0coeff[*it]               = -charge;
+        d_integralCoreDensityPerAtom[*it] = 0.0;
         if (d_atomTypeCoreFlagMap[atomicNumber])
           {
             std::function<double(const unsigned int &)> f =
@@ -288,7 +289,8 @@ namespace dftfe
             pcout
               << "PAW Initialization: Integral Pseudo Smooth CoreDensity from Radial integration: "
               << Q2 * sqrt(4 * M_PI) << std::endl;
-            d_DeltaL0coeff[*it] = (Q1 - Q2);
+            d_integralCoreDensityPerAtom[*it] = Q2 * sqrt(4 * M_PI);
+            d_DeltaL0coeff[*it] += (Q1 - Q2);
           }
 
       } //*it loop

@@ -941,10 +941,13 @@ namespace dftfe
     double integralCompCharge = TotalCompensationCharge();
     pcout << "----------------------------------------------------"
           << std::endl;
-    pcout << "Integral nTilde: " << integralRhoValue << std::endl;
+    pcout << "Integral nTilde : " << integralRhoValue << std::endl;
+    pcout << "Integral nTilde + nTildeCore: "
+          << d_integralCoreDensity + integralRhoValue << std::endl;
     pcout << "Inegral Comp charge: " << integralCompCharge << std::endl;
     pcout << "Charge Neutrality error: "
-          << (integralRhoValue + integralCompCharge) << std::endl;
+          << (integralRhoValue + d_integralCoreDensity + integralCompCharge)
+          << std::endl;
     pcout << "----------------------------------------------------"
           << std::endl;
   }
@@ -1061,7 +1064,51 @@ namespace dftfe
       }
     return weights;
   }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::computeIntegralCoreDensity(
+    const std::map<dealii::CellId, std::vector<double>> &rhoCore)
+  {
+    d_BasisOperatorHostPtr->reinit(0, 0, d_densityQuadratureId);
 
+    const dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
+                 JxwVector     = d_BasisOperatorHostPtr->JxW();
+    unsigned int numQuadPoints = d_BasisOperatorHostPtr->nQuadsPerCell();
+    MPI_Barrier(d_mpiCommParent);
+    double totalCoreDensity = 0.0;
+    if (rhoCore.size() > 0)
+      {
+        for (std::map<dealii::CellId, std::vector<double>>::const_iterator it =
+               rhoCore.begin();
+             it != rhoCore.end();
+             ++it)
+          {
+            const std::vector<double> &Value = it->second;
+            unsigned int               cellIndex =
+              d_BasisOperatorHostPtr->cellIndex(it->first);
+            for (int qpoint = 0; qpoint < numQuadPoints; qpoint++)
+              totalCoreDensity +=
+                Value[qpoint] * JxwVector[cellIndex * numQuadPoints + qpoint];
+          }
+      }
+    d_integralCoreDensity =
+      dealii::Utilities::MPI::sum(totalCoreDensity, d_mpiCommParent);
+    d_integrealCoreDensityRadial = 0.0;
+    std::vector<unsigned int> atomicNumbers =
+      d_atomicProjectorFnsContainer->getAtomicNumbers();
+    for (int iAtom = 0; iAtom < atomicNumbers.size(); iAtom++)
+      {
+        unsigned int Znum = atomicNumbers[iAtom];
+        d_integrealCoreDensityRadial += d_integralCoreDensityPerAtom[Znum];
+      }
+    pcout
+      << "PAW Class: Error in integralCoreDensity with radial data and FEM: "
+      << std::fabs(d_integralCoreDensity - d_integrealCoreDensityRadial)
+      << std::endl;
+    if (std::fabs(d_integralCoreDensity - d_integrealCoreDensityRadial) > 1E-4)
+      pcout << "PAW Class: Warning!! Increase density quadrature rule: "
+            << std::endl;
+  }
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>;
