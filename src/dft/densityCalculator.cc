@@ -174,7 +174,7 @@ namespace dftfe
             gradWfcQuadPointData.setValue(zero);
             rhoWfcContributions.setValue(0.0);
             gradRhoWfcContributions.setValue(0.0);
-            if (dftParams.pawPseudoPotential)
+            if (dftParams.pawPseudoPotential && pawClassPtr != NULL)
               {
                 pawClassPtr->getNonLocalOperator()->initialiseOperatorActionOnX(
                   kPoint);
@@ -186,7 +186,7 @@ namespace dftfe
                   std::min(BVec, totalNumWaveFunctions - jvec);
                 flattenedArrayBlock =
                   &(basisOperationsPtr->getMultiVector(currentBlockSize, 0));
-                if (dftParams.pawPseudoPotential)
+                if (dftParams.pawPseudoPotential && pawClassPtr != NULL)
                   {
                     pawClassPtr->getNonLocalOperator()
                       ->initialiseFlattenedDataStructure(
@@ -314,7 +314,8 @@ namespace dftfe
                               std::pair<unsigned int, unsigned int>(
                                 startingCellId,
                                 startingCellId + currentCellsBlockSize));
-                            if (dftParams.pawPseudoPotential)
+                            if (dftParams.pawPseudoPotential &&
+                                pawClassPtr != NULL)
                               {
                                 pawClassPtr->getNonLocalOperator()
                                   ->applyCconjtransOnX(
@@ -353,7 +354,7 @@ namespace dftfe
                               isEvaluateGradRho);
                           } // non-trivial cell block check
                       }     // cells block loop
-                    if (dftParams.pawPseudoPotential)
+                    if (dftParams.pawPseudoPotential && pawClassPtr != NULL)
                       {
                         pawClassPtr->getNonLocalOperator()
                           ->applyAllReduceOnCconjtransX(
@@ -518,7 +519,7 @@ namespace dftfe
       }
 
 #endif
-    if (dftParams.pawPseudoPotential)
+    if (dftParams.pawPseudoPotential && pawClassPtr != NULL)
       {
         pawClassPtr->communicateDijAcrossAllProcessors(TypeOfField::Out,
                                                        interpoolcomm,

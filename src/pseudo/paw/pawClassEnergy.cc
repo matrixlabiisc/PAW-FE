@@ -220,11 +220,7 @@ namespace dftfe
       }
   }
 
-  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
-  void
-  pawClass<ValueType, memorySpace>::computeNonLocalHamiltonianEntries(
-    const bool flagEnergy)
-  {}
+
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   double
@@ -465,6 +461,15 @@ namespace dftfe
               } // LDA case
             else
               {
+                double Yi, Yj;
+                pcout << "Starting GGA Delta XC: " << std::endl;
+                // double timerLDAContribution, timerGGAContribution;
+                // timerLDAContribution                       = 0.0;
+                // timerGGAContribution                       = 0.0;
+                // double               timerGGA0Contribution = 0.0;
+                // double               timerGGAAContribution = 0.0;
+                // double               timerGGABContribution = 0.0;
+                // double               timerGGACContribution = 0.0;
                 const std::vector<double> &productOfAEpartialWfc =
                   d_productOfAEpartialWfc[Znum];
                 const std::vector<double> &productOfPSpartialWfc =
@@ -574,12 +579,12 @@ namespace dftfe
                                         quad_points[qpoint][1],
                                         lQuantumNo_j,
                                         mQuantumNumber_j,
-                                        Yi);
+                                        Yj);
 
                                     std::vector<double> gradYj =
                                       derivativeOfRealSphericalHarmonic(
                                         lQuantumNo_j,
-                                        lQuantumNo_j,
+                                        mQuantumNumber_j,
                                         quad_points[qpoint][0],
                                         quad_points[qpoint][1]);
                                     SphericalHarmonics[projIndexI *
@@ -634,6 +639,7 @@ namespace dftfe
                     const unsigned int inc         = 1;
                     const double       Beta2       = 1.0;
                     // Computing Density for Libxc
+                    // MPI_Barrier(d_mpiCommParent);
                     // double TimerLDAStart = MPI_Wtime();
                     dgemm_(&transA,
                            &transB,
@@ -788,7 +794,8 @@ namespace dftfe
                            &inc);
 
                     // MPI_Barrier(d_mpiCommParent);
-                    // timerGGAAContribution += (MPI_Wtime() - TimerGGAAStart);
+                    // timerGGAAContribution += (MPI_Wtime() -
+                    // TimerGGAAStart);
 
 
                     std::vector<double> tempAEcontributionB(
@@ -847,8 +854,6 @@ namespace dftfe
                                &inc);
                       }
 
-
-
                     // Part2 of TensorContraction  for B
 
                     dgemm_(&transA,
@@ -878,8 +883,10 @@ namespace dftfe
                            &sigmaSmooth[0],
                            &inc);
                     // MPI_Barrier(d_mpiCommParent);
-                    // timerGGABContribution += (MPI_Wtime() - TimerGGABStart);
-
+                    // timerGGABContribution += (MPI_Wtime() -
+                    // TimerGGABStart);
+                    // pcout << "Finished Sigma Contribution part2 B" <<
+                    // std::endl;
 
                     std::vector<double> tempAEcontributionC(
                       numberOfProjectorsSq * numberofValues, 0.0);
@@ -938,8 +945,6 @@ namespace dftfe
                                &tempPScontributionC[index],
                                &inc);
                       }
-
-
 
                     dgemm_(&transA,
                            &transB,
@@ -1011,6 +1016,9 @@ namespace dftfe
                                        corrEnergyValPS[rpoint]);
                         double Value = rab[rpoint] * (Val1 - Val2) *
                                        pow(radialGrid[rpoint], 2);
+                        // std::cout<<rpoint<<" "<<Value<<" "<<rab[rpoint]<<"
+                        // "<<Val1<<" "<<Val2<<"
+                        // "<<radialGrid[rpoint]<<std::endl;
                         return (Value);
                       };
 
@@ -1038,6 +1046,11 @@ namespace dftfe
               }
           } // iAtomList
       }     // If locallyOwned
+    MPI_Barrier(d_mpiCommParent);
+    // std::cout<<"TotalDeltaXC: "<<TotalDeltaXC<<"
+    // "<<d_this_mpi_process<<std::endl;
+    // std::cout<<"TotalDeltaExchangeCorrelationVal:
+    // "<<TotalDeltaExchangeCorrelationVal<<" "<<d_this_mpi_process<<std::endl;
     DeltaExchangeCorrelationVal =
       (dealii::Utilities::MPI::sum(TotalDeltaExchangeCorrelationVal,
                                    d_mpiCommParent));
@@ -1132,7 +1145,7 @@ namespace dftfe
     double              totalColValenceEnergyContribution           = 0.0;
     double              totalExchangeCorrelationContribution        = 0.0;
     double              totalExchangeCorrelationValenceContribution = 0.0;
-    double              nonLocalHamiltonianContribution             = 0.0;
+    double              totalnonLocalHamiltonianContribution        = 0.0;
     const std::vector<unsigned int> &atomicNumber =
       d_atomicShapeFnsContainer->getAtomicNumbers();
     totalExchangeCorrelationContribution =
@@ -1164,13 +1177,19 @@ namespace dftfe
         double ColoumbContribution             = 0.0;
         double ColoumbContributionValence      = 0.0;
         double nonLocalHamiltonianContribution = 0.0;
+        pcout << "Energy nonlocal term: " << std::endl;
         for (int iProj = 0; iProj < numberOfProjectors; iProj++)
           {
             for (int jProj = 0; jProj < numberOfProjectors; jProj++)
               {
                 nonLocalHamiltonianContribution +=
-                  Dij_in[iProj * numberOfProjectors + jProj] *
+                  Dij_out[iProj * numberOfProjectors + jProj] *
                   deltaHij[iProj * numberOfProjectors + jProj];
+                pcout << iProj * numberOfProjectors + jProj << " "
+                      << Dij_out[iProj * numberOfProjectors + jProj] << " "
+                      << deltaHij[iProj * numberOfProjectors + jProj] << " "
+                      << Zeroij[iProj * numberOfProjectors + jProj] << " "
+                      << nonLocalHamiltonianContribution << std::endl;
                 KEcontribution += Dij_out[iProj * numberOfProjectors + jProj] *
                                   KEij[iProj * numberOfProjectors + jProj];
                 ZeroPotentialContribution +=
@@ -1196,8 +1215,8 @@ namespace dftfe
                 ColoumbContribution +=
                   CijkContribution *
                   Dij_out[iProj * numberOfProjectors + jProj];
-              }
-          }
+              } // jProj
+          }     // iProj
         ColoumbContributionValence = ColoumbContribution;
         ColoumbContribution += C;
         ColoumbContributionValence += Cvalence;
@@ -1208,7 +1227,12 @@ namespace dftfe
         totalKineticEnergyContributionValence += KEcontribution;
         totalColEnergyContribution += ColoumbContribution;
         totalColValenceEnergyContribution += ColoumbContributionValence;
-        nonLocalHamiltonianContribution += nonLocalHamiltonianContribution;
+        totalnonLocalHamiltonianContribution += nonLocalHamiltonianContribution;
+        pcout << "-------------------------" << std::endl;
+        pcout << totalnonLocalHamiltonianContribution << " "
+              << totalZeroPotentialContribution << " "
+              << ZeroPotentialContribution << " "
+              << totalZeroPotentialContribution << std::endl;
 
 
 
@@ -1228,7 +1252,11 @@ namespace dftfe
     dETerms[4] = totalColValenceEnergyContribution;
     dETerms[5] = totalExchangeCorrelationContribution;
     dETerms[6] = totalExchangeCorrelationValenceContribution;
-    dETerms[7] = nonLocalHamiltonianContribution;
+    dETerms[7] = totalnonLocalHamiltonianContribution;
+    pcout << "dETerms " << std::endl;
+    for (int i = 0; i <= 7; i++)
+      pcout << dETerms[i] << " ";
+    pcout << std::endl;
 
 
 

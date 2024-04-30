@@ -1130,13 +1130,7 @@ namespace dftfe
                           MPI_DOUBLE,
                           MPI_SUM,
                           d_mpiCommParent);
-            // if (flagEnergy)
-            //   MPI_Allreduce(MPI_IN_PLACE,
-            //                 &deltaColoumbicEnergyDijVector[0],
-            //                 npjsq * atomLists.size(),
-            //                 MPI_DOUBLE,
-            //                 MPI_SUM,
-            //                 d_mpiCommParent);
+
             for (int i = 0; i < atomLists.size(); i++)
               {
                 std::vector<double> ValueAtom(npjsq, 0.0);

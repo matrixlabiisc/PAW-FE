@@ -154,31 +154,64 @@ namespace dftfe
           {
             computeRhoNodalFromPSI(isConsiderSpectrumSplitting);
 
-            // normalize rho
-            const double charge =
-              totalCharge(d_matrixFreeDataPRefined, d_densityOutNodalValues[0]);
+            // // normalize rho
+            // const double charge =
+            //   totalCharge(d_matrixFreeDataPRefined,
+            //   d_densityOutNodalValues[0]);
 
 
-            const double scalingFactor = ((double)numElectrons) / charge;
+            // const double scalingFactor = ((double)numElectrons) / charge;
 
-            // scale nodal vector with scalingFactor
-            d_densityOutNodalValues[0] *= scalingFactor;
+            // // scale nodal vector with scalingFactor
+            // d_densityOutNodalValues[0] *= scalingFactor;
           }
       }
 
     if (d_dftParamsPtr->computeEnergyEverySCF || isGroundState)
       {
-        d_rhoOutNodalValuesDistributed = d_densityOutNodalValues[0];
-        d_rhoOutNodalValuesDistributed.update_ghost_values();
-        d_constraintsRhoNodalInfo.distribute(d_rhoOutNodalValuesDistributed);
-        interpolateDensityNodalDataToQuadratureDataLpsp(
-          d_basisOperationsPtrElectroHost,
-          d_densityDofHandlerIndexElectro,
-          d_lpspQuadratureIdElectro,
-          d_densityOutNodalValues[0],
-          d_densityTotalOutValuesLpspQuad,
-          d_gradDensityTotalOutValuesLpspQuad,
-          true);
+        // d_rhoOutNodalValuesDistributed = d_densityOutNodalValues[0];
+        // d_rhoOutNodalValuesDistributed.update_ghost_values();
+        // d_constraintsRhoNodalInfo.distribute(d_rhoOutNodalValuesDistributed);
+        // interpolateDensityNodalDataToQuadratureDataLpsp(
+        //   d_basisOperationsPtrElectroHost,
+        //   d_densityDofHandlerIndexElectro,
+        //   d_lpspQuadratureIdElectro,
+        //   d_densityOutNodalValues[0],
+        //   d_densityTotalOutValuesLpspQuad,
+        //   d_gradDensityTotalOutValuesLpspQuad,
+        //   true);
+
+        std::vector<
+          dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+          TempVector, TempVector2;
+
+        TempVector.resize(d_dftParamsPtr->spinPolarized == 1 ? 2 : 1);
+        computeRhoFromPSI(
+          &d_eigenVectorsFlattenedHost,
+          &d_eigenVectorsRotFracDensityFlattenedHost,
+          d_numEigenValues,
+          d_numEigenValuesRR,
+          eigenValues,
+          fermiEnergy,
+          fermiEnergyUp,
+          fermiEnergyDown,
+          d_basisOperationsPtrHost,
+          d_BLASWrapperPtrHost,
+          d_densityDofHandlerIndex,
+          d_lpspQuadratureId,
+          d_kPointWeights,
+          TempVector,
+          TempVector2,
+          false,
+          d_mpiCommParent,
+          interpoolcomm,
+          interBandGroupComm,
+          *d_dftParamsPtr,
+          isConsiderSpectrumSplitting && d_numEigenValues != d_numEigenValuesRR,
+          std::shared_ptr<dftfe::pawClass<dataTypes::number,
+                                          dftfe::utils::MemorySpace::HOST>>(
+            nullptr));
+        d_densityTotalOutValuesLpspQuad = TempVector[0];
       }
 
     if (isGroundState &&

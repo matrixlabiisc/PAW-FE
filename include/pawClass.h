@@ -273,8 +273,7 @@ namespace dftfe
     computeNonlocalPseudoPotentialConstants(CouplingType couplingtype,
                                             unsigned int s = 0);
 
-    void
-    computeNonLocalHamiltonianEntries(const bool flagEnergy);
+
 
     double
     computeDeltaExchangeCorrelationEnergy(double &DeltaExchangeCorrelationVal);

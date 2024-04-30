@@ -47,11 +47,15 @@ namespace dftfe
         {
           const std::vector<double> &cellFieldValues =
             fieldValues.find(basisOperationsPtr->cellID(iCell))->second;
-          for (unsigned int iQuad = 0; iQuad < nQuadsPerCell; ++iQuad)
-            result +=
-              cellFieldValues[iQuad] *
-              densityQuadValues[iCell * nQuadsPerCell + iQuad] *
-              basisOperationsPtr->JxWBasisData()[iCell * nQuadsPerCell + iQuad];
+          if (fieldValues.find(basisOperationsPtr->cellID(iCell)) !=
+              fieldValues.end())
+            {
+              for (unsigned int iQuad = 0; iQuad < nQuadsPerCell; ++iQuad)
+                result += cellFieldValues[iQuad] *
+                          densityQuadValues[iCell * nQuadsPerCell + iQuad] *
+                          basisOperationsPtr
+                            ->JxWBasisData()[iCell * nQuadsPerCell + iQuad];
+            }
         }
       return result;
     }
@@ -79,6 +83,39 @@ namespace dftfe
               fieldValues[iCell * nQuadsPerCell + iQuad] *
               densityQuadValues[iCell * nQuadsPerCell + iQuad] *
               basisOperationsPtr->JxWBasisData()[iCell * nQuadsPerCell + iQuad];
+        }
+      return result;
+    }
+    template <typename T>
+    double
+    computeFieldTimesDensity(
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<T, double, dftfe::utils::MemorySpace::HOST>>
+        &                basisOperationsPtr,
+      const unsigned int quadratureId,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                                                  fieldValues,
+      const std::map<dealii::CellId, std::vector<double>> &densityQuadValues)
+    {
+      double result = 0.0;
+      basisOperationsPtr->reinit(0, 0, quadratureId, false);
+      const unsigned int nQuadsPerCell = basisOperationsPtr->nQuadsPerCell();
+
+      for (unsigned int iCell = 0; iCell < basisOperationsPtr->nCells();
+           ++iCell)
+        {
+          const std::vector<double> &cellDensityValues =
+            densityQuadValues.find(basisOperationsPtr->cellID(iCell))->second;
+          if (densityQuadValues.find(basisOperationsPtr->cellID(iCell)) !=
+              densityQuadValues.end())
+            {
+              for (unsigned int iQuad = 0; iQuad < nQuadsPerCell; ++iQuad)
+                result += fieldValues[iCell * nQuadsPerCell + iQuad] *
+                          cellDensityValues[iQuad] *
+                          basisOperationsPtr
+                            ->JxWBasisData()[iCell * nQuadsPerCell + iQuad];
+            }
         }
       return result;
     }
@@ -743,7 +780,7 @@ namespace dftfe
       interpoolcomm);
     double excCorrPotentialTimesRho = 0.0, electrostaticPotentialTimesRho = 0.0,
            exchangeEnergy = 0.0, correlationEnergy = 0.0,
-           electrostaticEnergyTotPot = 0.0;
+           electrostaticEnergyTotPot = 0.0, localPotentialTimesRho = 0.0;
 
 
     electrostaticPotentialTimesRho =
@@ -752,17 +789,26 @@ namespace dftfe
                                          phiTotRhoInValues,
                                          densityOutValues[0]);
     if (d_dftParams.isPseudopotential || smearedNuclearCharges)
-      electrostaticPotentialTimesRho +=
+      localPotentialTimesRho +=
         internal::computeFieldTimesDensity(basisOperationsPtrElectro,
                                            lpspQuadratureIDElectro,
                                            pseudoLocValues,
                                            rhoOutValuesLpsp);
+
     electrostaticEnergyTotPot =
       0.5 * internal::computeFieldTimesDensity(basisOperationsPtrElectro,
                                                densityQuadratureIDElectro,
                                                phiTotRhoOutValues,
                                                densityOutValues[0]);
-    if (d_dftParams.isPseudopotential || smearedNuclearCharges)
+    if (d_dftParams.pawPseudoPotential && d_dftParams.nonLinearCoreCorrection)
+      electrostaticEnergyTotPot +=
+        0.5 * internal::computeFieldTimesDensity(basisOperationsPtrElectro,
+                                                 densityQuadratureIDElectro,
+                                                 phiTotRhoOutValues,
+                                                 rhoCoreValues);
+
+    if ((d_dftParams.isPseudopotential || smearedNuclearCharges) &&
+        !d_dftParams.pawPseudoPotential)
       electrostaticEnergyTotPot +=
         internal::computeFieldTimesDensity(basisOperationsPtrElectro,
                                            lpspQuadratureIDElectro,
@@ -794,8 +840,9 @@ namespace dftfe
                            exchangeEnergy,
                            correlationEnergy,
                            excCorrPotentialTimesRho);
-    const double potentialTimesRho =
-      excCorrPotentialTimesRho + electrostaticPotentialTimesRho;
+    const double potentialTimesRho = excCorrPotentialTimesRho +
+                                     electrostaticPotentialTimesRho +
+                                     localPotentialTimesRho;
 
     double energy = -potentialTimesRho + exchangeEnergy + correlationEnergy +
                     electrostaticEnergyTotPot;
@@ -840,7 +887,7 @@ namespace dftfe
       dealii::Utilities::MPI::sum(nuclearElectrostaticEnergy, mpi_communicator);
 
     if (isPAWpseudopotential)
-      totalEnergy += -pseudopotentialConstants[7] - pseudopotentialConstants[0];
+      totalEnergy += -pseudopotentialConstants[7];
 
 
     double d_energyDispersion = 0;
@@ -860,9 +907,6 @@ namespace dftfe
 
     double allElectronElectrostaticEnergy =
       (totalelectrostaticEnergyPot + totalNuclearElectrostaticEnergy);
-    if (isPAWpseudopotential)
-      allElectronElectrostaticEnergy += -pseudopotentialConstants[0];
-
 
     double totalkineticEnergy = -totalpotentialTimesRho + bandEnergy;
     if (isPAWpseudopotential)
