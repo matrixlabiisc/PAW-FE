@@ -381,9 +381,18 @@ namespace dftfe
           dealii::QGauss<1>(d_dftParamsPtr->QuadratureOrderCoreDensity),
           d_dftParamsPtr->QuadratureCopyCoreDensity));
       }
-    quadratureVector.push_back(
-      dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadLPSP<FEOrder>()),
-                           C_numCopies1DQuadLPSP()));
+    if (!d_dftParamsPtr->pawPseudoPotential)
+      {
+        quadratureVector.push_back(
+          dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadLPSP<FEOrder>()),
+                               C_numCopies1DQuadLPSP()));
+      }
+    else
+      {
+        quadratureVector.push_back(dealii::QIterated<1>(
+          dealii::QGauss<1>(d_dftParamsPtr->QuadratureOrderZeroPotential),
+          d_dftParamsPtr->QuadratureCopyZeroPotential));
+      }
     if (!d_dftParamsPtr->pawPseudoPotential)
       {
         if (d_dftParamsPtr->isCellStress)

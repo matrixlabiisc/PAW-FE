@@ -51,10 +51,12 @@ namespace dftfe
               fieldValues.end())
             {
               for (unsigned int iQuad = 0; iQuad < nQuadsPerCell; ++iQuad)
-                result += cellFieldValues[iQuad] *
-                          densityQuadValues[iCell * nQuadsPerCell + iQuad] *
-                          basisOperationsPtr
-                            ->JxWBasisData()[iCell * nQuadsPerCell + iQuad];
+                {
+                  result += cellFieldValues[iQuad] *
+                            densityQuadValues[iCell * nQuadsPerCell + iQuad] *
+                            basisOperationsPtr
+                              ->JxWBasisData()[iCell * nQuadsPerCell + iQuad];
+                }
             }
         }
       return result;
@@ -845,7 +847,7 @@ namespace dftfe
                                      localPotentialTimesRho;
 
     double energy = -potentialTimesRho + exchangeEnergy + correlationEnergy +
-                    electrostaticEnergyTotPot;
+                    electrostaticEnergyTotPot - localPotentialTimesRho;
 
     double nuclearElectrostaticEnergy = 0.0;
     if (!isPAWpseudopotential)
@@ -885,7 +887,14 @@ namespace dftfe
       dealii::Utilities::MPI::sum(electrostaticEnergyTotPot, mpi_communicator);
     double totalNuclearElectrostaticEnergy =
       dealii::Utilities::MPI::sum(nuclearElectrostaticEnergy, mpi_communicator);
-
+    double totalLocalPseudoPotentialEnergy =
+      dealii::Utilities::MPI::sum(localPotentialTimesRho, mpi_communicator);
+    pcout << "Integreal ZeroPotential values and error: "
+          << totalLocalPseudoPotentialEnergy << " "
+          << pseudopotentialConstants[0] << " "
+          << std::fabs(pseudopotentialConstants[0] -
+                       totalLocalPseudoPotentialEnergy)
+          << std::endl;
     if (isPAWpseudopotential)
       totalEnergy += -pseudopotentialConstants[7];
 
@@ -934,6 +943,18 @@ namespace dftfe
       }
     else
       {
+        // pcout<<"comp1: "<<totalkineticEnergy +
+        // pseudopotentialConstants[1]<<std::endl; pcout<<"comp2:
+        // "<<totalexchangeEnergy + totalcorrelationEnergy +
+        // pseudopotentialConstants[5]<<std::endl; pcout<<"comp3:
+        // "<<allElectronElectrostaticEnergy +
+        // pseudopotentialConstants[3]<<std::endl; pcout<<"comp4:
+        // "<<(totalLocalPseudoPotentialEnergy -
+        // pseudopotentialConstants[0])<<std::endl; pcout<<"total:
+        // "<<(totalkineticEnergy + pseudopotentialConstants[1] +
+        //    totalexchangeEnergy + totalcorrelationEnergy +
+        //    pseudopotentialConstants[5] + allElectronElectrostaticEnergy +
+        //    pseudopotentialConstants[3])<<std::endl;
         internal::printPAWEnergyTotal(
           bandEnergy,
           totalkineticEnergy + pseudopotentialConstants[1],
@@ -941,7 +962,11 @@ namespace dftfe
             pseudopotentialConstants[5],
           allElectronElectrostaticEnergy + pseudopotentialConstants[3],
           d_energyDispersion,
-          totalEnergy,
+          (totalkineticEnergy + pseudopotentialConstants[1] +
+           totalexchangeEnergy + totalcorrelationEnergy +
+           pseudopotentialConstants[5] + allElectronElectrostaticEnergy +
+           pseudopotentialConstants[3](totalLocalPseudoPotentialEnergy -
+                                       pseudopotentialConstants[0])),
           numberGlobalAtoms,
           pcout,
           d_dftParams.reproducible_output,
@@ -955,7 +980,11 @@ namespace dftfe
             pseudopotentialConstants[6],
           allElectronElectrostaticEnergy + pseudopotentialConstants[4],
           d_energyDispersion,
-          totalEnergy,
+          (totalkineticEnergy + pseudopotentialConstants[2] +
+           totalexchangeEnergy + totalcorrelationEnergy +
+           pseudopotentialConstants[6] + allElectronElectrostaticEnergy +
+           pseudopotentialConstants[4] +
+           (totalLocalPseudoPotentialEnergy - pseudopotentialConstants[0])),
           numberGlobalAtoms,
           pcout,
           d_dftParams.reproducible_output,
