@@ -482,6 +482,7 @@ namespace dftfe
     initialiseColoumbicEnergyCorrection();
     initialiseZeroPotential();
     initialiseDataonRadialMesh();
+    computeCoreDeltaExchangeCorrelationEnergy();
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void

@@ -780,6 +780,7 @@ namespace dftfe
                                 (d_dftParams.verbosity + scfConverged),
                                 d_dftParams),
       interpoolcomm);
+      pcout<<"Band Energy: "<<bandEnergy<<std::endl;
     double excCorrPotentialTimesRho = 0.0, electrostaticPotentialTimesRho = 0.0,
            exchangeEnergy = 0.0, correlationEnergy = 0.0,
            electrostaticEnergyTotPot = 0.0, localPotentialTimesRho = 0.0;
@@ -965,7 +966,7 @@ namespace dftfe
           (totalkineticEnergy + pseudopotentialConstants[1] +
            totalexchangeEnergy + totalcorrelationEnergy +
            pseudopotentialConstants[5] + allElectronElectrostaticEnergy +
-           pseudopotentialConstants[3](totalLocalPseudoPotentialEnergy -
+           pseudopotentialConstants[3]+(totalLocalPseudoPotentialEnergy -
                                        pseudopotentialConstants[0])),
           numberGlobalAtoms,
           pcout,
@@ -993,7 +994,11 @@ namespace dftfe
           d_dftParams);
       }
 
-    return totalEnergy;
+    return (totalkineticEnergy + pseudopotentialConstants[2] +
+           totalexchangeEnergy + totalcorrelationEnergy +
+           pseudopotentialConstants[6] + allElectronElectrostaticEnergy +
+           pseudopotentialConstants[4] +
+           (totalLocalPseudoPotentialEnergy - pseudopotentialConstants[0]));
   }
 
   void
