@@ -445,7 +445,7 @@ namespace dftfe
               d_phiTotAXQuadratureIdElectro};
             std::vector<dftfe::basis::UpdateFlags> updateFlags{updateFlagsAll,
                                                                updateFlagsAll,
-                                                               updateFlagsAll,
+                                                               dftfe::basis::update_values|dftfe::basis::update_jxw|dftfe::basis::update_quadpoints,
                                                                updateFlagsAll};
             d_basisOperationsPtrElectroHost->init(d_matrixFreeDataPRefined,
                                                   d_constraintsVectorElectro,
