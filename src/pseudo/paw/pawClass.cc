@@ -47,8 +47,9 @@ namespace dftfe
                                     sphericalFunction = d_atomicShapeFnsContainer->getSphericalFunctions();
     const std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomicShapeFnsContainer->getAtomIdsInCurrentProcess();
-
-
+    MPI_Barrier(d_mpiCommParent);
+    std::cout<<"Number of atoms in proc-ID: "<<d_this_mpi_process<<" "<<atomIdsInCurrentProcess.size()<<std::endl;
+    MPI_Barrier(d_mpiCommParent);
 
     for (unsigned int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
          iAtom++)
@@ -188,9 +189,9 @@ namespace dftfe
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
         unsigned int        npjsq = numberOfProjectors * numberOfProjectors;
         std::vector<double> Tij   = d_ProductOfQijShapeFnAtQuadPoints[atomId];
-        pcout << "Size of Tij: " << Tij.size() << std::endl;
+        std::cout << "Size of Tij: " << Tij.size() <<"in procs: "<<d_this_mpi_process<< std::endl;
         std::vector<double> Dij = D_ij[typeOfField][atomId];
-        pcout << "Size of Dij: " << Dij.size() << std::endl;
+        std::cout << "Size of Dij: " << Dij.size() << std::endl;
         std::vector<unsigned int> elementIndexesInAtomCompactSupport =
           d_atomicShapeFnsContainer
             ->d_elementIndexesInAtomCompactSupport[atomId];
@@ -254,7 +255,9 @@ namespace dftfe
     const std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomicShapeFnsContainer->getAtomIdsInCurrentProcess();
 
-
+    MPI_Barrier(d_mpiCommParent);
+    std::cout<<"Number of atoms in proc-ID: "<<d_this_mpi_process<<" "<<atomIdsInCurrentProcess.size()<<std::endl;
+    MPI_Barrier(d_mpiCommParent);
 
     for (unsigned int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
          iAtom++)
@@ -477,7 +480,8 @@ namespace dftfe
               gLValuesQuadPoints;
           } // iElemComp
 
-        d_ProductOfQijShapeFnAtQuadPoints[iAtom] = tempCoeff;
+        d_ProductOfQijShapeFnAtQuadPoints[atomId] = tempCoeff;
+        std::cout << "Size of Tij: " << tempCoeff.size() <<"in procs: "<<d_this_mpi_process<< std::endl;
 
 
       } // iAtom
