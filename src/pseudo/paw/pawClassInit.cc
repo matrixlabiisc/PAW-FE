@@ -753,6 +753,7 @@ namespace dftfe
               {
                 unsigned int atomId     = atomIdsInCurrentProcess[iAtom];
                 unsigned int startIndex = d_totalProjectorStartIndex[atomId];
+                //std::cout<<"Start Index for iAtom: "<<startIndex<<std::endl;
                 unsigned int Znum       = atomicNumber[atomId];
                 unsigned int numberOfProjectors =
                   d_atomicProjectorFnsContainer
@@ -822,7 +823,7 @@ namespace dftfe
                 d_BLASWrapperHostPtr->xscal(Pmatrix->data() +
                                               iDof * d_totalProjectors,
                                             scalingCoeff,
-                                            d_totalProjectors);
+                                            d_totalProjectors);                      
               }
             char      transA = 'N';
             ValueType alpha  = d_kpointWeights[kPoint];
@@ -868,7 +869,7 @@ namespace dftfe
               {
                 for (int j = 0; j < numberOfProjectors; j++)
                   {
-                    pcout << PijMatrix[((startIndex + i) * numberOfProjectors +
+                    pcout << PijMatrix[((startIndex + i) * d_totalProjectors +
                                         (startIndex + j))]
                           << " ";
                   } // j
@@ -880,7 +881,7 @@ namespace dftfe
                 for (int j = 0; j < numberOfProjectors; j++)
                   {
                     Pij[i * numberOfProjectors + j] = std::real(
-                      PijMatrix[((startIndex + i) * numberOfProjectors +
+                      PijMatrix[((startIndex + i) * d_totalProjectors +
                                  (startIndex + j))] +
                       multipoleInverse[i * numberOfProjectors + j]);
                     pcout << Pij[i * numberOfProjectors + j] << " ";

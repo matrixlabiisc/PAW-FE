@@ -1835,11 +1835,11 @@ namespace dftfe
                   &beta,
                   &d_sphericalFnTimesWavefunMatrix[atomId][0],
                   d_numberWaveFunctions);
-                // pcout << "Scaled Matrix " << std::endl;
+                //std::cout << "Scaled Matrix " <<atomId<<" rank: "<<d_this_mpi_process<< std::endl;
                 // for (int i = 0; i < inputMatrix.size(); i++)
-                //   pcout << inputMatrix[i] << " "
-                //         << d_sphericalFnTimesWavefunMatrix[atomId][i]
-                //         << std::endl;
+                //   std::cout <<"Scaled Matrix: "<< inputMatrix[i] << " "
+                //         << d_sphericalFnTimesWavefunMatrix[atomId][i]<<" "
+                //         << atomId<<" rank: "<<d_this_mpi_process<< std::endl;
                 startIndex +=
                   numberSphericalFunctions * numberSphericalFunctions;
               }
