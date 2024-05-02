@@ -753,8 +753,8 @@ namespace dftfe
               {
                 unsigned int atomId     = atomIdsInCurrentProcess[iAtom];
                 unsigned int startIndex = d_totalProjectorStartIndex[atomId];
-                //std::cout<<"Start Index for iAtom: "<<startIndex<<std::endl;
-                unsigned int Znum       = atomicNumber[atomId];
+                // std::cout<<"Start Index for iAtom: "<<startIndex<<std::endl;
+                unsigned int Znum = atomicNumber[atomId];
                 unsigned int numberOfProjectors =
                   d_atomicProjectorFnsContainer
                     ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
@@ -823,7 +823,7 @@ namespace dftfe
                 d_BLASWrapperHostPtr->xscal(Pmatrix->data() +
                                               iDof * d_totalProjectors,
                                             scalingCoeff,
-                                            d_totalProjectors);                      
+                                            d_totalProjectors);
               }
             char      transA = 'N';
             ValueType alpha  = d_kpointWeights[kPoint];

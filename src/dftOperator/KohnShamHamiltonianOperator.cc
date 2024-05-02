@@ -1429,9 +1429,8 @@ namespace dftfe
 
         // Call ZeroOut host and and constraints on
         // d_tempBlockVectorPawSinvHX
-        d_basisOperationsPtr
-          ->d_constraintInfo[d_basisOperationsPtr->d_dofHandlerID]
-          .distribute_slave_to_master(d_tempBlockVectorPawSinvHX);
+        inverseMassVectorScaledConstraintsNoneDataInfoPtr
+          ->distribute_slave_to_master(d_tempBlockVectorPawSinvHX);
         d_tempBlockVectorPawSinvHX.accumulateAddLocallyOwned();
         d_tempBlockVectorPawSinvHX.zeroOutGhosts();
         dst.add(scalarHX, d_tempBlockVectorPawSinvHX);

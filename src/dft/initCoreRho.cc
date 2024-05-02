@@ -187,7 +187,8 @@ namespace dftfe
                         value                         = Vec[0];
                         radialDensityFirstDerivative  = Vec[1];
                         radialDensitySecondDerivative = Vec[2];
-                        //pcout<<distanceToAtom<<" "<<value<<" "<<radialDensityFirstDerivative<<std::endl;
+                        // pcout<<distanceToAtom<<" "<<value<<"
+                        // "<<radialDensityFirstDerivative<<std::endl;
                         isCoreRhoDataInCell = true;
                       }
                     else
@@ -321,7 +322,8 @@ namespace dftfe
                         value                         = Vec[0];
                         radialDensityFirstDerivative  = Vec[1];
                         radialDensitySecondDerivative = Vec[2];
-                        //pcout<<distanceToAtom<<" "<<value<<" "<<radialDensityFirstDerivative<<std::endl;
+                        // pcout<<distanceToAtom<<" "<<value<<"
+                        // "<<radialDensityFirstDerivative<<std::endl;
                         isCoreRhoDataInCell = true;
                       }
                     else

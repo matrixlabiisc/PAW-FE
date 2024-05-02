@@ -536,8 +536,8 @@ namespace dftfe
               }
           }
       }
-    std::cout << "Size of Dij vector in processor: " << d_this_mpi_process
-              << " " << DijVector.size() << std::endl;
+    // std::cout << "Size of Dij vector in processor: " << d_this_mpi_process
+    //           << " " << DijVector.size() << std::endl;
     MPI_Barrier(d_mpiCommParent);
     return (DijVector);
   }
