@@ -190,10 +190,10 @@ namespace dftfe
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
         unsigned int        npjsq = numberOfProjectors * numberOfProjectors;
         std::vector<double> Tij   = d_ProductOfQijShapeFnAtQuadPoints[atomId];
-        std::cout << "Size of Tij: " << Tij.size()
-                  << "in procs: " << d_this_mpi_process << std::endl;
+        // std::cout << "Size of Tij: " << Tij.size() <<"in procs:
+        // "<<d_this_mpi_process<< std::endl;
         std::vector<double> Dij = D_ij[typeOfField][atomId];
-        std::cout << "Size of Dij: " << Dij.size() << std::endl;
+        // std::cout << "Size of Dij: " << Dij.size() << std::endl;
         std::vector<unsigned int> elementIndexesInAtomCompactSupport =
           d_atomicShapeFnsContainer
             ->d_elementIndexesInAtomCompactSupport[atomId];

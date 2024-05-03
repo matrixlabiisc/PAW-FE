@@ -17,15 +17,15 @@ SRC=`dirname $0` # location of source directory
 # and optimization flag
 
 #Paths for required external libraries
-dealiiDir="/global/project/projectdirs/m1759/dsambit/softwaresDFTFE/dealiiDevCustomized/installGcc8.3CUDA11.1.1Mklscalapack"
-alglibDir="/global/project/projectdirs/m1759/dsambit/softwaresDFTFE/alglib/cpp/src"
-libxcDir="/global/project/projectdirs/m1759/dsambit/softwaresDFTFE/libxc/installGcc8.3.0Libxc5.1.3"
-spglibDir="/global/project/projectdirs/m1759/dsambit/softwaresDFTFE/spglib/installGcc8.3.0"
-xmlIncludeDir="/usr/include/libxml2"
-xmlLibDir="/usr/lib64"
-ELPA_PATH="/global/project/projectdirs/m1759/dsambit/softwaresDFTFE/elpa/install-elpa-2021.05.002-cuda"
-dftdpath=""
-numdiffdir=""
+dealiiDir="/scratch/cdsphani/dftfesoftware/dealiiCustom/installGPU"
+alglibDir="/scratch/cdsphani/dftfesoftware/alglib/src"
+libxcDir="/scratch/cdsphani/dftfesoftware/libxc"
+spglibDir="/scratch/cdsphani/dftfesoftware/spglib"
+xmlIncludeDir="/home-ext/apps/spack/opt/spack/linux-centos7-cascadelake/gcc-11.2.0/libxml2-2.9.12-kay3j2c6lwgtulz5lsosyvyv462cbzil/include/libxml2"
+xmlLibDir="/home-ext/apps/spack/opt/spack/linux-centos7-cascadelake/gcc-11.2.0/libxml2-2.9.12-kay3j2c6lwgtulz5lsosyvyv462cbzil/lib"
+ELPA_PATH="/scratch/cdssri/elpa2024/elpa-2024.03.001/install"
+dftdpath="/scratch/cdsphani/dftfesoftware/sdftd3;/scratch/cdsphani/dftfesoftware/dftd4"
+numdiffdir="/scratch/cdsphani/dftfesoftware/numdiff"
 
 
 #Paths for optional external libraries
@@ -44,16 +44,16 @@ withGPUAwareMPI=OFF #Please use this option with care
                    #to be fast
 
 #Option to link to DCCL library (Only for GPU compilation)
-withDCCL=ON
+withDCCL=OFF
 withMDI=OFF
 withTorch=OFF
 withCustomizedDealii=ON
 
 #Compiler options and flags
-cxx_compiler=mpic++  #sets DCMAKE_CXX_COMPILER
+cxx_compiler=mpicxx  #sets DCMAKE_CXX_COMPILER
 cxx_flags="-fPIC" #sets DCMAKE_CXX_FLAGS
 cxx_flagsRelease="-O2" #sets DCMAKE_CXX_FLAGS_RELEASE
-device_flags="-arch=sm_70" # set DCMAKE_CXX_CUDA/HIP_FLAGS 
+device_flags="-arch=sm_70  -Xcompiler=-march=native -I"/home/ext/apps/spack/opt/spack/linux-centos7-cascadelake/intel-2021.4.0/intel-mpi-2019.10.317-6icwzn34bewfatxzytrqcu7kleh76fx3/compilers_and_libraries_2020.4.317/linux/mpi/intel64/include" -L"/home/ext/apps/spack/opt/spack/linux-centos7-cascadelake/intel-2021.4.0/intel-mpi-2019.10.317-6icwzn34bewfatxzytrqcu7kleh76fx3/compilers_and_libraries_2020.4.317/linux/mpi/intel64/lib/release" -L"/home/ext/apps/spack/opt/spack/linux-centos7-cascadelake/intel-2021.4.0/intel-mpi-2019.10.317-6icwzn34bewfatxzytrqcu7kleh76fx3/compilers_and_libraries_2020.4.317/linux/mpi/intel64/lib" -Xlinker --enable-new-dtags -Xlinker -rpath -Xlinker "/home/ext/apps/spack/opt/spack/linux-centos7-cascadelake/intel-2021.4.0/intel-mpi-2019.10.317-6icwzn34bewfatxzytrqcu7kleh76fx3/compilers_and_libraries_2020.4.317/linux/mpi/intel64/lib/release" -Xlinker -rpath -Xlinker "/home/ext/apps/spack/opt/spack/linux-centos7-cascadelake/intel-2021.4.0/intel-mpi-2019.10.317-6icwzn34bewfatxzytrqcu7kleh76fx3/compilers_and_libraries_2020.4.317/linux/mpi/intel64/lib" -lmpicxx -lmpifort -lmpi -lrt -lpthread -Wl,-z,now -Wl,-z,relro -Wl,-z,noexecstack -Xlinker --enable-new-dtags -ldl" # set DCMAKE_CXX_CUDA/HIP_FLAGS 
                            #(only applicable for withGPU=ON)
 device_architectures="70" # set DCMAKE_CXX_CUDA/HIP_ARCHITECTURES 
                            #(only applicable for withGPU=ON)
@@ -67,7 +67,7 @@ withHigherQuadPSP=OFF
 build_type=Release
 
 testing=OFF
-minimal_compile=ON
+minimal_compile=OFF
 ###########################################################################
 #Usually, no changes are needed below this line
 #
