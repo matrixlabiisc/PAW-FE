@@ -129,7 +129,7 @@ namespace dftfe
                         value = d_pawClassPtr->getRadialZeroPotential(
                           atomLocations[iAtom][0], distanceToAtom);
 
-                        // pcout<<distanceToAtom<<" "<<value<<std::endl;
+                        // std::cout<<"ZeroPotential "<<value<<std::endl;
                         isZeroPotentialDataInCell = true;
                       }
                     zeroPotentialQuadValues[q] += value;

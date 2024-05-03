@@ -1862,13 +1862,6 @@ namespace dftfe
         initPseudoPotentialAll();
 
         //
-        // compute Tr(XtHX) for each level of mesh
-        //
-        // dataTypes::number traceXtHX =
-        // computeTraceXtHX(numberWaveFunctionsErrorEstimate); pcout<<" Tr(XtHX)
-        // value for Level: "<<countLevel<<" "<<traceXtHX<<std::endl;
-
-        //
         // compute Tr(XtKX) for each level of mesh
         //
         traceXtKX = computeTraceXtKX(numberWaveFunctionsErrorEstimate);

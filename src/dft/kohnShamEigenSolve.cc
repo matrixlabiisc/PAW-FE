@@ -166,7 +166,7 @@ namespace dftfe
         for (int i = 0; i < d_numEigenValues; i++)
           pcout << ProjSinv[i * d_numEigenValues + i] << " ";
         pcout << std::endl;
-        std::exit(0);
+        // std::exit(0);
       }
     else
       {}

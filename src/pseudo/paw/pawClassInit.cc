@@ -1465,7 +1465,7 @@ namespace dftfe
     unsigned int threadId = omp_get_thread_num();
     double Value = d_atomicZeroPotVector[threadId][Znum]->getRadialValue(rad);
     Value /= sqrt(4 * M_PI);
-    // pcout<<rad<<" "<<Value<<std::endl;
+    std::cout << "Zero: " << rad << " " << Value << std::endl;
     return (Value);
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
