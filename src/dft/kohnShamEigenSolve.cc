@@ -62,7 +62,8 @@ namespace dftfe
   {
     if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
       {
-        std::vector<dataTypes::number> ProjHam, ProjS, projPawHam, ProjI;
+        std::vector<dataTypes::number> ProjHam, ProjS, projPawHam, ProjI,
+          ProjSinv;
 
         // linearAlgebraOperations::XtHX(, ProjHam);
         // linearAlgebraOperations::XtOX(, ProjS);
@@ -70,8 +71,8 @@ namespace dftfe
         unsigned int kPointIndex = 0;
         unsigned int spinType    = 0;
         MPI_Barrier(d_mpiCommParent);
-        pcout<<"XtpawHX called: "<<std::endl;
-        MPI_Barrier(d_mpiCommParent);          
+        pcout << "XtpawHX called: " << std::endl;
+        MPI_Barrier(d_mpiCommParent);
         linearAlgebraOperations::XtpawHX(
           *d_kohnShamDFTOperatorPtr,
           d_eigenVectorsFlattenedHost.data() +
@@ -85,8 +86,8 @@ namespace dftfe
           *d_dftParamsPtr,
           projPawHam);
         MPI_Barrier(d_mpiCommParent);
-        pcout<<"XtOX called: "<<std::endl;
-        MPI_Barrier(d_mpiCommParent);  
+        pcout << "XtOX called: " << std::endl;
+        MPI_Barrier(d_mpiCommParent);
         linearAlgebraOperations::XtOX(
           *d_kohnShamDFTOperatorPtr,
           d_eigenVectorsFlattenedHost.data() +
@@ -100,8 +101,8 @@ namespace dftfe
           *d_dftParamsPtr,
           ProjS);
         MPI_Barrier(d_mpiCommParent);
-        pcout<<"XtHX called: "<<std::endl;
-        MPI_Barrier(d_mpiCommParent);            
+        pcout << "XtHX called: " << std::endl;
+        MPI_Barrier(d_mpiCommParent);
         linearAlgebraOperations::XtHX(
           *d_kohnShamDFTOperatorPtr,
           d_eigenVectorsFlattenedHost.data() +
@@ -115,8 +116,8 @@ namespace dftfe
           *d_dftParamsPtr,
           ProjHam);
         MPI_Barrier(d_mpiCommParent);
-        pcout<<"XtIX called: "<<std::endl;
-        MPI_Barrier(d_mpiCommParent);            
+        pcout << "XtIX called: " << std::endl;
+        MPI_Barrier(d_mpiCommParent);
         linearAlgebraOperations::XtIX(
           *d_kohnShamDFTOperatorPtr,
           d_eigenVectorsFlattenedHost.data() +
@@ -129,6 +130,21 @@ namespace dftfe
           interBandGroupComm,
           *d_dftParamsPtr,
           ProjI);
+        MPI_Barrier(d_mpiCommParent);
+        pcout << "XtSinvX called: " << std::endl;
+        MPI_Barrier(d_mpiCommParent);
+        linearAlgebraOperations::XtSinvX(
+          *d_kohnShamDFTOperatorPtr,
+          d_eigenVectorsFlattenedHost.data() +
+            ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
+              d_numEigenValues *
+              matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          d_numEigenValues,
+          matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          mpi_communicator,
+          interBandGroupComm,
+          *d_dftParamsPtr,
+          ProjSinv);
         // d_BLASWrapperHostPtr->xnrm2();
         pcout << "XtIX: ";
         for (int i = 0; i < d_numEigenValues; i++)
@@ -145,6 +161,10 @@ namespace dftfe
         pcout << "XtpawHX: ";
         for (int i = 0; i < d_numEigenValues; i++)
           pcout << projPawHam[i * d_numEigenValues + i] << " ";
+        pcout << std::endl;
+        pcout << "XtSinvX: ";
+        for (int i = 0; i < d_numEigenValues; i++)
+          pcout << ProjSinv[i * d_numEigenValues + i] << " ";
         pcout << std::endl;
         std::exit(0);
       }

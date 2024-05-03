@@ -2991,13 +2991,13 @@ namespace dftfe
           d_phiTotRhoIn,
           d_phiInQuadValues,
           dummy);
-        interpolateElectroNodalDataToQuadratureDataGeneral(
-          d_basisOperationsPtrElectroHost,
-          d_phiTotDofHandlerIndexElectro,
-          d_smearedChargeQuadratureIdElectro,
-          d_phiTotRhoIn,
-          d_phitTotQuadPointsCompensation,
-          dummy);
+        // interpolateElectroNodalDataToQuadratureDataGeneral(
+        //   d_basisOperationsPtrElectroHost,
+        //   d_phiTotDofHandlerIndexElectro,
+        //   d_smearedChargeQuadratureIdElectro,
+        //   d_phiTotRhoIn,
+        //   d_phitTotQuadPointsCompensation,
+        //   dummy);
 
 
         computing_timer.leave_subsection("phiTot solve");
@@ -3053,15 +3053,15 @@ namespace dftfe
                       "Computing Non-Local XC Term Entries");
                     computing_timer.enter_subsection(
                       "Computing Non-Local Electrostatics Term Entries");
-                    // if (s == 0)
-                    //   d_pawClassPtr
-                    //     ->evaluateNonLocalHamiltonianElectrostaticsValue(
-                    //       d_phiTotRhoIn, d_phiTotDofHandlerIndexElectro);
                     if (s == 0)
                       d_pawClassPtr
                         ->evaluateNonLocalHamiltonianElectrostaticsValue(
-                          d_phitTotQuadPointsCompensation,
-                          d_phiTotDofHandlerIndexElectro);
+                          d_phiTotRhoIn, d_phiTotDofHandlerIndexElectro);
+                    // if (s == 0)
+                    // d_pawClassPtr
+                    //   ->evaluateNonLocalHamiltonianElectrostaticsValue(
+                    //     d_phitTotQuadPointsCompensation,
+                    //     d_phiTotDofHandlerIndexElectro);
                     computing_timer.leave_subsection(
                       "Computing Non-Local Electrostatics Term Entries");
                     d_pawClassPtr->computeNonlocalPseudoPotentialConstants(
@@ -3236,14 +3236,14 @@ namespace dftfe
                                 computing_timer.enter_subsection(
                                   "Computing Non-Local Electrostatics Term Entries");
                                 // if (s == 0)
-                                //   d_pawClassPtr
-                                //     ->evaluateNonLocalHamiltonianElectrostaticsValue(
-                                //       d_phiTotRhoIn,
-                                //       d_phiTotDofHandlerIndexElectro);
                                 d_pawClassPtr
                                   ->evaluateNonLocalHamiltonianElectrostaticsValue(
-                                    d_phitTotQuadPointsCompensation,
+                                    d_phiTotRhoIn,
                                     d_phiTotDofHandlerIndexElectro);
+                                // d_pawClassPtr
+                                //   ->evaluateNonLocalHamiltonianElectrostaticsValue(
+                                //     d_phitTotQuadPointsCompensation,
+                                //     d_phiTotDofHandlerIndexElectro);
                                 computing_timer.leave_subsection(
                                   "Computing Non-Local Electrostatics Term Entries");
                                 d_pawClassPtr
@@ -3395,11 +3395,11 @@ namespace dftfe
                   "Computing Non-Local XC Term Entries");
                 computing_timer.enter_subsection(
                   "Computing Non-Local Electrostatics Term Entries");
-                // d_pawClassPtr->evaluateNonLocalHamiltonianElectrostaticsValue(
-                //   d_phiTotRhoIn, d_phiTotDofHandlerIndexElectro);
                 d_pawClassPtr->evaluateNonLocalHamiltonianElectrostaticsValue(
-                  d_phitTotQuadPointsCompensation,
-                  d_phiTotDofHandlerIndexElectro);
+                  d_phiTotRhoIn, d_phiTotDofHandlerIndexElectro);
+                // d_pawClassPtr->evaluateNonLocalHamiltonianElectrostaticsValue(
+                //   d_phitTotQuadPointsCompensation,
+                //   d_phiTotDofHandlerIndexElectro);
                 computing_timer.leave_subsection(
                   "Computing Non-Local Electrostatics Term Entries");
                 d_pawClassPtr->computeNonlocalPseudoPotentialConstants(

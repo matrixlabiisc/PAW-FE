@@ -107,6 +107,15 @@ namespace dftfe
       const bool skip2                                         = false,
       const bool skip3                                         = false) = 0;
 
+    virtual void
+    SinvX(
+      dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
+      const double scalarHX,
+      const double scalarY,
+      const double scalarX,
+      dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
+        &dst) = 0;
+
     virtual dftUtils::constraintMatrixInfo *
     getOverloadedConstraintMatrixHost() const = 0;
 

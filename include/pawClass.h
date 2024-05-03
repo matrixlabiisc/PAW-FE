@@ -27,6 +27,7 @@
 #include "AtomCenteredSphericalFunctionLocalPotentialSpline.h"
 #include "AtomCenteredSphericalFunctionProjectorSpline.h"
 #include "AtomCenteredSphericalFunctionPAWProjectorSpline.h"
+#include "AtomCenteredSphericalFunctionPAWProjectorSpline2.h"
 #include "AtomCenteredSphericalFunctionZeroPotentialSpline.h"
 #include "AtomCenteredSphericalFunctionContainer.h"
 #include "AtomicCenteredNonLocalOperator.h"

@@ -191,6 +191,14 @@ namespace dftfe
       const bool skip3                                         = false);
 
     void
+    SinvX(
+      dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
+      const double scalarHX,
+      const double scalarY,
+      const double scalarX,
+      dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst);
+
+    void
     HXRR(
       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dstHX,

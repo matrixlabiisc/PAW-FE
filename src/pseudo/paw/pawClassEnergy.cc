@@ -87,17 +87,17 @@ namespace dftfe
           }
       }
 
-    // for (std::map<unsigned int, std::vector<double>>::iterator it =
-    //        d_nonLocalHamiltonianElectrostaticValue.begin();
-    //      it != d_nonLocalHamiltonianElectrostaticValue.end();
-    //      ++it)
-    //   {
-    //     unsigned int        atomId  = it->first;
-    //     std::vector<double> entries = it->second;
-    //     for (int i = 0; i < entries.size(); i++)
-    //       pcout << entries[i] << " ";
-    //     pcout << std::endl;
-    //   }
+    for (std::map<unsigned int, std::vector<double>>::iterator it =
+           d_nonLocalHamiltonianElectrostaticValue.begin();
+         it != d_nonLocalHamiltonianElectrostaticValue.end();
+         ++it)
+      {
+        unsigned int        atomId  = it->first;
+        std::vector<double> entries = it->second;
+        for (int i = 0; i < entries.size(); i++)
+          std::cout << entries[i] << " ";
+        std::cout << std::endl;
+      }
   }
 
 
@@ -185,6 +185,11 @@ namespace dftfe
                     ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                 std::vector<double> gLValues =
                   d_gLValuesQuadPoints[std::make_pair(atomId, cellIndex)];
+                // std::cout<<"Entries of iElem: "<<iElem<<std::endl;
+                // for(int q = 0; q < numberQuadraturePoints; q++)
+                //   std::cout<<gLValues[q]<<" "<<tempVec[q]<<std::endl;
+
+
                 iElem++;
                 d_BLASWrapperHostPtr->xgemm(
                   'N',
@@ -214,9 +219,9 @@ namespace dftfe
       {
         unsigned int        atomId  = it->first;
         std::vector<double> entries = it->second;
-        for (int i = 0; i < entries.size(); i++)
-          pcout << entries[i] << " ";
-        pcout << std::endl;
+        // for (int i = 0; i < entries.size(); i++)
+        //   std::cout << entries[i] << " ";
+        // std::cout << std::endl;
       }
   }
 

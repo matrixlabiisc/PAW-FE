@@ -217,7 +217,7 @@ namespace dftfe
           {
             d_atomicValenceDensityVector[i][*it] = std::make_shared<
               AtomCenteredSphericalFunctionValenceDensitySpline>(
-              valenceDataFile, 1E-10, true);
+              valenceDataFile, 1E-10 * sqrt(4 * M_PI), true);
             d_atomicCoreDensityVector[i][*it] =
               std::make_shared<AtomCenteredSphericalFunctionCoreDensitySpline>(
                 coreDataFilePS, 1E-12, true);
@@ -753,8 +753,8 @@ namespace dftfe
               {
                 unsigned int atomId     = atomIdsInCurrentProcess[iAtom];
                 unsigned int startIndex = d_totalProjectorStartIndex[atomId];
-                //std::cout<<"Start Index for iAtom: "<<startIndex<<std::endl;
-                unsigned int Znum       = atomicNumber[atomId];
+                // std::cout<<"Start Index for iAtom: "<<startIndex<<std::endl;
+                unsigned int Znum = atomicNumber[atomId];
                 unsigned int numberOfProjectors =
                   d_atomicProjectorFnsContainer
                     ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
@@ -823,7 +823,7 @@ namespace dftfe
                 d_BLASWrapperHostPtr->xscal(Pmatrix->data() +
                                               iDof * d_totalProjectors,
                                             scalingCoeff,
-                                            d_totalProjectors);                      
+                                            d_totalProjectors);
               }
             char      transA = 'N';
             ValueType alpha  = d_kpointWeights[kPoint];
@@ -853,6 +853,15 @@ namespace dftfe
                       dataTypes::mpi_type_id(&PijMatrix[0]),
                       MPI_SUM,
                       d_mpiCommParent);
+        pcout << "Pmatrix Entries: " << std::endl;
+        for (int i = 0; i < d_totalProjectors; i++)
+          {
+            for (int j = 0; j < d_totalProjectors; j++)
+              {
+                pcout << PijMatrix[i * d_totalProjectors + j] << " ";
+              }
+            pcout << std::endl;
+          }
         // Across kpools and across bands all reduce to be called
         for (unsigned int atomId = 0; atomId < atomicNumber.size(); atomId++)
           {
@@ -1138,12 +1147,16 @@ namespace dftfe
                 std::vector<double> ValueAtom(npjsq, 0.0);
                 std::vector<double> deltaColoumbicEnergyDij(npjsq, 0.0);
                 unsigned int        iAtom = atomLists[i];
-
+                pcout << "Non-local and Local contribution entries: "
+                      << std::endl;
                 for (int iProj = 0; iProj < npjsq; iProj++)
                   {
                     ValueAtom[iProj] =
                       NonLocalComputedContributions[i * npjsq + iProj] +
                       LocalContribution[iProj];
+                    pcout << iProj << " "
+                          << NonLocalComputedContributions[i * npjsq + iProj]
+                          << " " << LocalContribution[iProj] << std::endl;
                   }
                 d_atomicNonLocalPseudoPotentialConstants
                   [CouplingType::HamiltonianEntries][atomLists[i]] = ValueAtom;
@@ -1301,10 +1314,9 @@ namespace dftfe
                       }
                     d_atomicProjectorFnsMap[std::make_pair(Znum, alpha)] =
                       std::make_shared<
-                        AtomCenteredSphericalFunctionPAWProjectorSpline>(
+                        AtomCenteredSphericalFunctionPAWProjectorSpline2>(
                         projectorFile,
                         lQuantumNo,
-                        0,
                         j,
                         noOfProjectors + 1,
                         d_RmaxAug[*it],

@@ -48,7 +48,8 @@ namespace dftfe
     const std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomicShapeFnsContainer->getAtomIdsInCurrentProcess();
     MPI_Barrier(d_mpiCommParent);
-    std::cout<<"Number of atoms in proc-ID: "<<d_this_mpi_process<<" "<<atomIdsInCurrentProcess.size()<<std::endl;
+    std::cout << "Number of atoms in proc-ID: " << d_this_mpi_process << " "
+              << atomIdsInCurrentProcess.size() << std::endl;
     MPI_Barrier(d_mpiCommParent);
 
     for (unsigned int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
@@ -189,7 +190,8 @@ namespace dftfe
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
         unsigned int        npjsq = numberOfProjectors * numberOfProjectors;
         std::vector<double> Tij   = d_ProductOfQijShapeFnAtQuadPoints[atomId];
-        std::cout << "Size of Tij: " << Tij.size() <<"in procs: "<<d_this_mpi_process<< std::endl;
+        std::cout << "Size of Tij: " << Tij.size()
+                  << "in procs: " << d_this_mpi_process << std::endl;
         std::vector<double> Dij = D_ij[typeOfField][atomId];
         std::cout << "Size of Dij: " << Dij.size() << std::endl;
         std::vector<unsigned int> elementIndexesInAtomCompactSupport =
@@ -256,7 +258,8 @@ namespace dftfe
       d_atomicShapeFnsContainer->getAtomIdsInCurrentProcess();
 
     MPI_Barrier(d_mpiCommParent);
-    std::cout<<"Number of atoms in proc-ID: "<<d_this_mpi_process<<" "<<atomIdsInCurrentProcess.size()<<std::endl;
+    std::cout << "Number of atoms in proc-ID: " << d_this_mpi_process << " "
+              << atomIdsInCurrentProcess.size() << std::endl;
     MPI_Barrier(d_mpiCommParent);
 
     for (unsigned int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
@@ -481,7 +484,8 @@ namespace dftfe
           } // iElemComp
 
         d_ProductOfQijShapeFnAtQuadPoints[atomId] = tempCoeff;
-        std::cout << "Size of Tij: " << tempCoeff.size() <<"in procs: "<<d_this_mpi_process<< std::endl;
+        std::cout << "Size of Tij: " << tempCoeff.size()
+                  << "in procs: " << d_this_mpi_process << std::endl;
 
 
       } // iAtom
@@ -539,7 +543,7 @@ namespace dftfe
                 couplingEntriesHost.copyFrom(Entries);
                 d_couplingMatrixEntries[CouplingType::HamiltonianEntries] =
                   couplingEntriesHost;
-                pcout << "DEBUG: Line 514" << std::endl;
+                // pcout << "DEBUG: Line 514" << std::endl;
                 d_HamiltonianCouplingMatrixEntriesUpdated = true;
               }
           }
