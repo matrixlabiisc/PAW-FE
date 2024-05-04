@@ -665,22 +665,24 @@ namespace dftfe
                               projectorIndex_j] *
                           multipoleTable[alpha_i * numberOfRadialProjectors +
                                          alpha_j];
-                        pcout
-                          << projectorIndex_i << " " << projectorIndex_j << " "
-                          << alpha_i << " " << alpha_j << " "
-                          << gaunt(lQuantumNo_i,
-                                   lQuantumNo_j,
-                                   0,
-                                   mQuantumNo_i,
-                                   mQuantumNo_j,
-                                   0)
-                          << " "
-                          << Dij[projectorIndex_i * numberOfProjectors +
-                                 projectorIndex_j]
-                          << " "
-                          << multipoleTable[alpha_i * numberOfRadialProjectors +
-                                            alpha_j]
-                          << std::endl;
+                        // pcout
+                        //   << projectorIndex_i << " " << projectorIndex_j << "
+                        //   "
+                        //   << alpha_i << " " << alpha_j << " "
+                        //   << gaunt(lQuantumNo_i,
+                        //            lQuantumNo_j,
+                        //            0,
+                        //            mQuantumNo_i,
+                        //            mQuantumNo_j,
+                        //            0)
+                        //   << " "
+                        //   << Dij[projectorIndex_i * numberOfProjectors +
+                        //          projectorIndex_j]
+                        //   << " "
+                        //   << multipoleTable[alpha_i *
+                        //   numberOfRadialProjectors +
+                        //                     alpha_j]
+                        //   << std::endl;
                         projectorIndex_j++;
                       }
                   }
@@ -841,23 +843,25 @@ namespace dftfe
                                 0) *
                           multipoleTable[alpha_i * numberOfRadialProjectors +
                                          alpha_j];
-                        pcout
-                          << alpha_i << " " << alpha_j << " "
-                          << projectorIndex_i << " " << projectorIndex_j << " "
-                          << gaunt(lQuantumNumber_i,
-                                   lQuantumNumber_j,
-                                   0,
-                                   mQuantumNumber_i,
-                                   mQuantumNumber_j,
-                                   0)
-                          << " "
-                          << multipoleTable[alpha_i * numberOfRadialProjectors +
-                                            alpha_j]
-                          << " "
-                          << fullMultipoleTable[projectorIndex_i *
-                                                  numberOfProjectors +
-                                                projectorIndex_j]
-                          << std::endl;
+                        // pcout
+                        //   << alpha_i << " " << alpha_j << " "
+                        //   << projectorIndex_i << " " << projectorIndex_j << "
+                        //   "
+                        //   << gaunt(lQuantumNumber_i,
+                        //            lQuantumNumber_j,
+                        //            0,
+                        //            mQuantumNumber_i,
+                        //            mQuantumNumber_j,
+                        //            0)
+                        //   << " "
+                        //   << multipoleTable[alpha_i *
+                        //   numberOfRadialProjectors +
+                        //                     alpha_j]
+                        //   << " "
+                        //   << fullMultipoleTable[projectorIndex_i *
+                        //                           numberOfProjectors +
+                        //                         projectorIndex_j]
+                        //   << std::endl;
                         projectorIndex_j++;
                       } // mQuantumNumber_j
                   }     // alpha_j

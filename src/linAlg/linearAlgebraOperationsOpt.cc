@@ -313,7 +313,7 @@ namespace dftfe
           operatorMatrix.getMPICommunicatorDomain());
 
       const unsigned int lanczosIterations =
-        dftParams.reproducible_output ? 200 : 50;
+        dftParams.reproducible_output ? 200 : 100;
       double beta, betaNeg;
       T      betaTemp;
 

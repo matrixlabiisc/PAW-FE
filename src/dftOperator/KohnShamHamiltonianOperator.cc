@@ -1247,13 +1247,6 @@ namespace dftfe
     inverseMassVectorScaledConstraintsNoneDataInfoPtr->set_zero(
       d_tempBlockVectorPawSinvHX);
 
-    // d_BLASWrapperPtr->stridedBlockScale(
-    //   numberWavefunctions,
-    //   d_tempBlockVectorPawSinvHX.locallyOwnedSize(),
-    //   1.0,
-    //   d_basisOperationsPtr->massVectorBasisData().data(),
-    //   d_tempBlockVectorPawSinvHX.data());
-
     // VC^TMinvX is done
     for (unsigned int iCell = 0; iCell < numCells; iCell += d_cellsBlockSizeHX)
       {
@@ -1264,25 +1257,6 @@ namespace dftfe
           {
             d_pseudopotentialNonLocalOperator->applyCOnVCconjtransX(
               d_cellWaveFunctionMatrixDst.data(), cellRange);
-            // for(int iCell = 0; iCell < cellRange.second-cellRange.first;
-            // iCell++)
-            // {
-            //   if(d_pseudopotentialNonLocalOperator->atomSupportInElement(cellRange.first+iCell))
-            //   {
-            //     std::cout<<"elementId: "<<cellRange.first+iCell<<" ";
-            //   for(int i = 0; i < numberWavefunctions*numDoFsPerCell; i++)
-            //   {
-            //     std::cout<<d_cellWaveFunctionMatrixDst[iCell*numberWavefunctions*numDoFsPerCell+i]<<"
-            //     ";
-            //     //d_cellWaveFunctionMatrixDst[iCell*numberWavefunctions*numDoFsPerCell+i]
-            //     *=-1.0;
-            //   }
-            //   std::cout<<std::endl;
-            //   }
-
-            // }
-            // MPI_Barrier(d_mpiCommParent);
-            // d_BLASWrapperPtr->xscal(d_cellWaveFunctionMatrixDst.data(),-1.0,d_cellWaveFunctionMatrixDst.size());
             d_BLASWrapperPtr->axpyStridedBlockAtomicAdd(
               numberWavefunctions,
               numDoFsPerCell * (cellRange.second - cellRange.first),
@@ -1294,14 +1268,6 @@ namespace dftfe
               d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
                   .data() +
                 cellRange.first * numDoFsPerCell);
-            //               d_BLASWrapperPtr->axpyStridedBlockAtomicAdd(
-            // numberWavefunctions,
-            // numDoFsPerCell * (cellRange.second - cellRange.first),
-            // d_cellWaveFunctionMatrixDst.data(),
-            // d_tempBlockVectorPawSinvHX.data(),
-            // d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
-            //     .data() +
-            //   cellRange.first * numDoFsPerCell);
           }
       }
 
@@ -1310,19 +1276,12 @@ namespace dftfe
 
     // Call ZeroOut host and and constraints on
     // d_tempBlockVectorPawSinvHX
-    // d_basisOperationsPtr
-    //   ->d_constraintInfo[d_basisOperationsPtr->d_dofHandlerID]
-    //   .distribute_slave_to_master(d_tempBlockVectorPawSinvHX);
+
     inverseMassVectorScaledConstraintsNoneDataInfoPtr
       ->distribute_slave_to_master(d_tempBlockVectorPawSinvHX);
     d_tempBlockVectorPawSinvHX.accumulateAddLocallyOwned();
     d_tempBlockVectorPawSinvHX.zeroOutGhosts();
-    // d_BLASWrapperPtr->stridedBlockScale(
-    //   numberWavefunctions,
-    //   d_tempBlockVectorPawSinvHX.locallyOwnedSize(),
-    //   1.0,
-    //   d_basisOperationsPtr->inverseMassVectorBasisData().data(),
-    //   d_tempBlockVectorPawSinvHX.data());
+
     dst.add(scalarHX, d_tempBlockVectorPawSinvHX);
     dst.zeroOutGhosts();
   }
