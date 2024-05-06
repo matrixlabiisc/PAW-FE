@@ -890,7 +890,7 @@ namespace dftfe
       dealii::Utilities::MPI::sum(nuclearElectrostaticEnergy, mpi_communicator);
     double totalLocalPseudoPotentialEnergy =
       dealii::Utilities::MPI::sum(localPotentialTimesRho, mpi_communicator);
-    pcout << "Integreal ZeroPotential values and error: "
+    pcout << "Integral ZeroPotential values and error: "
           << totalLocalPseudoPotentialEnergy << " "
           << pseudopotentialConstants[0] << " "
           << std::fabs(pseudopotentialConstants[0] -

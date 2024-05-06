@@ -1259,8 +1259,7 @@ namespace dftfe
                    ++iComp)
                 for (unsigned int idim = 0; idim < 3; ++idim)
                   d_gradDensityInQuadValues[iComp][3 * iCell * n_q_points +
-                                                   3 * q + idim] *=
-                     scaling;
+                                                   3 * q + idim] *= scaling;
           }
       }
     double chargeAfterScaling =

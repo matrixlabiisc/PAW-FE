@@ -1758,8 +1758,8 @@ namespace dftfe
                AllElectronDensityContribution            = 0.0,
                PseudoElectronDensityContribution         = 0.0,
                ShapeFnContribution[numShapeFunctions];
-        double   ShapeFn0PseudoElectronDensityContributionFull = 0.0;
-
+        double ShapeFn0PseudoElectronDensityContributionFull = 0.0;
+        double PseudoElectronDensityContributionFull         = 0.0;
         if (d_atomTypeCoreFlagMap[*it])
           {
             std::function<double(const unsigned int &)> Integral1 =
@@ -1771,8 +1771,8 @@ namespace dftfe
               };
             ShapeFn0PseudoElectronDensityContribution =
               simpsonIntegral(0, RmaxIndex + 1, Integral1);
-            ShapeFn0PseudoElectronDensityContributionFull = 
-              simpsonIntegral(0,meshSize-2,Integral1);
+            ShapeFn0PseudoElectronDensityContributionFull =
+              simpsonIntegral(0, meshSize - 2, Integral1);
 
             std::function<double(const unsigned int &)> Integral2 =
               [&](const unsigned int &i) {
@@ -1782,7 +1782,8 @@ namespace dftfe
               };
             PseudoElectronDensityContribution =
               simpsonIntegral(0, RmaxIndex + 1, Integral2);
-
+            PseudoElectronDensityContributionFull =
+              simpsonIntegral(0, meshSize - 2, Integral2);
             std::function<double(const unsigned int &)> Integral3 =
               [&](const unsigned int &i) {
                 double Value =
@@ -1958,21 +1959,24 @@ namespace dftfe
         valueTemp = -0.5 * (PseudoElectronDensityContribution);
         pcout << " - psedo-pseduo contribution: " << valueTemp << std::endl;
         DeltaC += valueTemp;
-        //DeltaCValence += valueTemp;
-
+        valueTemp = -0.5 * (PseudoElectronDensityContributionFull);
+        pcout << " - psedo-pseduo contribution Full: " << valueTemp
+              << std::endl;
+        DeltaCValence += valueTemp;
         valueTemp = -0.5 * (dL0 * dL0 * ShapeFnContribution[0]);
         pcout << " -g_L(x)g_L(x) contribution: " << valueTemp << std::endl;
         DeltaC += valueTemp;
-        //DeltaCValence += valueTemp;
+        DeltaCValence += valueTemp;
 
         valueTemp =
           -(d_DeltaL0coeff[*it]) * (ShapeFn0PseudoElectronDensityContribution);
         pcout << " -g_L(x)-pseudo contribution: " << valueTemp << std::endl;
         DeltaC += valueTemp;
-        //DeltaCValence += valueTemp;
-        valueTemp =
-          -(d_DeltaL0coeff[*it]) * (ShapeFn0PseudoElectronDensityContributionFull);
-        pcout << " -g_L(x)-pseudo contribution Full: " << valueTemp << std::endl;
+        // DeltaCValence += valueTemp;
+        valueTemp = -(d_DeltaL0coeff[*it]) *
+                    (ShapeFn0PseudoElectronDensityContributionFull);
+        pcout << " -g_L(x)-pseudo contribution Full: " << valueTemp
+              << std::endl;
         DeltaCValence += valueTemp;
         valueTemp = -sqrt(4 * M_PI) * (*it) *
                     integralOfDensity(
