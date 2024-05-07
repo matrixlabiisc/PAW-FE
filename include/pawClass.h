@@ -372,7 +372,9 @@ namespace dftfe
     std::vector<unsigned int> d_totalProjectorStartIndex;
     double                    d_TotalCompensationCharge;
     double d_integralCoreDensity, d_integrealCoreDensityRadial;
-    std::map<unsigned int, double> d_integralCoreDensityPerAtom;
+    std::map<unsigned int, double>                d_integralCoreDensityPerAtom;
+    std::map<dealii::CellId, std::vector<double>> d_jxwcompensationCharge;
+
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
      * @param[in] atomLocations atomic Coordinates
@@ -544,15 +546,16 @@ namespace dftfe
     const unsigned int d_n_mpi_processes;
 
     // conditional stream object
-    dealii::ConditionalOStream  pcout;
-    bool                        d_useDevice;
-    unsigned int                d_densityQuadratureId;
-    unsigned int                d_compensationChargeQuadratureIdElectro;
-    unsigned int                d_localContributionQuadratureId;
-    unsigned int                d_nuclearChargeQuadratureIdElectro;
-    unsigned int                d_densityQuadratureIdElectro;
-    unsigned int                d_sparsityPatternQuadratureId;
-    unsigned int                d_nlpspQuadratureId;
+    dealii::ConditionalOStream pcout;
+    bool                       d_useDevice;
+    unsigned int               d_densityQuadratureId;
+    unsigned int               d_compensationChargeQuadratureIdElectro;
+    unsigned int               d_localContributionQuadratureId;
+    unsigned int               d_nuclearChargeQuadratureIdElectro;
+    unsigned int               d_densityQuadratureIdElectro;
+    unsigned int               d_sparsityPatternQuadratureId;
+    unsigned int               d_nlpspQuadratureId;
+    // unsigned int                d_dofHandlerID;
     std::shared_ptr<excManager> d_excManagerPtr;
     dftParameters *             d_dftParamsPtr;
     std::shared_ptr<

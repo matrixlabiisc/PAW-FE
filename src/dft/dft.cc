@@ -3085,7 +3085,8 @@ namespace dftfe
                             pcout << "Beginning Chebyshev filter pass " << j + 1
                                   << " for spin " << s + 1 << std::endl;
                           }
-                        computeTraceXtHX(d_numEigenValues);
+                        if (d_dftParamsPtr->verbosity >= 5)
+                          computeTraceXtHX(d_numEigenValues);
 
 #ifdef DFTFE_WITH_DEVICE
                         if constexpr (dftfe::utils::MemorySpace::DEVICE ==
@@ -3266,7 +3267,8 @@ namespace dftfe
                                 computing_timer.leave_subsection(
                                   "Hamiltonian Matrix Computation");
                               }
-                            computeTraceXtHX(d_numEigenValues);
+                            if (d_dftParamsPtr->verbosity >= 5)
+                              computeTraceXtHX(d_numEigenValues);
 
 #ifdef DFTFE_WITH_DEVICE
                             if constexpr (dftfe::utils::MemorySpace::DEVICE ==
@@ -3421,7 +3423,8 @@ namespace dftfe
                         pcout << "Beginning Chebyshev filter pass " << j + 1
                               << std::endl;
                       }
-                    computeTraceXtHX(d_numEigenValues);
+                    if (d_dftParamsPtr->verbosity >= 5)
+                      computeTraceXtHX(d_numEigenValues);
 
 #ifdef DFTFE_WITH_DEVICE
                     if constexpr (dftfe::utils::MemorySpace::DEVICE ==
@@ -3535,8 +3538,8 @@ namespace dftfe
                             computing_timer.leave_subsection(
                               "Hamiltonian Matrix Computation");
                           }
-
-                        computeTraceXtHX(d_numEigenValues);
+                        if (d_dftParamsPtr->verbosity >= 5)
+                          computeTraceXtHX(d_numEigenValues);
 #ifdef DFTFE_WITH_DEVICE
                         if constexpr (dftfe::utils::MemorySpace::DEVICE ==
                                       memorySpace)

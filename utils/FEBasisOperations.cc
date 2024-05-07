@@ -47,6 +47,7 @@ namespace dftfe
       d_quadPoints.clear();
       d_flattenedCellDofIndexToProcessDofIndexMap.clear();
       d_cellIndexToCellIdMap.clear();
+      d_cellIndexToCellIteratorMap.clear();
       d_cellIdToCellIndexMap.clear();
       d_inverseJacobianData.clear();
       d_JxWData.clear();
@@ -166,6 +167,8 @@ namespace dftfe
       d_cellDofIndexToProcessDofIndexMap =
         basisOperationsSrc.d_cellDofIndexToProcessDofIndexMap;
       d_cellIndexToCellIdMap = basisOperationsSrc.d_cellIndexToCellIdMap;
+      d_cellIndexToCellIteratorMap =
+        basisOperationsSrc.d_cellIndexToCellIteratorMap;
       d_cellIdToCellIndexMap = basisOperationsSrc.d_cellIdToCellIndexMap;
       d_nQuadsPerCell        = basisOperationsSrc.d_nQuadsPerCell;
       initializeMPIPattern();
@@ -579,6 +582,16 @@ namespace dftfe
     {
       return d_cellIndexToCellIdMap[iElem];
     }
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    dealii::DoFHandler<3>::active_cell_iterator
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      getCellIterator(const unsigned int iElem) const
+    {
+      return d_cellIndexToCellIteratorMap[iElem];
+    }
+
 
     template <typename ValueTypeBasisCoeff,
               typename ValueTypeBasisData,
@@ -744,6 +757,9 @@ namespace dftfe
       d_cellIndexToCellIdMap.clear();
       d_cellIndexToCellIdMap.resize(d_nCells);
 
+      d_cellIndexToCellIteratorMap.clear();
+      d_cellIndexToCellIteratorMap.resize(d_nCells);
+
       d_cellIdToCellIndexMap.clear();
       auto cellPtr =
         d_matrixFreeDataPtr->get_dof_handler(d_dofHandlerID).begin_active();
@@ -765,6 +781,7 @@ namespace dftfe
 
             d_cellIndexToCellIdMap[iCell]         = cellPtr->id();
             d_cellIdToCellIndexMap[cellPtr->id()] = iCell;
+            d_cellIndexToCellIteratorMap[iCell]   = cellPtr;
 
 
             ++iCell;

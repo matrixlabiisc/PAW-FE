@@ -690,6 +690,13 @@ namespace dftfe
        */
       dealii::CellId
       cellID(const unsigned int iElem) const;
+      /**
+       * @brief returns the deal.ii cell_iterator corresponing to given cell Index.
+       * @param[in] iElem cell Index
+       */
+
+      dealii::DoFHandler<3>::active_cell_iterator
+      getCellIterator(const unsigned int iElem) const;
 
       /**
        * @brief returns the cell index corresponding to given deal.ii cellID.
@@ -774,8 +781,10 @@ namespace dftfe
                                            dftfe::utils::MemorySpace::HOST>>
         d_quadPoints;
       dftfe::utils::MemoryStorage<dftfe::global_size_type, memorySpace>
-                                             d_flattenedCellDofIndexToProcessDofIndexMap;
-      std::vector<dealii::CellId>            d_cellIndexToCellIdMap;
+                                  d_flattenedCellDofIndexToProcessDofIndexMap;
+      std::vector<dealii::CellId> d_cellIndexToCellIdMap;
+      std::vector<dealii::DoFHandler<3>::active_cell_iterator>
+                                             d_cellIndexToCellIteratorMap;
       std::map<dealii::CellId, unsigned int> d_cellIdToCellIndexMap;
       std::map<unsigned int,
                dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>>

@@ -29,24 +29,19 @@ namespace dftfe
   {
     // FE Electrostatics
 
-    double alpha = 1.0;
-    double beta  = 1.0;
-    d_BasisOperatorElectroHostPtr->reinit(
-      0, 0, d_compensationChargeQuadratureIdElectro);
+    double             alpha = 1.0;
+    double             beta  = 1.0;
     const unsigned int numberNodesPerElement =
       d_BasisOperatorElectroHostPtr->nDofsPerCell();
-    const unsigned int numberQuadraturePoints =
-      d_BasisOperatorElectroHostPtr->nQuadsPerCell();
     const unsigned int numberAtomsOfInterest =
       d_atomicShapeFnsContainer->getNumAtomCentersSize();
     const std::vector<unsigned int> &atomicNumber =
       d_atomicShapeFnsContainer->getAtomicNumbers();
+    const unsigned int numberQuadraturePoints =
+      (d_jxwcompensationCharge.begin()->second).size();
     const std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomicShapeFnsContainer->getAtomIdsInCurrentProcess();
     d_nonLocalHamiltonianElectrostaticValue.clear();
-    // std::cout<<"DEBUG: Line 47: "<<d_this_mpi_process<<"
-    // "<<atomIdsInCurrentProcess.size()<<std::endl;
-    // MPI_Barrier(d_mpiCommParent);
     for (unsigned int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
          iAtom++)
       {
@@ -87,17 +82,17 @@ namespace dftfe
           }
       }
 
-    for (std::map<unsigned int, std::vector<double>>::iterator it =
-           d_nonLocalHamiltonianElectrostaticValue.begin();
-         it != d_nonLocalHamiltonianElectrostaticValue.end();
-         ++it)
-      {
-        unsigned int        atomId  = it->first;
-        std::vector<double> entries = it->second;
-        for (int i = 0; i < entries.size(); i++)
-          std::cout << entries[i] << " ";
-        std::cout << std::endl;
-      }
+    // for (std::map<unsigned int, std::vector<double>>::iterator it =
+    //        d_nonLocalHamiltonianElectrostaticValue.begin();
+    //      it != d_nonLocalHamiltonianElectrostaticValue.end();
+    //      ++it)
+    //   {
+    //     unsigned int        atomId  = it->first;
+    //     std::vector<double> entries = it->second;
+    //     for (int i = 0; i < entries.size(); i++)
+    //       std::cout << entries[i] << " ";
+    //     std::cout << std::endl;
+    //   }
   }
 
 
@@ -110,14 +105,12 @@ namespace dftfe
   {
     // FE Electrostatics
 
-    double alpha = 1.0;
-    double beta  = 1.0;
-    d_BasisOperatorElectroHostPtr->reinit(
-      0, 0, d_compensationChargeQuadratureIdElectro);
+    double             alpha = 1.0;
+    double             beta  = 1.0;
     const unsigned int numberNodesPerElement =
       d_BasisOperatorElectroHostPtr->nDofsPerCell();
     const unsigned int numberQuadraturePoints =
-      d_BasisOperatorElectroHostPtr->nQuadsPerCell();
+      (d_jxwcompensationCharge.begin()->second).size();
     const unsigned int numberAtomsOfInterest =
       d_atomicShapeFnsContainer->getNumAtomCentersSize();
     const std::vector<unsigned int> &atomicNumber =
@@ -185,11 +178,6 @@ namespace dftfe
                     ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                 std::vector<double> gLValues =
                   d_gLValuesQuadPoints[std::make_pair(atomId, cellIndex)];
-                // std::cout<<"Entries of iElem: "<<iElem<<std::endl;
-                // for(int q = 0; q < numberQuadraturePoints; q++)
-                //   std::cout<<gLValues[q]<<" "<<tempVec[q]<<std::endl;
-
-
                 iElem++;
                 d_BLASWrapperHostPtr->xgemm(
                   'N',
@@ -212,17 +200,17 @@ namespace dftfe
                 //}     // if
           }     // subcell
       }         // FEEval iterator
-    for (std::map<unsigned int, std::vector<double>>::iterator it =
-           d_nonLocalHamiltonianElectrostaticValue.begin();
-         it != d_nonLocalHamiltonianElectrostaticValue.end();
-         ++it)
-      {
-        unsigned int        atomId  = it->first;
-        std::vector<double> entries = it->second;
-        // for (int i = 0; i < entries.size(); i++)
-        //   std::cout << entries[i] << " ";
-        // std::cout << std::endl;
-      }
+    // for (std::map<unsigned int, std::vector<double>>::iterator it =
+    //        d_nonLocalHamiltonianElectrostaticValue.begin();
+    //      it != d_nonLocalHamiltonianElectrostaticValue.end();
+    //      ++it)
+    //   {
+    //     unsigned int        atomId  = it->first;
+    //     std::vector<double> entries = it->second;
+    //     // for (int i = 0; i < entries.size(); i++)
+    //     //   std::cout << entries[i] << " ";
+    //     // std::cout << std::endl;
+    //   }
   }
 
 
@@ -887,12 +875,6 @@ namespace dftfe
                            &Beta2,
                            &sigmaSmooth[0],
                            &inc);
-                    // MPI_Barrier(d_mpiCommParent);
-                    // timerGGABContribution += (MPI_Wtime() -
-                    // TimerGGABStart);
-                    // pcout << "Finished Sigma Contribution part2 B" <<
-                    // std::endl;
-
                     std::vector<double> tempAEcontributionC(
                       numberOfProjectorsSq * numberofValues, 0.0);
                     std::vector<double> tempPScontributionC(
@@ -1021,9 +1003,6 @@ namespace dftfe
                                        corrEnergyValPS[rpoint]);
                         double Value = rab[rpoint] * (Val1 - Val2) *
                                        pow(radialGrid[rpoint], 2);
-                        // std::cout<<rpoint<<" "<<Value<<" "<<rab[rpoint]<<"
-                        // "<<Val1<<" "<<Val2<<"
-                        // "<<radialGrid[rpoint]<<std::endl;
                         return (Value);
                       };
 
@@ -1052,10 +1031,6 @@ namespace dftfe
           } // iAtomList
       }     // If locallyOwned
     MPI_Barrier(d_mpiCommParent);
-    // std::cout<<"TotalDeltaXC: "<<TotalDeltaXC<<"
-    // "<<d_this_mpi_process<<std::endl;
-    // std::cout<<"TotalDeltaExchangeCorrelationVal:
-    // "<<TotalDeltaExchangeCorrelationVal<<" "<<d_this_mpi_process<<std::endl;
     DeltaExchangeCorrelationVal =
       (dealii::Utilities::MPI::sum(TotalDeltaExchangeCorrelationVal,
                                    d_mpiCommParent));
@@ -1190,11 +1165,11 @@ namespace dftfe
                 nonLocalHamiltonianContribution +=
                   Dij_out[iProj * numberOfProjectors + jProj] *
                   deltaHij[iProj * numberOfProjectors + jProj];
-                pcout << iProj * numberOfProjectors + jProj << " "
-                      << Dij_out[iProj * numberOfProjectors + jProj] << " "
-                      << deltaHij[iProj * numberOfProjectors + jProj] << " "
-                      << Zeroij[iProj * numberOfProjectors + jProj] << " "
-                      << nonLocalHamiltonianContribution << std::endl;
+                // pcout << iProj * numberOfProjectors + jProj << " "
+                //       << Dij_out[iProj * numberOfProjectors + jProj] << " "
+                //       << deltaHij[iProj * numberOfProjectors + jProj] << " "
+                //       << Zeroij[iProj * numberOfProjectors + jProj] << " "
+                //       << nonLocalHamiltonianContribution << std::endl;
                 KEcontribution += Dij_out[iProj * numberOfProjectors + jProj] *
                                   KEij[iProj * numberOfProjectors + jProj];
                 ZeroPotentialContribution +=
@@ -1233,11 +1208,11 @@ namespace dftfe
         totalColEnergyContribution += ColoumbContribution;
         totalColValenceEnergyContribution += ColoumbContributionValence;
         totalnonLocalHamiltonianContribution += nonLocalHamiltonianContribution;
-        pcout << "-------------------------" << std::endl;
-        pcout << totalnonLocalHamiltonianContribution << " "
-              << totalZeroPotentialContribution << " "
-              << ZeroPotentialContribution << " "
-              << totalZeroPotentialContribution << std::endl;
+        // pcout << "-------------------------" << std::endl;
+        // pcout << totalnonLocalHamiltonianContribution << " "
+        //       << totalZeroPotentialContribution << " "
+        //       << ZeroPotentialContribution << " "
+        //       << totalZeroPotentialContribution << std::endl;
 
 
 

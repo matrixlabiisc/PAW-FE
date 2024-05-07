@@ -525,13 +525,10 @@ namespace dftfe
           d_BasisOperatorHostPtr, d_nlpspQuadratureId, 1E-14, 0);
         pcout << "COmputing sparse structure for shapeFunctions: " << std::endl;
         d_atomicShapeFnsContainer->computeSparseStructure(
-          d_BasisOperatorElectroHostPtr,
-          d_compensationChargeQuadratureIdElectro,
-          1E-8,
-          0);
+          d_BasisOperatorElectroHostPtr, d_densityQuadratureIdElectro, 1E-8, 0);
         d_atomicShapeFnsContainer->computeFEEvaluationMaps(
           d_BasisOperatorElectroHostPtr,
-          d_compensationChargeQuadratureIdElectro,
+          d_densityQuadratureIdElectro,
           dofHanderId);
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
@@ -847,14 +844,17 @@ namespace dftfe
                       dataTypes::mpi_type_id(&PijMatrix[0]),
                       MPI_SUM,
                       d_mpiCommParent);
-        pcout << "Pmatrix Entries: " << std::endl;
-        for (int i = 0; i < d_totalProjectors; i++)
+        if (d_dftParamsPtr->verbosity >= 5)
           {
-            for (int j = 0; j < d_totalProjectors; j++)
+            pcout << "Pmatrix Entries: " << std::endl;
+            for (int i = 0; i < d_totalProjectors; i++)
               {
-                pcout << PijMatrix[i * d_totalProjectors + j] << " ";
+                for (int j = 0; j < d_totalProjectors; j++)
+                  {
+                    pcout << PijMatrix[i * d_totalProjectors + j] << " ";
+                  }
+                pcout << std::endl;
               }
-            pcout << std::endl;
           }
 
         // Across kpools and across bands all reduce to be called
@@ -873,19 +873,23 @@ namespace dftfe
                 std::vector<double> Pij(numberOfProjectors * numberOfProjectors,
                                         0.0);
                 std::vector<double> multipoleInverse = d_multipoleInverse[Znum];
-                pcout << " Delta Matrix Initial: " << std::endl;
-                for (int i = 0; i < numberOfProjectors; i++)
+                if (d_dftParamsPtr->verbosity >= 5)
                   {
-                    for (int j = 0; j < numberOfProjectors; j++)
+                    pcout << " Delta Matrix Initial: " << std::endl;
+                    for (int i = 0; i < numberOfProjectors; i++)
                       {
-                        pcout
-                          << PijMatrix[((startIndex + i) * d_totalProjectors +
-                                        (startIndex + j))]
-                          << " ";
-                      } // j
-                    pcout << std::endl;
-                  } // i
-                pcout << "Delta Matrix: " << std::endl;
+                        for (int j = 0; j < numberOfProjectors; j++)
+                          {
+                            pcout << PijMatrix[((startIndex + i) *
+                                                  d_totalProjectors +
+                                                (startIndex + j))]
+                                  << " ";
+                          } // j
+                        pcout << std::endl;
+                      } // i
+                  }
+                if (d_dftParamsPtr->verbosity >= 5)
+                  pcout << "Delta Matrix: " << std::endl;
                 for (int i = 0; i < numberOfProjectors; i++)
                   {
                     for (int j = 0; j < numberOfProjectors; j++)
@@ -894,36 +898,44 @@ namespace dftfe
                           PijMatrix[((startIndex + i) * d_totalProjectors +
                                      (startIndex + j))] +
                           multipoleInverse[i * numberOfProjectors + j]);
-                        pcout << Pij[i * numberOfProjectors + j] << " ";
+                        if (d_dftParamsPtr->verbosity >= 5)
+                          pcout << Pij[i * numberOfProjectors + j] << " ";
                       } // j
-                    pcout << std::endl;
+                    if (d_dftParamsPtr->verbosity >= 5)
+                      pcout << std::endl;
                   } // i
                 dftfe::linearAlgebraOperations::inverse(&Pij[0],
                                                         numberOfProjectors);
-                pcout << "Inverse Delta Matrix: " << std::endl;
-                for (int i = 0; i < numberOfProjectors; i++)
+                if (d_dftParamsPtr->verbosity >= 5)
                   {
-                    for (int j = 0; j < numberOfProjectors; j++)
+                    pcout << "Inverse Delta Matrix: " << std::endl;
+                    for (int i = 0; i < numberOfProjectors; i++)
                       {
-                        pcout << Pij[i * numberOfProjectors + j] << " ";
-                      } // j
-                    pcout << std::endl;
+                        for (int j = 0; j < numberOfProjectors; j++)
+                          {
+                            pcout << Pij[i * numberOfProjectors + j] << " ";
+                          } // j
+                        pcout << std::endl;
+                      }
                   }
                 d_atomicNonLocalPseudoPotentialConstants
                   [CouplingType::inversePawOverlapEntries][atomId] = Pij;
                 d_atomicNonLocalPseudoPotentialConstants;
-                pcout << "NonLocal Inverse-Overlap Matrrix for atomID: "
-                      << atomId << std::endl;
-                for (int i = 0; i < numberOfProjectors; i++)
+                if (d_dftParamsPtr->verbosity >= 5)
                   {
-                    for (int j = 0; j < numberOfProjectors; j++)
-                      pcout << d_atomicNonLocalPseudoPotentialConstants
-                                 [CouplingType::inversePawOverlapEntries]
-                                 [atomId][i * numberOfProjectors + j]
-                            << " ";
-                    pcout << std::endl;
+                    pcout << "NonLocal Inverse-Overlap Matrrix for atomID: "
+                          << atomId << std::endl;
+                    for (int i = 0; i < numberOfProjectors; i++)
+                      {
+                        for (int j = 0; j < numberOfProjectors; j++)
+                          pcout << d_atomicNonLocalPseudoPotentialConstants
+                                     [CouplingType::inversePawOverlapEntries]
+                                     [atomId][i * numberOfProjectors + j]
+                                << " ";
+                        pcout << std::endl;
+                      }
+                    pcout << "----------------------------" << std::endl;
                   }
-                pcout << "----------------------------" << std::endl;
 
               } // atomId
           }
@@ -950,7 +962,8 @@ namespace dftfe
                     ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                 unsigned int startIndex = d_totalProjectorStartIndex[atomId];
                 std::vector<double> multipoleInverse = d_multipoleInverse[Znum];
-                pcout << "Delta Matrix: " << std::endl;
+                if (d_dftParamsPtr->verbosity >= 5)
+                  pcout << "Delta Matrix: " << std::endl;
                 for (int i = 0; i < numberOfProjectors; i++)
                   {
                     for (int j = 0; j < numberOfProjectors; j++)
@@ -958,43 +971,30 @@ namespace dftfe
                         deltaMatrix2[((startIndex + i) * d_totalProjectors +
                                       (startIndex + j))] +=
                           multipoleInverse[i * numberOfProjectors + j];
-                        pcout << deltaMatrix2[((startIndex + i) *
-                                                 d_totalProjectors +
-                                               (startIndex + j))]
-                              << " ";
+                        if (d_dftParamsPtr->verbosity >= 5)
+                          pcout << deltaMatrix2[((startIndex + i) *
+                                                   d_totalProjectors +
+                                                 (startIndex + j))]
+                                << " ";
+                      } // j
+                    if (d_dftParamsPtr->verbosity >= 5)
+                      pcout << std::endl;
+                  } // i
+              }
+            if (d_dftParamsPtr->verbosity >= 5)
+              {
+                pcout << " Delta Matrix Final: " << std::endl;
+                for (int i = 0; i < d_totalProjectors; i++)
+                  {
+                    for (int j = 0; j < d_totalProjectors; j++)
+                      {
+                        pcout << deltaMatrix2[i * d_totalProjectors + j] << " ";
                       } // j
                     pcout << std::endl;
                   } // i
-                //  pcout << " Delta Matrix current: " << std::endl;
-                //   for (int i = 0; i < d_totalProjectors; i++)
-                //     {
-                //       for (int j = 0; j < d_totalProjectors; j++)
-                //         {
-                //            pcout<<deltaMatrix2[i*d_totalProjectors+j]<<" ";
-                //         } // j
-                //       pcout << std::endl;
-                //     } // i
               }
-            pcout << " Delta Matrix FInal: " << std::endl;
-            for (int i = 0; i < d_totalProjectors; i++)
-              {
-                for (int j = 0; j < d_totalProjectors; j++)
-                  {
-                    pcout << deltaMatrix2[i * d_totalProjectors + j] << " ";
-                  } // j
-                pcout << std::endl;
-              } // i
             dftfe::linearAlgebraOperations::inverse(&deltaMatrix2[0],
                                                     d_totalProjectors);
-            pcout << "Inverting Overall Delta Matrix: " << std::endl;
-            for (int i = 0; i < d_totalProjectors; i++)
-              {
-                for (int j = 0; j < d_totalProjectors; j++)
-                  {
-                    pcout << deltaMatrix2[i * d_totalProjectors + j] << " ";
-                  }
-                pcout << std::endl;
-              }
             for (unsigned int atomId = 0; atomId < atomicNumber.size();
                  atomId++)
               {
@@ -1016,18 +1016,21 @@ namespace dftfe
                   }     // i
                 d_atomicNonLocalPseudoPotentialConstants
                   [CouplingType::inversePawOverlapEntries][atomId] = Pij;
-                pcout << "NonLocal Inverse-Overlap Matrrix for atomID: "
-                      << atomId << std::endl;
-                for (int i = 0; i < numberOfProjectors; i++)
+                if (d_dftParamsPtr->verbosity >= 5)
                   {
-                    for (int j = 0; j < numberOfProjectors; j++)
-                      pcout << d_atomicNonLocalPseudoPotentialConstants
-                                 [CouplingType::inversePawOverlapEntries]
-                                 [atomId][i * numberOfProjectors + j]
-                            << " ";
-                    pcout << std::endl;
+                    pcout << "NonLocal Inverse-Overlap Matrrix for atomID: "
+                          << atomId << std::endl;
+                    for (int i = 0; i < numberOfProjectors; i++)
+                      {
+                        for (int j = 0; j < numberOfProjectors; j++)
+                          pcout << d_atomicNonLocalPseudoPotentialConstants
+                                     [CouplingType::inversePawOverlapEntries]
+                                     [atomId][i * numberOfProjectors + j]
+                                << " ";
+                        pcout << std::endl;
+                      }
+                    pcout << "----------------------------" << std::endl;
                   }
-                pcout << "----------------------------" << std::endl;
               }
           }
         d_inverseCouplingMatrixEntriesUpdated = false;
@@ -1157,9 +1160,6 @@ namespace dftfe
                 LocalContribution[iProj] = KEContribution[iProj] +
                                            C_ijcontribution[iProj] -
                                            zeroPotentialAtom[iProj];
-                // pcout<<iProj<<" "<<KEContribution[iProj]<<"
-                // "<<C_ijcontribution[iProj]<<" "<<zeroPotentialAtom[iProj]<<"
-                // "<<LocalContribution[iProj]<<std::endl;
               }
 
             for (int i = 0; i < atomLists.size(); i++)
@@ -1252,37 +1252,38 @@ namespace dftfe
                 std::vector<double> ValueAtom(npjsq, 0.0);
                 std::vector<double> deltaColoumbicEnergyDij(npjsq, 0.0);
                 unsigned int        iAtom = atomLists[i];
-                pcout << "Non-local and Local contribution entries: "
-                      << std::endl;
+                // pcout << "Non-local and Local contribution entries: "
+                //       << std::endl;
                 for (int iProj = 0; iProj < npjsq; iProj++)
                   {
                     ValueAtom[iProj] =
                       NonLocalComputedContributions[i * npjsq + iProj] +
                       LocalContribution[iProj];
-                    pcout << iProj << " "
-                          << NonLocalComputedContributions[i * npjsq + iProj]
-                          << " " << LocalContribution[iProj] << std::endl;
+                    // pcout << iProj << " "
+                    //       << NonLocalComputedContributions[i * npjsq + iProj]
+                    //       << " " << LocalContribution[iProj] << std::endl;
                   }
                 d_atomicNonLocalPseudoPotentialConstants
                   [CouplingType::HamiltonianEntries][atomLists[i]] = ValueAtom;
-                pcout << "NonLocal Hamiltonian Matrix for iAtom: "
-                      << atomLists[i] << " "
-                      << d_atomicNonLocalPseudoPotentialConstants
-                           [CouplingType::HamiltonianEntries][atomLists[i]]
-                             .size()
-                      << std::endl;
-                pcout << "Non Local Ham: " << std::endl;
-                for (int iProj = 0; iProj < numberOfProjectorFns; iProj++)
-                  {
-                    for (int jProj = 0; jProj < numberOfProjectorFns; jProj++)
-                      pcout
-                        << d_atomicNonLocalPseudoPotentialConstants
-                             [CouplingType::HamiltonianEntries][atomLists[i]]
-                             [iProj * numberOfProjectorFns + jProj]
-                        << " ";
-                    pcout << std::endl;
-                  }
-                pcout << "----------------------------" << std::endl;
+                // pcout << "NonLocal Hamiltonian Matrix for iAtom: "
+                //       << atomLists[i] << " "
+                //       << d_atomicNonLocalPseudoPotentialConstants
+                //            [CouplingType::HamiltonianEntries][atomLists[i]]
+                //              .size()
+                //       << std::endl;
+                // pcout << "Non Local Ham: " << std::endl;
+                // for (int iProj = 0; iProj < numberOfProjectorFns; iProj++)
+                //   {
+                //     for (int jProj = 0; jProj < numberOfProjectorFns;
+                //     jProj++)
+                //       pcout
+                //         << d_atomicNonLocalPseudoPotentialConstants
+                //              [CouplingType::HamiltonianEntries][atomLists[i]]
+                //              [iProj * numberOfProjectorFns + jProj]
+                //         << " ";
+                //     pcout << std::endl;
+                //   }
+                // pcout << "----------------------------" << std::endl;
               } // i in atomList
 
           } // *it
@@ -1570,7 +1571,6 @@ namespace dftfe
     unsigned int threadId = omp_get_thread_num();
     double Value = d_atomicZeroPotVector[threadId][Znum]->getRadialValue(rad);
     Value /= sqrt(4 * M_PI);
-    std::cout << "Zero: " << rad << " " << Value << std::endl;
     return (Value);
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>

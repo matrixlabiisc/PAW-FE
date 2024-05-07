@@ -897,18 +897,14 @@ namespace dftfe
   double
   pawClass<ValueType, memorySpace>::TotalCompensationCharge()
   {
-    double normValue = 0.0;
-    d_BasisOperatorElectroHostPtr->reinit(
-      0, 0, d_compensationChargeQuadratureIdElectro);
+    double             normValue = 0.0;
     const unsigned int numberAtomsOfInterest =
       d_atomicShapeFnsContainer->getNumAtomCentersSize();
     const unsigned int numberQuadraturePoints =
-      d_BasisOperatorElectroHostPtr->nQuadsPerCell();
+      (d_jxwcompensationCharge.begin()->second).size();
     const std::vector<unsigned int> &atomicNumber =
       d_atomicShapeFnsContainer->getAtomicNumbers();
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-                 JxwVector = d_BasisOperatorElectroHostPtr->JxW();
-    unsigned int iElem     = 0;
+    unsigned int iElem = 0;
 
     for (std::map<dealii::CellId, std::vector<double>>::iterator it =
            (*d_bQuadValuesAllAtoms).begin();
@@ -920,14 +916,14 @@ namespace dftfe
           (*d_bQuadValuesAllAtoms).find(it->first)->second;
         const unsigned int elementIndex =
           d_BasisOperatorElectroHostPtr->cellIndex(cellId);
+        const std::vector<double> jxw =
+          d_jxwcompensationCharge.find(it->first)->second;
         for (unsigned int q_point = 0; q_point < numberQuadraturePoints;
              q_point++)
           {
-            normValue +=
-              Temp[q_point] *
-              JxwVector[elementIndex * numberQuadraturePoints + q_point];
-            // pcout << iElem << " " << q_point << " " << Temp[q_point]
-            //       << std::endl;
+            normValue += Temp[q_point] * jxw[q_point];
+            // std::cout << "cell Index and Quad: " << elementIndex << " "
+            //           << q_point << " " << jxw[q_point] << std::endl;
           }
         iElem++;
       }
