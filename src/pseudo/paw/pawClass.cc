@@ -58,9 +58,6 @@ namespace dftfe
     const std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomicShapeFnsContainer->getAtomIdsInCurrentProcess();
     MPI_Barrier(d_mpiCommParent);
-    std::cout << "Number of atoms in proc-ID: " << d_this_mpi_process << " "
-              << atomIdsInCurrentProcess.size() << std::endl;
-    MPI_Barrier(d_mpiCommParent);
 
     for (unsigned int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
          iAtom++)
@@ -91,9 +88,6 @@ namespace dftfe
               elementIndexesInAtomCompactSupport[iElemComp];
             typename dealii::DoFHandler<3>::active_cell_iterator cell =
               d_BasisOperatorElectroHostPtr->getCellIterator(elementIndex);
-            std::cout << "CellID: " << cell->id() << " "
-                      << d_BasisOperatorElectroHostPtr->cellID(elementIndex)
-                      << std::endl;
             if (cell->is_locally_owned())
               {
                 fe_values.reinit(cell);
@@ -212,10 +206,7 @@ namespace dftfe
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
         unsigned int        npjsq = numberOfProjectors * numberOfProjectors;
         std::vector<double> Tij   = d_ProductOfQijShapeFnAtQuadPoints[atomId];
-        // std::cout << "Size of Tij: " << Tij.size() <<"in procs:
-        // "<<d_this_mpi_process<< std::endl;
         std::vector<double> Dij = D_ij[typeOfField][atomId];
-        // std::cout << "Size of Dij: " << Dij.size() << std::endl;
         std::vector<unsigned int> elementIndexesInAtomCompactSupport =
           d_atomicShapeFnsContainer
             ->d_elementIndexesInAtomCompactSupport[atomId];
@@ -279,8 +270,6 @@ namespace dftfe
               d_BasisOperatorElectroHostPtr->d_cellIdToCellIndexMap[it->first];
             dealii::DoFHandler<3>::active_cell_iterator cell =
               d_BasisOperatorElectroHostPtr->getCellIterator(cellIndex);
-            std::cout << "Filling quad values for cell index: " << cellIndex
-                      << std::endl;
             if (cell->is_locally_owned())
               {
                 fe_values.reinit(cell);
@@ -289,8 +278,6 @@ namespace dftfe
                      iQuad++)
                   {
                     jxw[iQuad] = fe_values.JxW(iQuad);
-                    // std::cout << "cell Index and Quad: " << cellIndex << " "
-                    //           << iQuad << " " << jxw[iQuad] << std::endl;
                   }
                 d_jxwcompensationCharge[it->first] = jxw;
 
@@ -317,9 +304,6 @@ namespace dftfe
     const std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomicShapeFnsContainer->getAtomIdsInCurrentProcess();
 
-    MPI_Barrier(d_mpiCommParent);
-    std::cout << "Number of atoms in proc-ID: " << d_this_mpi_process << " "
-              << atomIdsInCurrentProcess.size() << std::endl;
     MPI_Barrier(d_mpiCommParent);
 
     for (unsigned int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
@@ -562,8 +546,6 @@ namespace dftfe
           } // iElemComp
 
         d_ProductOfQijShapeFnAtQuadPoints[atomId] = tempCoeff;
-        std::cout << "Size of Tij: " << tempCoeff.size()
-                  << "in procs: " << d_this_mpi_process << std::endl;
 
 
       } // iAtom

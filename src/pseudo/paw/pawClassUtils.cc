@@ -759,7 +759,9 @@ namespace dftfe
                 index++;
               }
           }
-        pcout << "---------------MATRIX METHOD ------------------------"
+        if(d_dftParamsPtr->verbosity >=5)
+        {
+          pcout << "---------------MATRIX METHOD ------------------------"
               << std::endl;
 
 
@@ -775,6 +777,7 @@ namespace dftfe
           }
         pcout << "------------------------------------------------------------"
               << std::endl;
+        }
 
 
         D_ij[typeOfField][atomId] = Dij;
