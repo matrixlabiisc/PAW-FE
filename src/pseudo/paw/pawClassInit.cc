@@ -1033,7 +1033,7 @@ namespace dftfe
                   }
               }
           }
-        Pmatrix.clear();  
+        //Pmatrix.clear();  
         d_inverseCouplingMatrixEntriesUpdated = false;
       }
     else if (couplingtype == CouplingType::HamiltonianEntries)

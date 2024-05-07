@@ -1074,8 +1074,8 @@ namespace dftfe
               }
           }
       }
-    std::cout << "Size of Dij Weights in procs: " << d_this_mpi_process << " "
-              << weights.size() << std::endl;
+    // std::cout << "Size of Dij Weights in procs: " << d_this_mpi_process << " "
+    //           << weights.size() << std::endl;
     MPI_Barrier(d_mpiCommParent);
     return weights;
   }
