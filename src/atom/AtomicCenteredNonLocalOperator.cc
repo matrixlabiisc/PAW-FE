@@ -1644,7 +1644,7 @@ namespace dftfe
       const dftfe::utils::MemoryStorage<double, memorySpace> &scalingVector)
   {
     AssertThrow(
-      scalingVector.size() == d_numberWaveFunctions,
+      scalingVector.size() >= d_numberWaveFunctions,
       dealii::ExcMessage(
         "DFT-FE Error: Inconsistent size of scaling vector. Not same as number of WaveFunctions"));
 
