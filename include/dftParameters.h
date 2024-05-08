@@ -214,6 +214,7 @@ namespace dftfe
     bool         KineticEnergyCorrection;
     bool         DiagonalMassMatrix;
     bool         ApproxDelta;
+    bool         memoryOptPmatrix;
 
     dftParameters();
 

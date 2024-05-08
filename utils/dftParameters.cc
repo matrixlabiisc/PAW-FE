@@ -284,6 +284,10 @@ namespace dftfe
                           "false",
                           dealii::Patterns::Bool(),
                           "[Standard] ");
+        prm.declare_entry("USE MEMORY OPT METHOD FOR P MATRIX",
+                          "true",
+                          dealii::Patterns::Bool(),
+                          "[Standard] ");                          
         prm.declare_entry("NUMBER OF ATOM CENTERED SHAPE FUNCTIONS",
                           "3",
                           dealii::Patterns::Integer(0),
@@ -1392,6 +1396,7 @@ namespace dftfe
     maxCellUpdateStep  = 0.1;
 
     writeStructreEnergyForcesFileForPostProcess = false;
+    
   }
 
 
@@ -1497,6 +1502,7 @@ namespace dftfe
 
       DiagonalMassMatrix = prm.get_bool("USE DIAGONAL MASS MATRIX");
       ApproxDelta        = prm.get_bool("USE APPROX DELTA MATRIX");
+      memoryOptPmatrix = prm.get_bool("USE MEMORY OPT METHOD FOR P MATRIX");
       noShapeFnsInPAW =
         prm.get_integer("NUMBER OF ATOM CENTERED SHAPE FUNCTIONS");
       prm.enter_subsection("Optimization");

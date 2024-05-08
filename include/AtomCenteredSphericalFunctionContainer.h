@@ -196,6 +196,9 @@ namespace dftfe
     bool
     atomSupportInElement(unsigned int iElem);
 
+    bool
+    atomIdPresentInCurrentProcessor(unsigned int atomId);
+
     void
     getDataForSparseStructure(
       const std::map<unsigned int, std::vector<int>> &sparsityPattern,
