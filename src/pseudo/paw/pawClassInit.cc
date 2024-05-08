@@ -729,6 +729,7 @@ namespace dftfe
       {
         if (!d_dftParamsPtr->memoryOptPmatrix)
           {
+            pcout<<"PAWClass: Pmatrix construction in Normal Mode "<<std::endl;
             const unsigned int numberNodesPerElement =
               d_BasisOperatorHostPtr->nDofsPerCell();
             const ValueType alpha1 = 1.0;
@@ -856,7 +857,7 @@ namespace dftfe
                           dataTypes::mpi_type_id(&PijMatrix[0]),
                           MPI_SUM,
                           d_mpiCommParent);
-            if (d_dftParamsPtr->verbosity >= 5)
+            if (d_verbosity >= 5)
               {
                 pcout << "Pmatrix Entries: " << std::endl;
                 for (int i = 0; i < d_totalProjectors; i++)
@@ -888,7 +889,7 @@ namespace dftfe
                                             0.0);
                     std::vector<double> multipoleInverse =
                       d_multipoleInverse[Znum];
-                    if (d_dftParamsPtr->verbosity >= 5)
+                    if (d_verbosity >= 5)
                       {
                         pcout << " Delta Matrix Initial: " << std::endl;
                         for (int i = 0; i < numberOfProjectors; i++)
@@ -903,7 +904,7 @@ namespace dftfe
                             pcout << std::endl;
                           } // i
                       }
-                    if (d_dftParamsPtr->verbosity >= 5)
+                    if (d_verbosity >= 5)
                       pcout << "Delta Matrix: " << std::endl;
                     for (int i = 0; i < numberOfProjectors; i++)
                       {
@@ -913,15 +914,15 @@ namespace dftfe
                               PijMatrix[((startIndex + i) * d_totalProjectors +
                                          (startIndex + j))] +
                               multipoleInverse[i * numberOfProjectors + j]);
-                            if (d_dftParamsPtr->verbosity >= 5)
+                            if (d_verbosity >= 5)
                               pcout << Pij[i * numberOfProjectors + j] << " ";
                           } // j
-                        if (d_dftParamsPtr->verbosity >= 5)
+                        if (d_verbosity >= 5)
                           pcout << std::endl;
                       } // i
                     dftfe::linearAlgebraOperations::inverse(&Pij[0],
                                                             numberOfProjectors);
-                    if (d_dftParamsPtr->verbosity >= 5)
+                    if (d_verbosity >= 5)
                       {
                         pcout << "Inverse Delta Matrix: " << std::endl;
                         for (int i = 0; i < numberOfProjectors; i++)
@@ -936,7 +937,7 @@ namespace dftfe
                     d_atomicNonLocalPseudoPotentialConstants
                       [CouplingType::inversePawOverlapEntries][atomId] = Pij;
                     d_atomicNonLocalPseudoPotentialConstants;
-                    if (d_dftParamsPtr->verbosity >= 5)
+                    if (d_verbosity >= 5)
                       {
                         pcout << "NonLocal Inverse-Overlap Matrrix for atomID: "
                               << atomId << std::endl;
@@ -980,7 +981,7 @@ namespace dftfe
                       d_totalProjectorStartIndex[atomId];
                     std::vector<double> multipoleInverse =
                       d_multipoleInverse[Znum];
-                    if (d_dftParamsPtr->verbosity >= 5)
+                    if (d_verbosity >= 5)
                       pcout << "Delta Matrix: " << std::endl;
                     for (int i = 0; i < numberOfProjectors; i++)
                       {
@@ -989,17 +990,17 @@ namespace dftfe
                             deltaMatrix2[((startIndex + i) * d_totalProjectors +
                                           (startIndex + j))] +=
                               multipoleInverse[i * numberOfProjectors + j];
-                            if (d_dftParamsPtr->verbosity >= 5)
+                            if (d_verbosity >= 5)
                               pcout << deltaMatrix2[((startIndex + i) *
                                                        d_totalProjectors +
                                                      (startIndex + j))]
                                     << " ";
                           } // j
-                        if (d_dftParamsPtr->verbosity >= 5)
+                        if (d_verbosity >= 5)
                           pcout << std::endl;
                       } // i
                   }
-                if (d_dftParamsPtr->verbosity >= 5)
+                if (d_verbosity >= 5)
                   {
                     pcout << " Delta Matrix Final: " << std::endl;
                     for (int i = 0; i < d_totalProjectors; i++)
@@ -1037,7 +1038,7 @@ namespace dftfe
                       }     // i
                     d_atomicNonLocalPseudoPotentialConstants
                       [CouplingType::inversePawOverlapEntries][atomId] = Pij;
-                    if (d_dftParamsPtr->verbosity >= 5)
+                    if (d_verbosity >= 5)
                       {
                         pcout << "NonLocal Inverse-Overlap Matrrix for atomID: "
                               << atomId << std::endl;
@@ -1058,12 +1059,13 @@ namespace dftfe
           }
         else
           {
+            pcout<<"PAWClass: Pmatrix construction in MemoryOpt Mode "<<std::endl;
             if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
               {
-                        const unsigned int numberNodesPerElement =
-              d_BasisOperatorHostPtr->nDofsPerCell();
-            const ValueType alpha1 = 1.0;
-            
+                const unsigned int numberNodesPerElement =
+                  d_BasisOperatorHostPtr->nDofsPerCell();
+                const ValueType alpha1 = 1.0;
+
                 const unsigned int totalProjectorsInProcessor =
                   d_atomicProjectorFnsContainer
                     ->getTotalNumberOfSphericalFunctionsInCurrentProcessor();
@@ -1088,159 +1090,199 @@ namespace dftfe
                   unsigned int,
                   dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>>
                   Pmatrix;
-                                const dftfe::utils::
+                const dftfe::utils::
                   MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
                     DminusHalf =
-                      d_BasisOperatorHostPtr->inverseSqrtMassVectorBasisData();  
+                      d_BasisOperatorHostPtr->inverseSqrtMassVectorBasisData();
                 for (int i = 0; i < numProjList.size(); i++)
                   {
-                    Pmatrix[numProjList[i]] =
+                    if(Pmatrix.find(numProjList[i]) == Pmatrix.end())
+                    {
+                      Pmatrix[numProjList[i]] =
                       dftfe::linearAlgebra::MultiVector<ValueType,
                                                         memorySpace>();
                     Pmatrix[numProjList[i]].reinit(
                       d_BasisOperatorHostPtr->mpiPatternP2P, numProjList[i]);
+                    }
                   }
                 const std::vector<unsigned int> &atomicNumber =
                   d_atomicShapeFnsContainer->getAtomicNumbers();
-
-                for(int kPoint = 0; kPoint < d_kpointWeights.size(); kPoint++)
-                {
-                  unsigned int projStartIndex = 0;
-                for (unsigned int atomId = 0; atomId < atomicNumber.size();
-                     atomId++)
-                  {
-                    unsigned int Znum = atomicNumber[atomId];
-                    unsigned int numProj =
-                      d_atomicProjectorFnsContainer
-                        ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
-                    Pmatrix[numProj].setValue(0);
-
-                    if (d_atomicProjectorFnsContainer
-                          ->atomIdPresentInCurrentProcessor(atomId))
-                      {
-                        std::vector<unsigned int>
-                          elementIndexesInAtomCompactSupport =
-                            d_atomicProjectorFnsContainer
-                              ->d_elementIndexesInAtomCompactSupport[atomId];
-                        int numberElementsInAtomCompactSupport =
-                          elementIndexesInAtomCompactSupport.size();
-
-                        for (int iElem = 0;
-                             iElem < numberElementsInAtomCompactSupport;
-                             iElem++)
-                          {
-                            unsigned int elementIndex =
-                              elementIndexesInAtomCompactSupport[iElem];
-                            // convert this to a ValueType* for better access.
-                            // IMPORTANT...
-                            std::vector<ValueType> CMatrixEntries =
-                              d_nonLocalOperator->getCmatrixEntries(
-                                kPoint, atomId, elementIndex);
-                            // pcout << "CMatrix: " << iElem << " " <<
-                            // elementIndex
-                            //       << std::endl;
-                            for (int iDof = 0; iDof < numberNodesPerElement;
-                                 iDof++)
-                              {
-                                long int dofIndex =
-                                  d_BasisOperatorHostPtr
-                                    ->d_cellDofIndexToProcessDofIndexMap
-                                      [elementIndex * numberNodesPerElement +
-                                       iDof];
-                                d_BLASWrapperHostPtr->xaxpy(
-                                  numProj,
-                                  &alpha1,
-                                  &CMatrixEntries[iDof * numProj],
-                                  1,
-                                  Pmatrix[numProj].data() + (dofIndex * numProj),
-                                  1);
-                              } // iDof
-
-
-                          } // iElem
-
-
-
-                      } // if atomId present
-                    d_BasisOperatorHostPtr
-                      ->d_constraintInfo[d_BasisOperatorHostPtr->d_dofHandlerID]
-                      .distribute_slave_to_master(Pmatrix[numProj]);
-                    Pmatrix[numProj].accumulateAddLocallyOwned();
-                    Pmatrix[numProj].zeroOutGhosts();
-                    if (d_atomicProjectorFnsContainer
-                          ->atomIdPresentInCurrentProcessor(atomId))
-                      {
-                        for (int iDof = 0;
-                             iDof < Pmatrix[numProj].locallyOwnedSize();
-                             iDof++)
-                          {
-                            const ValueType scalingCoeff =
-                              *(DminusHalf.data() + iDof);
-                            d_BLASWrapperHostPtr->xaxpy(
-                              numProj,
-                              &scalingCoeff,
-                              Pmatrix[numProj].data() + iDof * numProj,
-                              1,
-                              &processorLocalPmatrix
-                                [iDof * totalProjectorsInProcessor +
-                                 projStartIndex],
-                              1);
-                          } // iDof
-                          projStartIndex += numProj;
-                      }     // if
-
-                  } // atomId
-                char      transA = 'N';
-                ValueType alpha  = d_kpointWeights[kPoint];
-                ValueType beta   = 1.0;
-#ifdef USE_COMPLEX
-                char transB = 'C';
-#else
-                char transB = 'T';
-#endif
-                d_BLASWrapperHostPtr->xgemm(transA,
-                                            transB,
-                                            totalProjectorsInProcessor,
-                                            totalProjectorsInProcessor,
-                                            ndofs,
-                                            &alpha,
-                                            &processorLocalPmatrix[0],
-                                            totalProjectorsInProcessor,
-                                            &processorLocalPmatrix[0],
-                                            totalProjectorsInProcessor,
-                                            &beta,
-                                            &processorLocalPTransPMatrix[0],
-                                            totalProjectorsInProcessor);
-              }                            
                 std::vector<unsigned int> atomIdsInCurrentProcess =
                   d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
-                unsigned int startIndexProcessor = 0;
+                std::vector<unsigned int> startIndexProcessorVec(
+                  atomIdsInCurrentProcess.size(), 0);
+                unsigned int startIndex = 0;
+                for (int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
+                     iAtom++)
+                  {
+                    startIndexProcessorVec[iAtom] = startIndex;
+                    startIndex +=
+                      d_atomicProjectorFnsContainer
+                        ->getTotalNumberOfSphericalFunctionsPerAtom(
+                          atomicNumber[atomIdsInCurrentProcess[iAtom]]);
+                  }
+                for (int kPoint = 0; kPoint < d_kpointWeights.size(); kPoint++)
+                  {
+                    unsigned int projStartIndex = 0;
+                    for (unsigned int atomId = 0; atomId < atomicNumber.size();
+                         atomId++)
+                      {
+                        unsigned int Znum = atomicNumber[atomId];
+                        unsigned int numProj =
+                          d_atomicProjectorFnsContainer
+                            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+                        Pmatrix[numProj].setValue(0);
+
+                        if (d_atomicProjectorFnsContainer
+                              ->atomIdPresentInCurrentProcessor(atomId))
+                          {
+                            std::vector<unsigned int>
+                              elementIndexesInAtomCompactSupport =
+                                d_atomicProjectorFnsContainer
+                                  ->d_elementIndexesInAtomCompactSupport
+                                    [atomId];
+                            int numberElementsInAtomCompactSupport =
+                              elementIndexesInAtomCompactSupport.size();
+
+                            for (int iElem = 0;
+                                 iElem < numberElementsInAtomCompactSupport;
+                                 iElem++)
+                              {
+                                unsigned int elementIndex =
+                                  elementIndexesInAtomCompactSupport[iElem];
+                                // convert this to a ValueType* for better
+                                // access. IMPORTANT...
+                                std::vector<ValueType> CMatrixEntries =
+                                  d_nonLocalOperator->getCmatrixEntries(
+                                    kPoint, atomId, elementIndex);
+                                // pcout << "CMatrix: " << iElem << " " <<
+                                // elementIndex
+                                //       << std::endl;
+                                for (int iDof = 0; iDof < numberNodesPerElement;
+                                     iDof++)
+                                  {
+                                    long int dofIndex =
+                                      d_BasisOperatorHostPtr
+                                        ->d_cellDofIndexToProcessDofIndexMap
+                                          [elementIndex *
+                                             numberNodesPerElement +
+                                           iDof];
+                                    d_BLASWrapperHostPtr->xaxpy(
+                                      numProj,
+                                      &alpha1,
+                                      &CMatrixEntries[iDof * numProj],
+                                      1,
+                                      Pmatrix[numProj].data() +
+                                        (dofIndex * numProj),
+                                      1);
+                                  } // iDof
+
+
+                              } // iElem
+
+
+
+                          } // if atomId present
+                        d_BasisOperatorHostPtr
+                          ->d_constraintInfo[d_BasisOperatorHostPtr
+                                               ->d_dofHandlerID]
+                          .distribute_slave_to_master(Pmatrix[numProj]);
+                        Pmatrix[numProj].accumulateAddLocallyOwned();
+                        Pmatrix[numProj].zeroOutGhosts();
+                        if (d_atomicProjectorFnsContainer
+                              ->atomIdPresentInCurrentProcessor(atomId))
+                          {
+                            for (int iDof = 0;
+                                 iDof < Pmatrix[numProj].locallyOwnedSize();
+                                 iDof++)
+                              {
+                                const ValueType scalingCoeff =
+                                  *(DminusHalf.data() + iDof);
+                                d_BLASWrapperHostPtr->xaxpy(
+                                  numProj,
+                                  &scalingCoeff,
+                                  Pmatrix[numProj].data() + iDof * numProj,
+                                  1,
+                                  &processorLocalPmatrix
+                                    [iDof * totalProjectorsInProcessor +
+                                     projStartIndex],
+                                  1);
+                              } // iDof
+                            projStartIndex += numProj;
+                          } // if
+
+                      } // atomId
+                    char      transA = 'N';
+                    ValueType alpha  = d_kpointWeights[kPoint];
+                    ValueType beta   = 1.0;
+#ifdef USE_COMPLEX
+                    char transB = 'C';
+#else
+                    char transB = 'T';
+#endif
+                    if (totalProjectorsInProcessor > 0)
+                      d_BLASWrapperHostPtr->xgemm(
+                        transA,
+                        transB,
+                        totalProjectorsInProcessor,
+                        totalProjectorsInProcessor,
+                        ndofs,
+                        &alpha,
+                        &processorLocalPmatrix[0],
+                        totalProjectorsInProcessor,
+                        &processorLocalPmatrix[0],
+                        totalProjectorsInProcessor,
+                        &beta,
+                        &processorLocalPTransPMatrix[0],
+                        totalProjectorsInProcessor);
+                  }
+
+
                 for (int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
                      iAtom++)
                   {
                     unsigned int atomId = atomIdsInCurrentProcess[iAtom];
                     unsigned int Znum   = atomicNumber[atomId];
-                    unsigned int numProj =
+                    unsigned int numProj_i =
                       d_atomicProjectorFnsContainer
                         ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
-                    unsigned int startIndexGlobal =
+                    unsigned int startIndexGlobal_i =
                       d_totalProjectorStartIndex[atomId];
-                    for (int iProj = 0; iProj < numProj; iProj++)
+                    unsigned int startIndexProcessor_i =
+                      startIndexProcessorVec[iAtom];
+                    for (int iProj = 0; iProj < numProj_i; iProj++)
                       {
-                        for (int jProj = 0; jProj < numProj; jProj++)
+                        for (int jAtom = 0;
+                             jAtom < atomIdsInCurrentProcess.size();
+                             jAtom++)
                           {
-                            PijMatrix[(startIndexGlobal + iProj) *
-                                        d_totalProjectors +
-                                      (startIndexGlobal + jProj)] =
-                              processorLocalPTransPMatrix
-                                [(startIndexProcessor + iProj) *
-                                   totalProjectorsInProcessor +
-                                 (startIndexProcessor + jProj)];
-                          }
+                            unsigned int atomId_j =
+                              atomIdsInCurrentProcess[jAtom];
+                            unsigned int Znum = atomicNumber[atomId_j];
+                            unsigned int numProj_j =
+                              d_atomicProjectorFnsContainer
+                                ->getTotalNumberOfSphericalFunctionsPerAtom(
+                                  Znum);
+                            unsigned int startIndexGlobal_j =
+                              d_totalProjectorStartIndex[atomId_j];
+                            unsigned int startIndexProcessor_j =
+                              startIndexProcessorVec[jAtom];
+                            for (int jProj = 0; jProj < numProj_j; jProj++)
+                              {
+                                PijMatrix[(startIndexGlobal_i + iProj) *
+                                            d_totalProjectors +
+                                          (startIndexGlobal_j + jProj)] =
+                                  processorLocalPTransPMatrix
+                                    [(startIndexProcessor_i + iProj) *
+                                       totalProjectorsInProcessor +
+                                     (startIndexProcessor_j + jProj)];
+                              }
+                          } // jAtom
                       }
-                      startIndexProcessor += numProj;
+
 
                   } // iAtom
+
 
                 MPI_Allreduce(MPI_IN_PLACE,
                               &PijMatrix[0],
@@ -1248,7 +1290,7 @@ namespace dftfe
                               dataTypes::mpi_type_id(&PijMatrix[0]),
                               MPI_SUM,
                               d_mpiCommParent);
-                if (d_dftParamsPtr->verbosity >= 5)
+                if (d_verbosity >= 5)
                   {
                     pcout << "Pmatrix Entries: " << std::endl;
                     for (int i = 0; i < d_totalProjectors; i++)
@@ -1284,7 +1326,7 @@ namespace dftfe
                       d_totalProjectorStartIndex[atomId];
                     std::vector<double> multipoleInverse =
                       d_multipoleInverse[Znum];
-                    if (d_dftParamsPtr->verbosity >= 5)
+                    if (d_verbosity >= 5)
                       pcout << "Delta Matrix: " << std::endl;
                     for (int i = 0; i < numberOfProjectors; i++)
                       {
@@ -1293,17 +1335,17 @@ namespace dftfe
                             deltaMatrix2[((startIndex + i) * d_totalProjectors +
                                           (startIndex + j))] +=
                               multipoleInverse[i * numberOfProjectors + j];
-                            if (d_dftParamsPtr->verbosity >= 5)
+                            if (d_verbosity >= 5)
                               pcout << deltaMatrix2[((startIndex + i) *
                                                        d_totalProjectors +
                                                      (startIndex + j))]
                                     << " ";
                           } // j
-                        if (d_dftParamsPtr->verbosity >= 5)
+                        if (d_verbosity >= 5)
                           pcout << std::endl;
                       } // i
                   }
-                if (d_dftParamsPtr->verbosity >= 5)
+                if (d_verbosity >= 5)
                   {
                     pcout << " Delta Matrix Final: " << std::endl;
                     for (int i = 0; i < d_totalProjectors; i++)
@@ -1341,7 +1383,7 @@ namespace dftfe
                       }     // i
                     d_atomicNonLocalPseudoPotentialConstants
                       [CouplingType::inversePawOverlapEntries][atomId] = Pij;
-                    if (d_dftParamsPtr->verbosity >= 5)
+                    if (d_verbosity >= 5)
                       {
                         pcout << "NonLocal Inverse-Overlap Matrrix for atomID: "
                               << atomId << std::endl;
@@ -1361,6 +1403,7 @@ namespace dftfe
               } // memorySpace::HOST
           }
         // Pmatrix.clear();
+        std::exit(0);
         d_inverseCouplingMatrixEntriesUpdated = false;
       }
     else if (couplingtype == CouplingType::HamiltonianEntries)
@@ -4488,6 +4531,9 @@ namespace dftfe
                   {
                     const unsigned int currentBlockSize =
                       std::min(BVec, totalNumWaveFunctions - jvec);
+                    d_BasisOperatorHostPtr->reinit(currentBlockSize,
+                                                   cellsBlockSize,
+                                                   quadratureIndex);
                     flattenedArrayBlock =
                       &(d_BasisOperatorHostPtr->getMultiVector(currentBlockSize,
                                                                0));

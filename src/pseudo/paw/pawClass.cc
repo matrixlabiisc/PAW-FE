@@ -741,14 +741,14 @@ namespace dftfe
                                          numberSphericalFunctions,
                                        0.0);
 
-        if (d_dftParamsPtr->verbosity >= 5)
+        if (d_verbosity >= 5)
           {
-            pcout << "U Matrix Entries" << std::endl;
+            std::cout << "U Matrix Entries" << std::endl;
             for (int i = 0; i < numberSphericalFunctions * vectorBlockSize; i++)
-              pcout << *(d_nonLocalOperator->getCconjtansXLocalDataStructure(
-                           atomId) +
-                         i)
-                    << std::endl;
+              std::cout << *(d_nonLocalOperator
+                               ->getCconjtansXLocalDataStructure(atomId) +
+                             i)
+                        << std::endl;
           }
         d_BLASWrapperHostPtr->xgemm(
           transA,

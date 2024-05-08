@@ -441,7 +441,7 @@ namespace dftfe
                                 break;
                               }
                           }
-                        else if (cutOffType == 1 && r < cutOffVal)
+                        else if (cutOffType == 1 && r < cutOffVal*SphericalFunction->getRadialCutOff())
                           {
                             sparseFlag = 1;
                             break;
@@ -536,19 +536,18 @@ namespace dftfe
     return (d_AtomIdsInElement[iElem].size() > 0 ? true : false);
   }
 
-    bool
+  bool
   AtomCenteredSphericalFunctionContainer::atomIdPresentInCurrentProcessor(
     unsigned int atomId)
   {
     bool atomPresent = false;
 
-    for(int iAtom = 0; iAtom < d_AtomIdsInCurrentProcess.size(); iAtom++)
+    for (int iAtom = 0; iAtom < d_AtomIdsInCurrentProcess.size(); iAtom++)
       {
-        if(atomId == d_AtomIdsInCurrentProcess[iAtom])
+        if (atomId == d_AtomIdsInCurrentProcess[iAtom])
           return true;
       }
     return atomPresent;
-
   }
 
   void
@@ -588,8 +587,8 @@ namespace dftfe
             if (atomSupportInElement(cellIndex))
               {
                 d_feEvaluationMap.insert(cell);
-                std::cout << "Cell: " << cell << " " << cellIndex << " "
-                          << std::endl;
+                // std::cout << "Cell: " << cell << " " << cellIndex << " "
+                //           << std::endl;
               }
           }
       }

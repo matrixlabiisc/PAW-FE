@@ -759,7 +759,7 @@ namespace dftfe
                 index++;
               }
           }
-        if (d_dftParamsPtr->verbosity >= 5)
+        if (d_verbosity >= 5)
           {
             pcout << "---------------MATRIX METHOD ------------------------"
                   << std::endl;
