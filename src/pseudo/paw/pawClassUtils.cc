@@ -759,25 +759,28 @@ namespace dftfe
                 index++;
               }
           }
-        if(d_dftParamsPtr->verbosity >=5)
-        {
-          pcout << "---------------MATRIX METHOD ------------------------"
-              << std::endl;
-
-
-        pcout << "------------------------------------------------------------"
-              << std::endl;
-        pcout << "D_ij of atom: " << atomId << " with Z:" << Znum << std::endl;
-        int numberProjectorFunctions = numberOfProjectors;
-        for (int i = 0; i < numberProjectorFunctions; i++)
+        if (d_dftParamsPtr->verbosity >= 5)
           {
-            for (int j = 0; j < numberProjectorFunctions; j++)
-              pcout << Dij[i * numberProjectorFunctions + j] << " ";
-            pcout << std::endl;
-          }
-        pcout << "------------------------------------------------------------"
+            pcout << "---------------MATRIX METHOD ------------------------"
+                  << std::endl;
+
+
+            pcout
+              << "------------------------------------------------------------"
               << std::endl;
-        }
+            pcout << "D_ij of atom: " << atomId << " with Z:" << Znum
+                  << std::endl;
+            int numberProjectorFunctions = numberOfProjectors;
+            for (int i = 0; i < numberProjectorFunctions; i++)
+              {
+                for (int j = 0; j < numberProjectorFunctions; j++)
+                  pcout << Dij[i * numberProjectorFunctions + j] << " ";
+                pcout << std::endl;
+              }
+            pcout
+              << "------------------------------------------------------------"
+              << std::endl;
+          }
 
 
         D_ij[typeOfField][atomId] = Dij;
@@ -1074,7 +1077,8 @@ namespace dftfe
               }
           }
       }
-    // std::cout << "Size of Dij Weights in procs: " << d_this_mpi_process << " "
+    // std::cout << "Size of Dij Weights in procs: " << d_this_mpi_process << "
+    // "
     //           << weights.size() << std::endl;
     MPI_Barrier(d_mpiCommParent);
     return weights;

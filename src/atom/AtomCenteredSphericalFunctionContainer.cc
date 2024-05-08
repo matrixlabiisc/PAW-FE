@@ -536,6 +536,21 @@ namespace dftfe
     return (d_AtomIdsInElement[iElem].size() > 0 ? true : false);
   }
 
+    bool
+  AtomCenteredSphericalFunctionContainer::atomIdPresentInCurrentProcessor(
+    unsigned int atomId)
+  {
+    bool atomPresent = false;
+
+    for(int iAtom = 0; iAtom < d_AtomIdsInCurrentProcess.size(); iAtom++)
+      {
+        if(atomId == d_AtomIdsInCurrentProcess[iAtom])
+          return true;
+      }
+    return atomPresent;
+
+  }
+
   void
   AtomCenteredSphericalFunctionContainer::computeFEEvaluationMaps(
     std::shared_ptr<
