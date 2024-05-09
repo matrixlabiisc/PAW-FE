@@ -523,8 +523,6 @@ namespace dftfe
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
           d_BasisOperatorHostPtr, d_nlpspQuadratureId, 1E-14, 0);
-        // d_atomicProjectorFnsContainer->computeSparseStructure(
-        //   d_BasisOperatorHostPtr, d_nlpspQuadratureId, 8.1, 1);
         pcout << "COmputing sparse structure for shapeFunctions: " << std::endl;
         d_atomicShapeFnsContainer->computeSparseStructure(
           d_BasisOperatorElectroHostPtr, d_densityQuadratureIdElectro, 1E-8, 0);
@@ -1072,10 +1070,26 @@ namespace dftfe
                 const std::vector<unsigned int> &atomicNumber =
                   d_atomicShapeFnsContainer->getAtomicNumbers();
                 const unsigned int natoms = atomicNumber.size();
-                const unsigned int totalProjectorsInProcessor =
-                  d_atomicProjectorFnsContainer
-                    ->getTotalNumberOfSphericalFunctionsInCurrentProcessor();
                 const unsigned int ndofs = d_BasisOperatorHostPtr->nOwnedDofs();
+
+                std::vector<unsigned int> relAtomdIdsInCurrentProcs = relevantAtomdIdsInCurrentProcs();
+                unsigned int totalProjectorsInProcessor = 0;
+                std::vector<unsigned int> startIndexProcessorVec(
+                  relAtomdIdsInCurrentProcs.size(), 0);
+                unsigned int startIndex = 0;
+                for (int iAtom = 0; iAtom < relAtomdIdsInCurrentProcs.size();
+                     iAtom++)
+                  {
+                    startIndexProcessorVec[iAtom] = startIndex;
+                    unsigned int atomId = relAtomdIdsInCurrentProcs[iAtom];
+                    unsigned int Znum = atomicNumber[atomId];
+                    startIndex +=
+                      d_atomicProjectorFnsContainer
+                        ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+                  }
+                totalProjectorsInProcessor = startIndex;  
+                std::cout<<"Projectors in procs: "<<d_this_mpi_process<<" is: "<<totalProjectorsInProcessor<<std::endl;
+                MPI_Barrier(d_mpiCommParent);
                 std::vector<ValueType> processorLocalPmatrix(
                   ndofs * totalProjectorsInProcessor, 0.0);
                 std::vector<ValueType> processorLocalPTransPMatrix(
@@ -1093,85 +1107,7 @@ namespace dftfe
                         ->getTotalNumberOfSphericalFunctionsPerAtom(*it));
                   }
 
-                dftfe::linearAlgebra::MultiVector<double, memorySpace>
-                  atomOwnedVector;
-                atomOwnedVector.reinit(d_BasisOperatorHostPtr->mpiPatternP2P,
-                                       atomicNumber.size());
-                atomOwnedVector.setValue(0);
-                std::vector<unsigned int> atomIdsInCurrentProcess =
-                  d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
 
-                for (int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
-                     iAtom++)
-                  {
-                    unsigned int atomId = atomIdsInCurrentProcess[iAtom];
-
-                    std::vector<unsigned int>
-                      elementIndexesInAtomCompactSupport =
-                        d_atomicProjectorFnsContainer
-                          ->d_elementIndexesInAtomCompactSupport[atomId];
-                    int numberElementsInAtomCompactSupport =
-                      elementIndexesInAtomCompactSupport.size();
-
-                    for (int iElem = 0;
-                         iElem < numberElementsInAtomCompactSupport;
-                         iElem++)
-                      {
-                        unsigned int elementIndex =
-                          elementIndexesInAtomCompactSupport[iElem];
-                        // convert this to a ValueType* for better
-                        // access. IMPORTANT...
-                        std::vector<ValueType> CMatrixEntries =
-                          d_nonLocalOperator->getCmatrixEntries(0,
-                                                                atomId,
-                                                                elementIndex);
-                        // pcout << "CMatrix: " << iElem << " " <<
-                        // elementIndex
-                        //       << std::endl;
-                        for (int iDof = 0; iDof < numberNodesPerElement; iDof++)
-                          {
-                            long int dofIndex =
-                              d_BasisOperatorHostPtr
-                                ->d_cellDofIndexToProcessDofIndexMap
-                                  [elementIndex * numberNodesPerElement + iDof];
-                            *(atomOwnedVector.data() + (dofIndex * natoms) +
-                              atomId) += 1.0;
-                            // d_BLASWrapperHostPtr->xaxpy(
-                            //   numProj,
-                            //   &alpha1,
-                            //   &CMatrixEntries[iDof * numProj],
-                            //   1,
-                            //   Pmatrix[numProj].data() + (dofIndex * numProj),
-                            //   1);
-                          } // iDof
-
-
-                      } // iElem
-
-                  } // iAtom
-                d_BasisOperatorHostPtr
-                  ->d_constraintInfo[d_BasisOperatorHostPtr->d_dofHandlerID]
-                  .distribute_slave_to_master(atomOwnedVector);
-                atomOwnedVector.accumulateAddLocallyOwned();
-                atomOwnedVector.zeroOutGhosts();
-                std::vector<double> atomsPresent(natoms, 0.0);
-                for (unsigned int iDof = 0;
-                     iDof < atomOwnedVector.locallyOwnedSize();
-                     iDof++)
-                  {
-                    std::transform(atomOwnedVector.data() + iDof * natoms,
-                                   atomOwnedVector.data() + iDof * natoms +
-                                     natoms,
-                                   atomsPresent.data(),
-                                   atomsPresent.data(),
-                                   [](auto &p, auto &q) { return p + q; });
-                  }
-                std::vector<unsigned int> totalAtomIdsInProcessor;
-                for (int iAtom = 0; iAtom < natoms; iAtom++)
-                  {
-                    if (atomsPresent[iAtom] > 0)
-                      totalAtomIdsInProcessor.push_back(iAtom);
-                  }
                 std::map<
                   unsigned int,
                   dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>>
@@ -1194,21 +1130,8 @@ namespace dftfe
                   }
 
 
-                std::cout << "Number of atoms in procs: "
-                          << totalAtomIdsInProcessor.size() << " "
-                          << d_this_mpi_process << std::endl;
-                std::vector<unsigned int> startIndexProcessorVec(
-                  totalAtomIdsInProcessor.size(), 0);
-                unsigned int startIndex = 0;
-                for (int iAtom = 0; iAtom < totalAtomIdsInProcessor.size();
-                     iAtom++)
-                  {
-                    startIndexProcessorVec[iAtom] = startIndex;
-                    startIndex +=
-                      d_atomicProjectorFnsContainer
-                        ->getTotalNumberOfSphericalFunctionsPerAtom(
-                          atomicNumber[totalAtomIdsInProcessor[iAtom]]);
-                  }
+
+
                 for (int kPoint = 0; kPoint < d_kpointWeights.size(); kPoint++)
                   {
                     unsigned int projStartIndex = 0;
@@ -1296,9 +1219,9 @@ namespace dftfe
                         //     "<<maxAbsValue<<std::endl;
                         // }
 
-                        if (d_atomicProjectorFnsContainer
-                              ->atomIdPresentInCurrentProcessor(atomId))
+                        if (std::find(relAtomdIdsInCurrentProcs.begin(),relAtomdIdsInCurrentProcs.end(),atomId)!= relAtomdIdsInCurrentProcs.end())
                           {
+                            std::cout<<"DEBUG: Line 1223 in procs: "<<d_this_mpi_process<<std::endl;
                             for (int iDof = 0;
                                  iDof < Pmatrix[numProj].locallyOwnedSize();
                                  iDof++)
@@ -1345,10 +1268,10 @@ namespace dftfe
                   } // kPoint
 
 
-                for (int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
+                for (int iAtom = 0; iAtom < relAtomdIdsInCurrentProcs.size();
                      iAtom++)
                   {
-                    unsigned int atomId = atomIdsInCurrentProcess[iAtom];
+                    unsigned int atomId = relAtomdIdsInCurrentProcs[iAtom];
                     unsigned int Znum   = atomicNumber[atomId];
                     unsigned int numProj_i =
                       d_atomicProjectorFnsContainer
@@ -1360,11 +1283,11 @@ namespace dftfe
                     for (int iProj = 0; iProj < numProj_i; iProj++)
                       {
                         for (int jAtom = 0;
-                             jAtom < atomIdsInCurrentProcess.size();
+                             jAtom < relAtomdIdsInCurrentProcs.size();
                              jAtom++)
                           {
                             unsigned int atomId_j =
-                              atomIdsInCurrentProcess[jAtom];
+                              relAtomdIdsInCurrentProcs[jAtom];
                             unsigned int Znum = atomicNumber[atomId_j];
                             unsigned int numProj_j =
                               d_atomicProjectorFnsContainer

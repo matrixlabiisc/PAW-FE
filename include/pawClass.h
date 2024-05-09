@@ -496,6 +496,9 @@ namespace dftfe
     computeCoreDeltaExchangeCorrelationEnergy();
 
 
+    std::vector<unsigned int>
+    relevantAtomdIdsInCurrentProcs();
+
 
     std::vector<double>
     derivativeOfRealSphericalHarmonic(unsigned int lQuantumNo,
