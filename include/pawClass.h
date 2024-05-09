@@ -496,6 +496,9 @@ namespace dftfe
     computeCoreDeltaExchangeCorrelationEnergy();
 
 
+    std::vector<unsigned int>
+    relevantAtomdIdsInCurrentProcs();
+
 
     std::vector<double>
     derivativeOfRealSphericalHarmonic(unsigned int lQuantumNo,
@@ -618,7 +621,6 @@ namespace dftfe
     // Total Compensation charge field only due to the g_0(r)Delta_0 component
     std::map<dealii::CellId, std::vector<double>>     d_bl0QuadValuesAllAtoms;
     distributedCPUVec<ValueType>                      Pmatrix;
-    dftUtils::constraintMatrixInfo                    d_pawconstraintMatrixData;
     std::map<unsigned int, bool>                      d_atomTypeCoreFlagMap;
     bool                                              d_floatingNuclearCharges;
     int                                               d_verbosity;

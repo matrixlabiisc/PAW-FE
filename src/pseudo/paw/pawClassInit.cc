@@ -729,7 +729,8 @@ namespace dftfe
       {
         if (!d_dftParamsPtr->memoryOptPmatrix)
           {
-            pcout<<"PAWClass: Pmatrix construction in Normal Mode "<<std::endl;
+            pcout << "PAWClass: Pmatrix construction in Normal Mode "
+                  << std::endl;
             const unsigned int numberNodesPerElement =
               d_BasisOperatorHostPtr->nDofsPerCell();
             const ValueType alpha1 = 1.0;
@@ -1059,17 +1060,36 @@ namespace dftfe
           }
         else
           {
-            pcout<<"PAWClass: Pmatrix construction in MemoryOpt Mode "<<std::endl;
+            pcout << "PAWClass: Pmatrix construction in MemoryOpt Mode "
+                  << std::endl;
             if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
               {
                 const unsigned int numberNodesPerElement =
                   d_BasisOperatorHostPtr->nDofsPerCell();
-                const ValueType alpha1 = 1.0;
-
-                const unsigned int totalProjectorsInProcessor =
-                  d_atomicProjectorFnsContainer
-                    ->getTotalNumberOfSphericalFunctionsInCurrentProcessor();
+                const ValueType                  alpha1 = 1.0;
+                const std::vector<unsigned int> &atomicNumber =
+                  d_atomicShapeFnsContainer->getAtomicNumbers();
+                const unsigned int natoms = atomicNumber.size();
                 const unsigned int ndofs = d_BasisOperatorHostPtr->nOwnedDofs();
+
+                std::vector<unsigned int> relAtomdIdsInCurrentProcs = relevantAtomdIdsInCurrentProcs();
+                unsigned int totalProjectorsInProcessor = 0;
+                std::vector<unsigned int> startIndexProcessorVec(
+                  relAtomdIdsInCurrentProcs.size(), 0);
+                unsigned int startIndex = 0;
+                for (int iAtom = 0; iAtom < relAtomdIdsInCurrentProcs.size();
+                     iAtom++)
+                  {
+                    startIndexProcessorVec[iAtom] = startIndex;
+                    unsigned int atomId = relAtomdIdsInCurrentProcs[iAtom];
+                    unsigned int Znum = atomicNumber[atomId];
+                    startIndex +=
+                      d_atomicProjectorFnsContainer
+                        ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+                  }
+                totalProjectorsInProcessor = startIndex;  
+                std::cout<<"Projectors in procs: "<<d_this_mpi_process<<" is: "<<totalProjectorsInProcessor<<std::endl;
+                MPI_Barrier(d_mpiCommParent);
                 std::vector<ValueType> processorLocalPmatrix(
                   ndofs * totalProjectorsInProcessor, 0.0);
                 std::vector<ValueType> processorLocalPTransPMatrix(
@@ -1086,6 +1106,8 @@ namespace dftfe
                       d_atomicProjectorFnsContainer
                         ->getTotalNumberOfSphericalFunctionsPerAtom(*it));
                   }
+
+
                 std::map<
                   unsigned int,
                   dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>>
@@ -1096,31 +1118,20 @@ namespace dftfe
                       d_BasisOperatorHostPtr->inverseSqrtMassVectorBasisData();
                 for (int i = 0; i < numProjList.size(); i++)
                   {
-                    if(Pmatrix.find(numProjList[i]) == Pmatrix.end())
-                    {
-                      Pmatrix[numProjList[i]] =
-                      dftfe::linearAlgebra::MultiVector<ValueType,
-                                                        memorySpace>();
-                    Pmatrix[numProjList[i]].reinit(
-                      d_BasisOperatorHostPtr->mpiPatternP2P, numProjList[i]);
-                    }
+                    if (Pmatrix.find(numProjList[i]) == Pmatrix.end())
+                      {
+                        Pmatrix[numProjList[i]] =
+                          dftfe::linearAlgebra::MultiVector<ValueType,
+                                                            memorySpace>();
+                        Pmatrix[numProjList[i]].reinit(
+                          d_BasisOperatorHostPtr->mpiPatternP2P,
+                          numProjList[i]);
+                      }
                   }
-                const std::vector<unsigned int> &atomicNumber =
-                  d_atomicShapeFnsContainer->getAtomicNumbers();
-                std::vector<unsigned int> atomIdsInCurrentProcess =
-                  d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
-                std::vector<unsigned int> startIndexProcessorVec(
-                  atomIdsInCurrentProcess.size(), 0);
-                unsigned int startIndex = 0;
-                for (int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
-                     iAtom++)
-                  {
-                    startIndexProcessorVec[iAtom] = startIndex;
-                    startIndex +=
-                      d_atomicProjectorFnsContainer
-                        ->getTotalNumberOfSphericalFunctionsPerAtom(
-                          atomicNumber[atomIdsInCurrentProcess[iAtom]]);
-                  }
+
+
+
+
                 for (int kPoint = 0; kPoint < d_kpointWeights.size(); kPoint++)
                   {
                     unsigned int projStartIndex = 0;
@@ -1189,9 +1200,28 @@ namespace dftfe
                           .distribute_slave_to_master(Pmatrix[numProj]);
                         Pmatrix[numProj].accumulateAddLocallyOwned();
                         Pmatrix[numProj].zeroOutGhosts();
-                        if (d_atomicProjectorFnsContainer
-                              ->atomIdPresentInCurrentProcessor(atomId))
+                        // if(!d_atomicProjectorFnsContainer
+                        //       ->atomIdPresentInCurrentProcessor(atomId))
+                        // {
+                        //   double maxAbsValue = 0.0;
+                        //   for(int iDof = 0; iDof <
+                        //   Pmatrix[numProj].locallyOwnedSize(); iDof++)
+                        //     {
+                        //       if (std::fabs(*(Pmatrix[numProj].data()+
+                        //       iDof*numProj)) > maxAbsValue)
+                        //         maxAbsValue = *(Pmatrix[numProj].data()+
+                        //         iDof*numProj);
+
+
+                        //     }
+                        //     std::cout<<"Max Abs Value in procs:
+                        //     "<<d_this_mpi_process<<" is:
+                        //     "<<maxAbsValue<<std::endl;
+                        // }
+
+                        if (std::find(relAtomdIdsInCurrentProcs.begin(),relAtomdIdsInCurrentProcs.end(),atomId)!= relAtomdIdsInCurrentProcs.end())
                           {
+                            std::cout<<"DEBUG: Line 1223 in procs: "<<d_this_mpi_process<<std::endl;
                             for (int iDof = 0;
                                  iDof < Pmatrix[numProj].locallyOwnedSize();
                                  iDof++)
@@ -1235,13 +1265,13 @@ namespace dftfe
                         &beta,
                         &processorLocalPTransPMatrix[0],
                         totalProjectorsInProcessor);
-                  }
+                  } // kPoint
 
 
-                for (int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
+                for (int iAtom = 0; iAtom < relAtomdIdsInCurrentProcs.size();
                      iAtom++)
                   {
-                    unsigned int atomId = atomIdsInCurrentProcess[iAtom];
+                    unsigned int atomId = relAtomdIdsInCurrentProcs[iAtom];
                     unsigned int Znum   = atomicNumber[atomId];
                     unsigned int numProj_i =
                       d_atomicProjectorFnsContainer
@@ -1253,11 +1283,11 @@ namespace dftfe
                     for (int iProj = 0; iProj < numProj_i; iProj++)
                       {
                         for (int jAtom = 0;
-                             jAtom < atomIdsInCurrentProcess.size();
+                             jAtom < relAtomdIdsInCurrentProcs.size();
                              jAtom++)
                           {
                             unsigned int atomId_j =
-                              atomIdsInCurrentProcess[jAtom];
+                              relAtomdIdsInCurrentProcs[jAtom];
                             unsigned int Znum = atomicNumber[atomId_j];
                             unsigned int numProj_j =
                               d_atomicProjectorFnsContainer
