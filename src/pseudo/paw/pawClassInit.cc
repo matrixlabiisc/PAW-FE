@@ -1071,7 +1071,7 @@ namespace dftfe
                 const ValueType                  alpha1 = 1.0;
                 const std::vector<unsigned int> &atomicNumber =
                   d_atomicShapeFnsContainer->getAtomicNumbers();
-                const unsigned int natoms = atomicNumber.size(); 
+                const unsigned int natoms = atomicNumber.size();
                 const unsigned int totalProjectorsInProcessor =
                   d_atomicProjectorFnsContainer
                     ->getTotalNumberOfSphericalFunctionsInCurrentProcessor();
@@ -1134,7 +1134,8 @@ namespace dftfe
                               d_BasisOperatorHostPtr
                                 ->d_cellDofIndexToProcessDofIndexMap
                                   [elementIndex * numberNodesPerElement + iDof];
-                            *(atomOwnedVector.data()+(dofIndex*natoms)+atomId) += 1.0;      
+                            *(atomOwnedVector.data() + (dofIndex * natoms) +
+                              atomId) += 1.0;
                             // d_BLASWrapperHostPtr->xaxpy(
                             //   numProj,
                             //   &alpha1,
@@ -1148,27 +1149,29 @@ namespace dftfe
                       } // iElem
 
                   } // iAtom
-                        d_BasisOperatorHostPtr
-                          ->d_constraintInfo[d_BasisOperatorHostPtr
-                                               ->d_dofHandlerID]
-                          .distribute_slave_to_master(atomOwnedVector);
-                        atomOwnedVector.accumulateAddLocallyOwned();
-                        atomOwnedVector.zeroOutGhosts();
-                std::vector<double> atomsPresent(natoms,0.0);
-                for(unsigned int iDof = 0; iDof < atomOwnedVector.locallyOwnedSize(); iDof++)
+                d_BasisOperatorHostPtr
+                  ->d_constraintInfo[d_BasisOperatorHostPtr->d_dofHandlerID]
+                  .distribute_slave_to_master(atomOwnedVector);
+                atomOwnedVector.accumulateAddLocallyOwned();
+                atomOwnedVector.zeroOutGhosts();
+                std::vector<double> atomsPresent(natoms, 0.0);
+                for (unsigned int iDof = 0;
+                     iDof < atomOwnedVector.locallyOwnedSize();
+                     iDof++)
                   {
-                    std::transform(atomOwnedVector.data()+iDof*natoms,
-                                    atomOwnedVector.data()+iDof*natoms+natoms,
-                                    atomsPresent.data(),
-                                    atomsPresent.data(),
-                                    [](auto &p, auto &q){return p+q;});
+                    std::transform(atomOwnedVector.data() + iDof * natoms,
+                                   atomOwnedVector.data() + iDof * natoms +
+                                     natoms,
+                                   atomsPresent.data(),
+                                   atomsPresent.data(),
+                                   [](auto &p, auto &q) { return p + q; });
                   }
                 std::vector<unsigned int> totalAtomIdsInProcessor;
-                for(int iAtom = 0; iAtom < natoms; iAtom++)
-                {
-                  if(atomsPresent[iAtom] > 0)
-                    totalAtomIdsInProcessor.push_back(iAtom);
-                }
+                for (int iAtom = 0; iAtom < natoms; iAtom++)
+                  {
+                    if (atomsPresent[iAtom] > 0)
+                      totalAtomIdsInProcessor.push_back(iAtom);
+                  }
                 std::map<
                   unsigned int,
                   dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>>
