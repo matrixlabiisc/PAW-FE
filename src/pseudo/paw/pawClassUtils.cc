@@ -536,8 +536,7 @@ namespace dftfe
               }
           }
       }
-    // std::cout << "Size of Dij vector in processor: " << d_this_mpi_process
-    //           << " " << DijVector.size() << std::endl;
+
     MPI_Barrier(d_mpiCommParent);
     return (DijVector);
   }
@@ -707,7 +706,6 @@ namespace dftfe
   {
     const std::vector<unsigned int> ownedAtomIds =
       d_nonLocalOperator->getOwnedAtomIdsInCurrentProcessor();
-    std::cout<<"Procs and ownedatomIds: "<<d_this_mpi_process<<" "<<ownedAtomIds.size()<<std::endl;  
     std::vector<double>       DijTotalVector(d_nProjSqTotal, 0.0);
     std::vector<unsigned int> atomicNumber =
       d_atomicProjectorFnsContainer->getAtomicNumbers();
@@ -735,7 +733,8 @@ namespace dftfe
           }
       }
     MPI_Barrier(d_mpiCommParent);
-    pcout<<"DEBUG: PAW Line 738"<<" "<<d_nProjSqTotal<<std::endl;  
+    pcout << "DEBUG: PAW Line 738"
+          << " " << d_nProjSqTotal << std::endl;
     MPI_Allreduce(MPI_IN_PLACE,
                   &DijTotalVector[0],
                   d_nProjSqTotal,
@@ -743,7 +742,8 @@ namespace dftfe
                   MPI_SUM,
                   d_mpiCommParent);
     MPI_Barrier(d_mpiCommParent);
-    pcout<<"DEBUG: PAW Line 746"<<" "<<d_nProjSqTotal<<std::endl;                   
+    pcout << "DEBUG: PAW Line 746"
+          << " " << d_nProjSqTotal << std::endl;
     for (unsigned int atomId = 0; atomId < atomicNumber.size(); atomId++)
       {
         unsigned int Znum = atomicNumber[atomId];
@@ -933,8 +933,6 @@ namespace dftfe
              q_point++)
           {
             normValue += Temp[q_point] * jxw[q_point];
-            // std::cout << "cell Index and Quad: " << elementIndex << " "
-            //           << q_point << " " << jxw[q_point] << std::endl;
           }
         iElem++;
       }
@@ -1067,14 +1065,15 @@ namespace dftfe
                          mQuantumNo_j++)
                       {
                         weights.push_back(
-                          multipoleTable[alpha_i * numRadProj + alpha_j] *
-                          gaunt(lQuantumNo_i,
-                                lQuantumNo_j,
-                                0,
-                                mQuantumNo_i,
-                                mQuantumNo_j,
-                                0) *
-                          sqrt(4 * M_PI));
+                          pow(multipoleTable[alpha_i * numRadProj + alpha_j] *
+                                gaunt(lQuantumNo_i,
+                                      lQuantumNo_j,
+                                      0,
+                                      mQuantumNo_i,
+                                      mQuantumNo_j,
+                                      0) *
+                                sqrt(4 * M_PI),
+                              2));
                         projectorIndex_j++;
                       }
                   }
@@ -1082,9 +1081,7 @@ namespace dftfe
               }
           }
       }
-    // std::cout << "Size of Dij Weights in procs: " << d_this_mpi_process << "
-    // "
-    //           << weights.size() << std::endl;
+
     MPI_Barrier(d_mpiCommParent);
     return weights;
   }
@@ -1137,85 +1134,77 @@ namespace dftfe
   std::vector<unsigned int>
   pawClass<ValueType, memorySpace>::relevantAtomdIdsInCurrentProcs()
   {
-                const unsigned int numberNodesPerElement =
-                  d_BasisOperatorHostPtr->nDofsPerCell();
-                const std::vector<unsigned int> &atomicNumber =
-                  d_atomicShapeFnsContainer->getAtomicNumbers();
-                const unsigned int natoms = atomicNumber.size();
-                dftfe::linearAlgebra::MultiVector<double, dftfe::utils::MemorySpace::HOST>
-                  atomOwnedVector;
-                atomOwnedVector.reinit(d_BasisOperatorHostPtr->mpiPatternP2P,
-                                       natoms);
-                atomOwnedVector.setValue(0);
-                std::vector<unsigned int> atomIdsInCurrentProcess =
-                  d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
+    const unsigned int numberNodesPerElement =
+      d_BasisOperatorHostPtr->nDofsPerCell();
+    const std::vector<unsigned int> &atomicNumber =
+      d_atomicShapeFnsContainer->getAtomicNumbers();
+    const unsigned int natoms = atomicNumber.size();
+    dftfe::linearAlgebra::MultiVector<double, dftfe::utils::MemorySpace::HOST>
+      atomOwnedVector;
+    atomOwnedVector.reinit(d_BasisOperatorHostPtr->mpiPatternP2P, natoms);
+    atomOwnedVector.setValue(0);
+    std::vector<unsigned int> atomIdsInCurrentProcess =
+      d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
 
-                for (int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
-                     iAtom++)
-                  {
-                    unsigned int atomId = atomIdsInCurrentProcess[iAtom];
+    for (int iAtom = 0; iAtom < atomIdsInCurrentProcess.size(); iAtom++)
+      {
+        unsigned int atomId = atomIdsInCurrentProcess[iAtom];
 
-                    std::vector<unsigned int>
-                      elementIndexesInAtomCompactSupport =
-                        d_atomicProjectorFnsContainer
-                          ->d_elementIndexesInAtomCompactSupport[atomId];
-                    int numberElementsInAtomCompactSupport =
-                      elementIndexesInAtomCompactSupport.size();
+        std::vector<unsigned int> elementIndexesInAtomCompactSupport =
+          d_atomicProjectorFnsContainer
+            ->d_elementIndexesInAtomCompactSupport[atomId];
+        int numberElementsInAtomCompactSupport =
+          elementIndexesInAtomCompactSupport.size();
 
-                    for (int iElem = 0;
-                         iElem < numberElementsInAtomCompactSupport;
-                         iElem++)
-                      {
-                        unsigned int elementIndex =
-                          elementIndexesInAtomCompactSupport[iElem];
-                        for (int iDof = 0; iDof < numberNodesPerElement; iDof++)
-                          {
-                            long int dofIndex =
-                              d_BasisOperatorHostPtr
-                                ->d_cellDofIndexToProcessDofIndexMap
-                                  [elementIndex * numberNodesPerElement + iDof];
-                            *(atomOwnedVector.data() + (dofIndex * natoms) +
-                              atomId) += 1.0;
-                            // d_BLASWrapperHostPtr->xaxpy(
-                            //   numProj,
-                            //   &alpha1,
-                            //   &CMatrixEntries[iDof * numProj],
-                            //   1,
-                            //   Pmatrix[numProj].data() + (dofIndex * numProj),
-                            //   1);
-                          } // iDof
+        for (int iElem = 0; iElem < numberElementsInAtomCompactSupport; iElem++)
+          {
+            unsigned int elementIndex =
+              elementIndexesInAtomCompactSupport[iElem];
+            for (int iDof = 0; iDof < numberNodesPerElement; iDof++)
+              {
+                long int dofIndex =
+                  d_BasisOperatorHostPtr->d_cellDofIndexToProcessDofIndexMap
+                    [elementIndex * numberNodesPerElement + iDof];
+                *(atomOwnedVector.data() + (dofIndex * natoms) + atomId) += 1.0;
+                // d_BLASWrapperHostPtr->xaxpy(
+                //   numProj,
+                //   &alpha1,
+                //   &CMatrixEntries[iDof * numProj],
+                //   1,
+                //   Pmatrix[numProj].data() + (dofIndex * numProj),
+                //   1);
+              } // iDof
 
 
-                      } // iElem
+          } // iElem
 
-                  } // iAtom
-                d_BasisOperatorHostPtr
-                  ->d_constraintInfo[d_BasisOperatorHostPtr->d_dofHandlerID]
-                  .distribute_slave_to_master(atomOwnedVector);
-                atomOwnedVector.accumulateAddLocallyOwned();
-                atomOwnedVector.zeroOutGhosts();
-                std::vector<double> atomsPresent(natoms, 0.0);
-                for (unsigned int iDof = 0;
-                     iDof < atomOwnedVector.locallyOwnedSize();
-                     iDof++)
-                  {
-                    std::transform(atomOwnedVector.data() + iDof * natoms,
-                                   atomOwnedVector.data() + iDof * natoms +
-                                     natoms,
-                                   atomsPresent.data(),
-                                   atomsPresent.data(),
-                                   [](auto &p, auto &q) { return p + q; });
-                  }
-                std::vector<unsigned int> totalAtomIdsInProcessor;
-                for (int iAtom = 0; iAtom < natoms; iAtom++)
-                  {
-                    if (atomsPresent[iAtom] > 0)
-                      totalAtomIdsInProcessor.push_back(iAtom);
-                  } 
-                std::cout << "Number of relevant atoms and local atoms in procs: "
-                          << totalAtomIdsInProcessor.size() << " "<<atomIdsInCurrentProcess.size()<<" "
-                          << d_this_mpi_process << std::endl;
-                return (totalAtomIdsInProcessor);                                       
+      } // iAtom
+    d_BasisOperatorHostPtr
+      ->d_constraintInfo[d_BasisOperatorHostPtr->d_dofHandlerID]
+      .distribute_slave_to_master(atomOwnedVector);
+    atomOwnedVector.accumulateAddLocallyOwned();
+    atomOwnedVector.zeroOutGhosts();
+    std::vector<double> atomsPresent(natoms, 0.0);
+    for (unsigned int iDof = 0; iDof < atomOwnedVector.locallyOwnedSize();
+         iDof++)
+      {
+        std::transform(atomOwnedVector.data() + iDof * natoms,
+                       atomOwnedVector.data() + iDof * natoms + natoms,
+                       atomsPresent.data(),
+                       atomsPresent.data(),
+                       [](auto &p, auto &q) { return p + q; });
+      }
+    std::vector<unsigned int> totalAtomIdsInProcessor;
+    for (int iAtom = 0; iAtom < natoms; iAtom++)
+      {
+        if (atomsPresent[iAtom] > 0)
+          totalAtomIdsInProcessor.push_back(iAtom);
+      }
+    std::cout << "Number of relevant atoms and local atoms in procs: "
+              << totalAtomIdsInProcessor.size() << " "
+              << atomIdsInCurrentProcess.size() << " " << d_this_mpi_process
+              << std::endl;
+    return (totalAtomIdsInProcessor);
   }
 
 

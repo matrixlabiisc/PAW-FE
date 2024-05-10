@@ -95,7 +95,7 @@ namespace dftfe
              ++iComp)
           d_gradDensityOutQuadValues[iComp].resize(3 * nQuadsPerCell * nCells);
 
-
+#if defined(DFTFE_WITH_DEVICE)
         if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
           computeRhoFromPSI(&d_eigenVectorsFlattenedDevice,
                             &d_eigenVectorsRotFracFlattenedDevice,
@@ -123,6 +123,7 @@ namespace dftfe
                             d_dftParamsPtr->pawPseudoPotential ? d_pawClassPtr :
                                                                  NULL);
         else
+#endif
           computeRhoFromPSI(&d_eigenVectorsFlattenedHost,
                             &d_eigenVectorsRotFracDensityFlattenedHost,
                             d_numEigenValues,
@@ -368,7 +369,7 @@ namespace dftfe
 
     // compute rho from wavefunctions at nodal locations of 2p DoFHandler
     // nodes in each cell
-
+#if defined(DFTFE_WITH_DEVICE)
     if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
       computeRhoFromPSI(&d_eigenVectorsFlattenedDevice,
                         &d_eigenVectorsRotFracFlattenedDevice,
@@ -396,6 +397,7 @@ namespace dftfe
                                                              NULL);
 
     else
+#endif
       computeRhoFromPSI(&d_eigenVectorsFlattenedHost,
                         &d_eigenVectorsRotFracDensityFlattenedHost,
                         d_numEigenValues,

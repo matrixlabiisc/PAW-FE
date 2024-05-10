@@ -78,7 +78,7 @@ namespace dftfe
                                             atomCoordinates[3 * atomId + 1],
                                             atomCoordinates[3 * atomId + 2]);
         double           dL0 = d_DeltaL0coeff[Znum];
-        pcout << "Delta dL0: " << dL0 << " Znum: " << Znum << std::endl;
+        // pcout << "Delta dL0: " << dL0 << " Znum: " << Znum << std::endl;
         double RmaxAug = d_RmaxAug[Znum];
 
         for (int iElemComp = 0; iElemComp < numberElementsInAtomCompactSupport;

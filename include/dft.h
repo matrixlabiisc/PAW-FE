@@ -1446,9 +1446,9 @@ namespace dftfe
     // std::map<dealii::CellId, std::vector<double>> d_phiInValues,
     // d_phiOutValues;
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-                 d_phiInQuadValues, d_phiOutQuadValues, d_phitTotQuadPointsCompensation;
-        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-                 d_gradPhiInQuadValues, d_gradPhiOutQuadValues, d_gradPhiResQuadValues;             
+      d_phiInQuadValues, d_phiOutQuadValues, d_phitTotQuadPointsCompensation;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+                 d_gradPhiInQuadValues, d_gradPhiOutQuadValues, d_gradPhiResQuadValues;
     MixingScheme d_mixingScheme;
 
     distributedCPUVec<double> d_rhoInNodalValuesRead, d_rhoOutNodalValuesSplit,

@@ -502,7 +502,7 @@ namespace dftfe
                           double z = node[2] - atomCoord[2];
 
 
-                          double r     = sqrt(x * x + y * y + z * z);
+                          double r = sqrt(x * x + y * y + z * z);
                           double theta, phi;
                           if (r == 0)
                             {
@@ -510,10 +510,10 @@ namespace dftfe
                               phi   = 0;
                             }
                           else
-                          {
-                            theta = acos(z / r);
-                            phi = atan2(y,x);
-                          }  
+                            {
+                              theta = acos(z / r);
+                              phi   = atan2(y, x);
+                            }
 
                           double R = 0.0;
                           if (

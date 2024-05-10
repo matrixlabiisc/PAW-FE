@@ -87,7 +87,7 @@ namespace dftfe
         0.0 :
         (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * r) +
          alpha * (std::sph_bessel(d_lQuantumNumber, q2[d_lQuantumNumber] * r)));
-    return Value;
+    return Value / d_NormalizationConstant;
   }
   std::vector<double>
   AtomCenteredSphericalFunctionBessel::getDerivativeValue(double r) const

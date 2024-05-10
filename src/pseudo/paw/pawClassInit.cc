@@ -1072,8 +1072,9 @@ namespace dftfe
                 const unsigned int natoms = atomicNumber.size();
                 const unsigned int ndofs = d_BasisOperatorHostPtr->nOwnedDofs();
 
-                std::vector<unsigned int> relAtomdIdsInCurrentProcs = relevantAtomdIdsInCurrentProcs();
-                unsigned int totalProjectorsInProcessor = 0;
+                std::vector<unsigned int> relAtomdIdsInCurrentProcs =
+                  relevantAtomdIdsInCurrentProcs();
+                unsigned int              totalProjectorsInProcessor = 0;
                 std::vector<unsigned int> startIndexProcessorVec(
                   relAtomdIdsInCurrentProcs.size(), 0);
                 unsigned int startIndex = 0;
@@ -1082,13 +1083,14 @@ namespace dftfe
                   {
                     startIndexProcessorVec[iAtom] = startIndex;
                     unsigned int atomId = relAtomdIdsInCurrentProcs[iAtom];
-                    unsigned int Znum = atomicNumber[atomId];
+                    unsigned int Znum   = atomicNumber[atomId];
                     startIndex +=
                       d_atomicProjectorFnsContainer
                         ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                   }
-                totalProjectorsInProcessor = startIndex;  
-                std::cout<<"Projectors in procs: "<<d_this_mpi_process<<" is: "<<totalProjectorsInProcessor<<std::endl;
+                totalProjectorsInProcessor = startIndex;
+                std::cout << "Projectors in procs: " << d_this_mpi_process
+                          << " is: " << totalProjectorsInProcessor << std::endl;
                 MPI_Barrier(d_mpiCommParent);
                 std::vector<ValueType> processorLocalPmatrix(
                   ndofs * totalProjectorsInProcessor, 0.0);
@@ -1128,7 +1130,6 @@ namespace dftfe
                           numProjList[i]);
                       }
                   }
-
 
 
 
@@ -1219,9 +1220,13 @@ namespace dftfe
                         //     "<<maxAbsValue<<std::endl;
                         // }
 
-                        if (std::find(relAtomdIdsInCurrentProcs.begin(),relAtomdIdsInCurrentProcs.end(),atomId)!= relAtomdIdsInCurrentProcs.end())
+                        if (std::find(relAtomdIdsInCurrentProcs.begin(),
+                                      relAtomdIdsInCurrentProcs.end(),
+                                      atomId) !=
+                            relAtomdIdsInCurrentProcs.end())
                           {
-                            std::cout<<"DEBUG: Line 1223 in procs: "<<d_this_mpi_process<<std::endl;
+                            std::cout << "DEBUG: Line 1223 in procs: "
+                                      << d_this_mpi_process << std::endl;
                             for (int iDof = 0;
                                  iDof < Pmatrix[numProj].locallyOwnedSize();
                                  iDof++)

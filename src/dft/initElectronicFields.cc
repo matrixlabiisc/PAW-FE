@@ -94,15 +94,17 @@ namespace dftfe
     //
     // initialize PSI and density
     //
-    std::cout<<"Local Size in proc: "<<matrix_free_data.get_vector_partitioner()->local_size()<<" "<<this_mpi_process<<std::endl;
+    std::cout << "Local Size in proc: "
+              << matrix_free_data.get_vector_partitioner()->local_size() << " "
+              << this_mpi_process << std::endl;
     MPI_Barrier(d_mpiCommParent);
-    if(matrix_free_data.get_vector_partitioner()->local_size() > 0)
-    AssertThrow(
-      (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
-          d_numEigenValues <
-        INT_MAX / matrix_free_data.get_vector_partitioner()->local_size(),
-      dealii::ExcMessage(
-        "DFT-FE error: size of local wavefunctions storage exceeds integer bounds. Please increase number of MPI tasks"));
+    if (matrix_free_data.get_vector_partitioner()->local_size() > 0)
+      AssertThrow(
+        (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
+            d_numEigenValues <
+          INT_MAX / matrix_free_data.get_vector_partitioner()->local_size(),
+        dealii::ExcMessage(
+          "DFT-FE error: size of local wavefunctions storage exceeds integer bounds. Please increase number of MPI tasks"));
 
     d_eigenVectorsFlattenedHost.resize(
       (d_numEigenValues *
@@ -126,10 +128,10 @@ namespace dftfe
         mpi_communicator,
         "Created flattened array eigenvectors before update ghost values");
     MPI_Barrier(d_mpiCommParent);
-    pcout<<"DEBUG: Line 127"<<std::endl;
+    pcout << "DEBUG: Line 127" << std::endl;
     readPSI();
     MPI_Barrier(d_mpiCommParent);
-    pcout<<"DEBUG: Line 129"<<std::endl;
+    pcout << "DEBUG: Line 129" << std::endl;
     if (d_dftParamsPtr->verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(mpi_communicator,
                                         "Created flattened array eigenvectors");
@@ -137,10 +139,10 @@ namespace dftfe
     // if(!(d_dftParamsPtr->chkType==2 && d_dftParamsPtr->restartFromChk))
     //{
     MPI_Barrier(d_mpiCommParent);
-    pcout<<"DEBUG: Line 138"<<std::endl;      
+    pcout << "DEBUG: Line 138" << std::endl;
     initRho();
     MPI_Barrier(d_mpiCommParent);
-    pcout<<"DEBUG: Line 141"<<std::endl;    
+    pcout << "DEBUG: Line 141" << std::endl;
     // d_rhoOutNodalValues.reinit(d_rhoInNodalValues);
     //}
 
