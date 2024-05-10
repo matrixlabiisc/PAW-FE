@@ -707,6 +707,7 @@ namespace dftfe
   {
     const std::vector<unsigned int> ownedAtomIds =
       d_nonLocalOperator->getOwnedAtomIdsInCurrentProcessor();
+    std::cout<<"Procs and ownedatomIds: "<<d_this_mpi_process<<" "<<ownedAtomIds.size()<<std::endl;  
     std::vector<double>       DijTotalVector(d_nProjSqTotal, 0.0);
     std::vector<unsigned int> atomicNumber =
       d_atomicProjectorFnsContainer->getAtomicNumbers();
@@ -733,12 +734,16 @@ namespace dftfe
               }
           }
       }
+    MPI_Barrier(d_mpiCommParent);
+    pcout<<"DEBUG: PAW Line 738"<<" "<<d_nProjSqTotal<<std::endl;  
     MPI_Allreduce(MPI_IN_PLACE,
                   &DijTotalVector[0],
                   d_nProjSqTotal,
                   MPI_DOUBLE,
                   MPI_SUM,
                   d_mpiCommParent);
+    MPI_Barrier(d_mpiCommParent);
+    pcout<<"DEBUG: PAW Line 746"<<" "<<d_nProjSqTotal<<std::endl;                   
     for (unsigned int atomId = 0; atomId < atomicNumber.size(); atomId++)
       {
         unsigned int Znum = atomicNumber[atomId];

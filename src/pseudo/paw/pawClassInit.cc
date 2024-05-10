@@ -1433,7 +1433,6 @@ namespace dftfe
               } // memorySpace::HOST
           }
         // Pmatrix.clear();
-        std::exit(0);
         d_inverseCouplingMatrixEntriesUpdated = false;
       }
     else if (couplingtype == CouplingType::HamiltonianEntries)

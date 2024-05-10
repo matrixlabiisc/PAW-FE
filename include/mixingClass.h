@@ -34,7 +34,8 @@ namespace dftfe
     gradRho,
     magZ,
     gradMagZ,
-    DijMatrix
+    DijMatrix,
+    gradPhi
   };
 
   /**
