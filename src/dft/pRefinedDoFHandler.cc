@@ -266,7 +266,8 @@ namespace dftfe
     d_phiTotDofHandlerIndexElectro = d_constraintsVectorElectro.size() - 1;
 
     d_binsStartDofHandlerIndexElectro = d_constraintsVectorElectro.size();
-
+    if(!d_dftParamsPtr->pawPseudoPotential)
+    {
     double init_bins;
     MPI_Barrier(d_mpiCommParent);
     init_bins = MPI_Wtime();
@@ -275,6 +276,7 @@ namespace dftfe
     // used for computing self-potential (Vself) using Poisson problem
     // with atoms belonging to a given bin
     //
+
     if (meshOnlyDeformed)
       {
         computing_timer.enter_subsection("Update atom bins bc");
@@ -314,6 +316,7 @@ namespace dftfe
       pcout
         << "updateAtomPositionsAndMoveMesh: initBoundaryConditions: Time taken for bins update: "
         << init_bins << std::endl;
+    }
 
     d_constraintsVectorElectro.push_back(&d_constraintsPRefinedOnlyHanging);
     d_phiExtDofHandlerIndexElectro = d_constraintsVectorElectro.size() - 1;
