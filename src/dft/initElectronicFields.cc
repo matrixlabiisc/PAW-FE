@@ -94,7 +94,9 @@ namespace dftfe
     //
     // initialize PSI and density
     //
-
+    std::cout<<"Local Size in proc: "<<matrix_free_data.get_vector_partitioner()->local_size()<<" "<<this_mpi_process<<std::endl;
+    MPI_Barrier(d_mpiCommParent);
+    if(matrix_free_data.get_vector_partitioner()->local_size() > 0)
     AssertThrow(
       (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
           d_numEigenValues <
@@ -115,24 +117,30 @@ namespace dftfe
             (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size(),
           dataTypes::number(0.0));
       }
-
+    MPI_Barrier(d_mpiCommParent);
     pcout << std::endl
           << "Setting initial guess for wavefunctions...." << std::endl;
 
-    if (d_dftParamsPtr->verbosity >= 4)
+    if (d_dftParamsPtr->verbosity >= 2)
       dftUtils::printCurrentMemoryUsage(
         mpi_communicator,
         "Created flattened array eigenvectors before update ghost values");
-
+    MPI_Barrier(d_mpiCommParent);
+    pcout<<"DEBUG: Line 127"<<std::endl;
     readPSI();
-
+    MPI_Barrier(d_mpiCommParent);
+    pcout<<"DEBUG: Line 129"<<std::endl;
     if (d_dftParamsPtr->verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(mpi_communicator,
                                         "Created flattened array eigenvectors");
 
     // if(!(d_dftParamsPtr->chkType==2 && d_dftParamsPtr->restartFromChk))
     //{
+    MPI_Barrier(d_mpiCommParent);
+    pcout<<"DEBUG: Line 138"<<std::endl;      
     initRho();
+    MPI_Barrier(d_mpiCommParent);
+    pcout<<"DEBUG: Line 141"<<std::endl;    
     // d_rhoOutNodalValues.reinit(d_rhoInNodalValues);
     //}
 

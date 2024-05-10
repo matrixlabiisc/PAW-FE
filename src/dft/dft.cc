@@ -2404,6 +2404,9 @@ namespace dftfe
             d_dftParamsPtr->adaptAndersonMixingParameter);
         if (d_dftParamsPtr->pawPseudoPotential)
           {
+            
+            
+            
             dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
                                 Dij_MassVector;
             std::vector<double> Weights = d_pawClassPtr->getDijWeights();
@@ -2670,6 +2673,25 @@ namespace dftfe
                   }
                 if (d_dftParamsPtr->pawPseudoPotential)
                   {
+                    
+                  if (scfIter == 1)
+                    d_gradPhiResQuadValues.resize(d_gradPhiInQuadValues.size());
+                    d_basisOperationsPtrElectroHost->reinit(
+                      0, 0, d_densityQuadratureIdElectro, false);
+                    computeResidualQuadData(
+                  d_gradPhiOutQuadValues,
+                  d_gradPhiInQuadValues,
+                  d_gradPhiResQuadValues,
+                  d_basisOperationsPtrElectroHost->JxWBasisData(),
+                  false);
+                d_mixingScheme.addVariableToInHist(
+                  mixingVariable::gradPhi,
+                  d_gradPhiInQuadValues.data(),
+                  d_gradPhiInQuadValues.size());
+                d_mixingScheme.addVariableToResidualHist(
+                  mixingVariable::gradPhi,
+                  d_gradPhiResQuadValues.data(),
+                  d_gradPhiResQuadValues.size());
                     std::vector<double> Dij_in =
                       d_pawClassPtr->DijVectorForMixing(TypeOfField::In);
                     std::vector<double> Dij_res =
@@ -2687,19 +2709,24 @@ namespace dftfe
 
                 // Compute the mixing coefficients
                 if (!d_dftParamsPtr->pawPseudoPotential)
-                  d_mixingScheme.computeAndersonMixingCoeff(
+                  {
+                    d_mixingScheme.computeAndersonMixingCoeff(
                     d_dftParamsPtr->spinPolarized == 1 ?
                       std::vector<mixingVariable>{mixingVariable::rho,
                                                   mixingVariable::magZ} :
                       std::vector<mixingVariable>{mixingVariable::rho});
+                  }
                 else
-                  d_mixingScheme.computeAndersonMixingCoeff(
-                    d_dftParamsPtr->spinPolarized == 1 ?
-                      std::vector<mixingVariable>{mixingVariable::rho,
-                                                  mixingVariable::magZ,
-                                                  mixingVariable::DijMatrix} :
-                      std::vector<mixingVariable>{mixingVariable::rho,
-                                                  mixingVariable::DijMatrix});
+                  {
+                    // d_mixingScheme.computeAndersonMixingCoeff(
+                    // d_dftParamsPtr->spinPolarized == 1 ?
+                    //   std::vector<mixingVariable>{mixingVariable::rho,
+                    //                               mixingVariable::magZ,
+                    //                               mixingVariable::DijMatrix} :
+                    //   std::vector<mixingVariable>{mixingVariable::rho,
+                    //                               mixingVariable::DijMatrix});
+                    d_mixingScheme.computeAndersonMixingCoeff(std::vector<mixingVariable>{mixingVariable::gradPhi});
+                  }
 
                 // update the mixing variables
                 for (unsigned int iComp = 0; iComp < norms.size(); ++iComp)
@@ -2980,6 +3007,7 @@ namespace dftfe
 
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
           dummy;
+        if(!d_dftParamsPtr->pawPseudoPotential)
         interpolateElectroNodalDataToQuadratureDataGeneral(
           d_basisOperationsPtrElectroHost,
           d_phiTotDofHandlerIndexElectro,
@@ -2987,6 +3015,15 @@ namespace dftfe
           d_phiTotRhoIn,
           d_phiInQuadValues,
           dummy);
+        else
+          interpolateElectroNodalDataToQuadratureDataGeneral(
+          d_basisOperationsPtrElectroHost,
+          d_phiTotDofHandlerIndexElectro,
+          d_densityQuadratureIdElectro,
+          d_phiTotRhoIn,
+          d_phiInQuadValues,
+          d_gradPhiInQuadValues,
+          true);  
         // interpolateElectroNodalDataToQuadratureDataGeneral(
         //   d_basisOperationsPtrElectroHost,
         //   d_phiTotDofHandlerIndexElectro,
@@ -3717,9 +3754,9 @@ namespace dftfe
                   tempvec[iquad] += -d_dftParamsPtr->netCharge / d_domainVolume;
               }
 
-            if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
+            if ((d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
                 d_dftParamsPtr->floatingNuclearCharges and
-                not d_dftParamsPtr->pinnedNodeForPBC)
+                not d_dftParamsPtr->pinnedNodeForPBC) || d_dftParamsPtr->pawPseudoPotential)
               {
 #ifdef DFTFE_WITH_DEVICE
                 d_phiTotalSolverProblemDevice.reinit(
@@ -3805,7 +3842,7 @@ namespace dftfe
                                d_dftParamsPtr->maxLinearSolverIterations,
                                d_dftParamsPtr->verbosity);
               }
-
+            if(!d_dftParamsPtr->pawPseudoPotential)
             interpolateElectroNodalDataToQuadratureDataGeneral(
               d_basisOperationsPtrElectroHost,
               d_phiTotDofHandlerIndexElectro,
@@ -3813,7 +3850,15 @@ namespace dftfe
               d_phiTotRhoOut,
               d_phiOutQuadValues,
               dummy);
-
+            else
+            interpolateElectroNodalDataToQuadratureDataGeneral(
+              d_basisOperationsPtrElectroHost,
+              d_phiTotDofHandlerIndexElectro,
+              d_densityQuadratureIdElectro,
+              d_phiTotRhoOut,
+              d_phiOutQuadValues,
+              d_gradPhiOutQuadValues,
+              true);
 
             //
             // impose integral phi equals 0

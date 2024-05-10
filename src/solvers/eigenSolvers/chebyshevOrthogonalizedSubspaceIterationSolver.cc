@@ -428,7 +428,8 @@ namespace dftfe
     computingTimerStandard.leave_subsection("Chebyshev filtering on CPU");
     if (d_dftParams.verbosity >= 4)
       pcout << "ChebyShev Filtering Done: " << std::endl;
-
+    MPI_Barrier(d_mpiCommParent);
+    pcout<<"DEBUG: Line 432"<<std::endl;
 
 
     if (d_dftParams.orthogType.compare("CGS") == 0)
@@ -453,6 +454,8 @@ namespace dftfe
           }
         else
           {
+                MPI_Barrier(d_mpiCommParent);
+    pcout<<"DEBUG: Line 458"<<std::endl;
             linearAlgebraOperations::rayleighRitzGEP(operatorMatrix,
                                                      elpaScala,
                                                      eigenVectorsFlattened,
@@ -464,6 +467,8 @@ namespace dftfe
                                                      eigenValues,
                                                      useMixedPrec,
                                                      d_dftParams);
+                MPI_Barrier(d_mpiCommParent);
+    pcout<<"DEBUG: Line 471"<<std::endl;                                         
           }
         computing_timer.leave_subsection("Rayleigh-Ritz GEP");
 
@@ -532,6 +537,8 @@ namespace dftfe
           }
         else
           {
+                MPI_Barrier(d_mpiCommParent);
+    pcout<<"DEBUG: Line 541"<<std::endl;
             linearAlgebraOperations::rayleighRitz(operatorMatrix,
                                                   elpaScala,
                                                   eigenVectorsFlattened,
@@ -543,6 +550,8 @@ namespace dftfe
                                                   eigenValues,
                                                   d_dftParams,
                                                   false);
+                MPI_Barrier(d_mpiCommParent);
+    pcout<<"DEBUG: Line 554"<<std::endl;                                      
           }
 
 

@@ -503,14 +503,17 @@ namespace dftfe
 
 
                           double r     = sqrt(x * x + y * y + z * z);
-                          double theta = acos(z / r);
-                          double phi   = atan2(y, x);
-
+                          double theta, phi;
                           if (r == 0)
                             {
                               theta = 0;
                               phi   = 0;
                             }
+                          else
+                          {
+                            theta = acos(z / r);
+                            phi = atan2(y,x);
+                          }  
 
                           double R = 0.0;
                           if (
