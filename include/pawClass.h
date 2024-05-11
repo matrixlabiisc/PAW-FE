@@ -323,6 +323,9 @@ namespace dftfe
     computeIntegralCoreDensity(
       const std::map<dealii::CellId, std::vector<double>> &rhoCore);
 
+    double
+    computeNormDij(std::vector<double> &DijResidual);
+
   private:
     void
     createAtomTypesList(const std::vector<std::vector<double>> &atomLocations);

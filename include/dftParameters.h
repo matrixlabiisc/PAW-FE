@@ -214,6 +214,7 @@ namespace dftfe
     bool         DiagonalMassMatrix;
     bool         ApproxDelta;
     bool         memoryOptPmatrix;
+    bool         useGradPhiMixing;
 
     dftParameters();
 

@@ -733,8 +733,6 @@ namespace dftfe
           }
       }
     MPI_Barrier(d_mpiCommParent);
-    pcout << "DEBUG: PAW Line 738"
-          << " " << d_nProjSqTotal << std::endl;
     MPI_Allreduce(MPI_IN_PLACE,
                   &DijTotalVector[0],
                   d_nProjSqTotal,
@@ -742,8 +740,6 @@ namespace dftfe
                   MPI_SUM,
                   d_mpiCommParent);
     MPI_Barrier(d_mpiCommParent);
-    pcout << "DEBUG: PAW Line 746"
-          << " " << d_nProjSqTotal << std::endl;
     for (unsigned int atomId = 0; atomId < atomicNumber.size(); atomId++)
       {
         unsigned int Znum = atomicNumber[atomId];
@@ -1207,7 +1203,20 @@ namespace dftfe
     return (totalAtomIdsInProcessor);
   }
 
-
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  double
+  pawClass<ValueType, memorySpace>::computeNormDij(
+    std::vector<double> &DijResidual)
+  {
+    std::vector<double> Weights = getDijWeights();
+    AssertThrow(DijResidual.size() == Weights.size(),
+                dealii::ExcMessage("PAW:: Mixing issue for Dij "));
+    double norm = 0.0;
+    for (unsigned int i = 0; i < DijResidual.size(); i++)
+      norm += DijResidual[i] * DijResidual[i] * Weights[i];
+    MPI_Allreduce(MPI_IN_PLACE, &norm, 1, MPI_DOUBLE, MPI_SUM, d_mpiCommParent);
+    return sqrt(norm);
+  }
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>;

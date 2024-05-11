@@ -2416,6 +2416,22 @@ namespace dftfe
               d_dftParamsPtr->mixingParameter,
               d_dftParamsPtr->adaptAndersonMixingParameter);
           }
+        if (d_dftParamsPtr->useGradPhiMixing)
+          {
+            dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+              gradPhiWeights;
+            gradPhiWeights.resize(
+              d_basisOperationsPtrElectroHost->JxWBasisData().size() * 3);
+            for (unsigned int i = 0; i < gradPhiWeights.size(); ++i)
+              gradPhiWeights[i] =
+                d_basisOperationsPtrElectroHost->JxWBasisData()[i / 3];
+            d_mixingScheme.addMixingVariable(
+              mixingVariable::gradPhi,
+              gradPhiWeights,
+              true, // call MPI REDUCE while computing dot products
+              d_dftParamsPtr->mixingParameter,
+              d_dftParamsPtr->adaptAndersonMixingParameter);
+          }
         if (d_excManagerPtr->getDensityBasedFamilyType() ==
             densityFamilyType::GGA)
           {
@@ -2609,7 +2625,7 @@ namespace dftfe
               {
                 std::vector<double> norms(
                   d_dftParamsPtr->spinPolarized == 1 ? 2 : 1);
-                double normgradPhi = 0.0;
+                double normGradPhi = 0.0;
                 double normDij     = 0.0;
                 // Update the history of mixing variables
                 if (scfIter == 1)
@@ -2672,29 +2688,44 @@ namespace dftfe
                   }
                 if (d_dftParamsPtr->pawPseudoPotential)
                   {
-                    if (scfIter == 1)
-                      d_gradPhiResQuadValues.resize(
-                        d_gradPhiInQuadValues.size());
-                    d_basisOperationsPtrElectroHost->reinit(
-                      0, 0, d_densityQuadratureIdElectro, false);
-                    computeResidualQuadData(
-                      d_gradPhiOutQuadValues,
-                      d_gradPhiInQuadValues,
-                      d_gradPhiResQuadValues,
-                      d_basisOperationsPtrElectroHost->JxWBasisData(),
-                      false);
-                    d_mixingScheme.addVariableToInHist(
-                      mixingVariable::gradPhi,
-                      d_gradPhiInQuadValues.data(),
-                      d_gradPhiInQuadValues.size());
-                    d_mixingScheme.addVariableToResidualHist(
-                      mixingVariable::gradPhi,
-                      d_gradPhiResQuadValues.data(),
-                      d_gradPhiResQuadValues.size());
+                    if (d_dftParamsPtr->useGradPhiMixing)
+                      {
+                        if (scfIter == 1)
+                          d_gradPhiResQuadValues.resize(
+                            d_gradPhiInQuadValues.size());
+                        d_basisOperationsPtrElectroHost->reinit(
+                          0, 0, d_densityQuadratureIdElectro, false);
+                        dftfe::utils::
+                          MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+                            gradPhiWeights;
+                        gradPhiWeights.resize(
+                          d_basisOperationsPtrElectroHost->JxWBasisData()
+                            .size() *
+                          3);
+                        for (unsigned int i = 0; i < gradPhiWeights.size(); ++i)
+                          gradPhiWeights[i] = d_basisOperationsPtrElectroHost
+                                                ->JxWBasisData()[i / 3];
+                        normGradPhi =
+                          computeResidualQuadData(d_gradPhiOutQuadValues,
+                                                  d_gradPhiInQuadValues,
+                                                  d_gradPhiResQuadValues,
+                                                  gradPhiWeights,
+                                                  true);
+
+                        d_mixingScheme.addVariableToInHist(
+                          mixingVariable::gradPhi,
+                          d_gradPhiInQuadValues.data(),
+                          d_gradPhiInQuadValues.size());
+                        d_mixingScheme.addVariableToResidualHist(
+                          mixingVariable::gradPhi,
+                          d_gradPhiResQuadValues.data(),
+                          d_gradPhiResQuadValues.size());
+                      }
                     std::vector<double> Dij_in =
                       d_pawClassPtr->DijVectorForMixing(TypeOfField::In);
                     std::vector<double> Dij_res =
                       d_pawClassPtr->DijVectorForMixing(TypeOfField::Residual);
+                    normDij = d_pawClassPtr->computeNormDij(Dij_res);
                     d_mixingScheme.addVariableToInHist(
                       mixingVariable::DijMatrix, Dij_in.data(), Dij_in.size());
                     d_mixingScheme.addVariableToResidualHist(
@@ -2717,16 +2748,18 @@ namespace dftfe
                   }
                 else
                   {
-                    // d_mixingScheme.computeAndersonMixingCoeff(
-                    // d_dftParamsPtr->spinPolarized == 1 ?
-                    //   std::vector<mixingVariable>{mixingVariable::rho,
-                    //                               mixingVariable::magZ,
-                    //                               mixingVariable::DijMatrix}
-                    //                               :
-                    //   std::vector<mixingVariable>{mixingVariable::rho,
-                    //                               mixingVariable::DijMatrix});
-                    d_mixingScheme.computeAndersonMixingCoeff(
-                      std::vector<mixingVariable>{mixingVariable::gradPhi});
+                    if (d_dftParamsPtr->useGradPhiMixing)
+                      d_mixingScheme.computeAndersonMixingCoeff(
+                        std::vector<mixingVariable>{mixingVariable::gradPhi});
+                    else
+                      d_mixingScheme.computeAndersonMixingCoeff(
+                        d_dftParamsPtr->spinPolarized == 1 ?
+                          std::vector<mixingVariable>{
+                            mixingVariable::rho,
+                            mixingVariable::magZ,
+                            mixingVariable::DijMatrix} :
+                          std::vector<mixingVariable>{
+                            mixingVariable::rho, mixingVariable::DijMatrix});
                   }
 
                 // update the mixing variables
@@ -2738,6 +2771,8 @@ namespace dftfe
                 norm = 0.0;
                 for (unsigned int iComp = 0; iComp < norms.size(); ++iComp)
                   norm += norms[iComp] * norms[iComp];
+
+
                 norm = std::sqrt(norm / ((double)norms.size()));
                 if (d_excManagerPtr->getDensityBasedFamilyType() ==
                     densityFamilyType::GGA)
@@ -2762,12 +2797,24 @@ namespace dftfe
                                                  interBandGroupComm);
                   }
                 if (d_dftParamsPtr->verbosity >= 1)
-                  for (unsigned int iComp = 0; iComp < norms.size(); ++iComp)
-                    pcout << d_dftParamsPtr->mixingMethod
-                          << " mixing, L2 norm of "
-                          << (iComp == 0 ? "electron" : "magnetization")
-                          << "-density difference: " << norms[iComp]
-                          << std::endl;
+                  {
+                    for (unsigned int iComp = 0; iComp < norms.size(); ++iComp)
+                      pcout << d_dftParamsPtr->mixingMethod
+                            << " mixing, L2 norm of "
+                            << (iComp == 0 ? "electron" : "magnetization")
+                            << "-density difference: " << norms[iComp]
+                            << std::endl;
+                    if (d_dftParamsPtr->pawPseudoPotential)
+                      pcout << d_dftParamsPtr->mixingMethod
+                            << " mixing, L2 norm of "
+                            << "Dij matrix"
+                            << "difference: " << normDij << std::endl;
+                    if (d_dftParamsPtr->useGradPhiMixing)
+                      pcout << d_dftParamsPtr->mixingMethod
+                            << " mixing, L2 norm of "
+                            << "gradPhi"
+                            << "difference: " << (normGradPhi) << std::endl;
+                  }
               }
 
             if (d_dftParamsPtr->verbosity >= 1 &&
@@ -3712,8 +3759,9 @@ namespace dftfe
         //
         // phiTot with rhoOut
         //
-        if (d_dftParamsPtr->computeEnergyEverySCF &&
-            d_numEigenValuesRR == d_numEigenValues)
+        if ((d_dftParamsPtr->computeEnergyEverySCF &&
+             d_numEigenValuesRR == d_numEigenValues) ||
+            d_dftParamsPtr->useGradPhiMixing)
           {
             if (d_dftParamsPtr->verbosity >= 2)
               pcout
@@ -3842,7 +3890,7 @@ namespace dftfe
                                d_dftParamsPtr->maxLinearSolverIterations,
                                d_dftParamsPtr->verbosity);
               }
-            if (!d_dftParamsPtr->pawPseudoPotential)
+            if (!d_dftParamsPtr->useGradPhiMixing)
               interpolateElectroNodalDataToQuadratureDataGeneral(
                 d_basisOperationsPtrElectroHost,
                 d_phiTotDofHandlerIndexElectro,
@@ -3860,67 +3908,59 @@ namespace dftfe
                 d_gradPhiOutQuadValues,
                 true);
 
-            //
-            // impose integral phi equals 0
-            //
-            /*
-            if(d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
-            d_dftParamsPtr->periodicZ && !d_dftParamsPtr->pinnedNodeForPBC)
-            {
-              if(d_dftParamsPtr->verbosity>=2)
-                pcout<<"Value of integPhiOut:
-            "<<totalCharge(d_dofHandlerPRefined,d_phiTotRhoOut);
-            }
-            */
 
             computing_timer.leave_subsection("phiTot solve");
-
-            const dealii::Quadrature<3> &quadrature =
-              matrix_free_data.get_quadrature(d_densityQuadratureId);
-            d_dispersionCorr.computeDispresionCorrection(
-              atomLocations, d_domainBoundingVectors);
-            const double totalEnergy = energyCalc.computeEnergy(
-              d_basisOperationsPtrHost,
-              d_basisOperationsPtrElectroHost,
-              d_densityQuadratureId,
-              d_densityQuadratureIdElectro,
-              d_smearedChargeQuadratureIdElectro,
-              d_lpspQuadratureIdElectro,
-              eigenValues,
-              d_kPointWeights,
-              fermiEnergy,
-              d_dftParamsPtr->spinPolarized == 0 ? fermiEnergy : fermiEnergyUp,
-              d_dftParamsPtr->spinPolarized == 0 ? fermiEnergy :
-                                                   fermiEnergyDown,
-              d_excManagerPtr,
-              d_dispersionCorr,
-              d_phiInQuadValues,
-              d_phiOutQuadValues,
-              d_phiTotRhoOut,
-              d_densityInQuadValues,
-              d_densityOutQuadValues,
-              d_gradDensityInQuadValues,
-              d_gradDensityOutQuadValues,
-              d_densityTotalOutValuesLpspQuad,
-              d_rhoCore,
-              d_gradRhoCore,
-              d_bQuadValuesAllAtoms,
-              d_bCellNonTrivialAtomIds,
-              d_localVselfs,
-              d_dftParamsPtr->pawPseudoPotential ? d_zeroPotential :
-                                                   d_pseudoVLoc,
-              d_atomNodeIdToChargeMap,
-              atomLocations.size(),
-              lowerBoundKindex,
-              0,
-              d_dftParamsPtr->verbosity >= 0 ? true : false,
-              d_dftParamsPtr->smearedNuclearCharges,
-              d_dftParamsPtr->pawPseudoPotential,
-              d_dftParamsPtr->pawPseudoPotential ?
-                d_pawClassPtr->getDeltaEnergy() :
-                std::vector<double>());
-            if (d_dftParamsPtr->verbosity == 1)
-              pcout << "Total energy  : " << totalEnergy << std::endl;
+            if (d_dftParamsPtr->computeEnergyEverySCF &&
+                d_numEigenValuesRR == d_numEigenValues)
+              {
+                const dealii::Quadrature<3> &quadrature =
+                  matrix_free_data.get_quadrature(d_densityQuadratureId);
+                d_dispersionCorr.computeDispresionCorrection(
+                  atomLocations, d_domainBoundingVectors);
+                const double totalEnergy = energyCalc.computeEnergy(
+                  d_basisOperationsPtrHost,
+                  d_basisOperationsPtrElectroHost,
+                  d_densityQuadratureId,
+                  d_densityQuadratureIdElectro,
+                  d_smearedChargeQuadratureIdElectro,
+                  d_lpspQuadratureIdElectro,
+                  eigenValues,
+                  d_kPointWeights,
+                  fermiEnergy,
+                  d_dftParamsPtr->spinPolarized == 0 ? fermiEnergy :
+                                                       fermiEnergyUp,
+                  d_dftParamsPtr->spinPolarized == 0 ? fermiEnergy :
+                                                       fermiEnergyDown,
+                  d_excManagerPtr,
+                  d_dispersionCorr,
+                  d_phiInQuadValues,
+                  d_phiOutQuadValues,
+                  d_phiTotRhoOut,
+                  d_densityInQuadValues,
+                  d_densityOutQuadValues,
+                  d_gradDensityInQuadValues,
+                  d_gradDensityOutQuadValues,
+                  d_densityTotalOutValuesLpspQuad,
+                  d_rhoCore,
+                  d_gradRhoCore,
+                  d_bQuadValuesAllAtoms,
+                  d_bCellNonTrivialAtomIds,
+                  d_localVselfs,
+                  d_dftParamsPtr->pawPseudoPotential ? d_zeroPotential :
+                                                       d_pseudoVLoc,
+                  d_atomNodeIdToChargeMap,
+                  atomLocations.size(),
+                  lowerBoundKindex,
+                  0,
+                  d_dftParamsPtr->verbosity >= 0 ? true : false,
+                  d_dftParamsPtr->smearedNuclearCharges,
+                  d_dftParamsPtr->pawPseudoPotential,
+                  d_dftParamsPtr->pawPseudoPotential ?
+                    d_pawClassPtr->getDeltaEnergy() :
+                    std::vector<double>());
+                if (d_dftParamsPtr->verbosity == 1)
+                  pcout << "Total energy  : " << totalEnergy << std::endl;
+              }
           }
         else
           {

@@ -94,9 +94,7 @@ namespace dftfe
     //
     // initialize PSI and density
     //
-    std::cout << "Local Size in proc: "
-              << matrix_free_data.get_vector_partitioner()->local_size() << " "
-              << this_mpi_process << std::endl;
+
     MPI_Barrier(d_mpiCommParent);
     if (matrix_free_data.get_vector_partitioner()->local_size() > 0)
       AssertThrow(

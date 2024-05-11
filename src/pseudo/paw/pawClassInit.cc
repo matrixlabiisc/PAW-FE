@@ -1225,8 +1225,6 @@ namespace dftfe
                                       atomId) !=
                             relAtomdIdsInCurrentProcs.end())
                           {
-                            std::cout << "DEBUG: Line 1223 in procs: "
-                                      << d_this_mpi_process << std::endl;
                             for (int iDof = 0;
                                  iDof < Pmatrix[numProj].locallyOwnedSize();
                                  iDof++)
@@ -3951,8 +3949,7 @@ namespace dftfe
             for (int mQuantumNo_i = -lQuantumNo_i; mQuantumNo_i <= lQuantumNo_i;
                  mQuantumNo_i++)
               {
-                // pcout << "DEBUG: " << alpha_i << " " << lQuantumNo_i << " "
-                //       << mQuantumNo_i << std::endl;
+
                 unsigned int projIndex_j = 0;
                 for (unsigned int alpha_j = 0;
                      alpha_j < numberOfRadialProjectors;

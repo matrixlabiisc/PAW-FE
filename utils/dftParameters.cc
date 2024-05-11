@@ -281,6 +281,10 @@ namespace dftfe
                           "false",
                           dealii::Patterns::Bool(),
                           "[Standard] ");
+        prm.declare_entry("USE GRAD PHI MIXING",
+                          "true",
+                          dealii::Patterns::Bool(),
+                          "[Standard] ");
         prm.declare_entry("NUMBER OF ATOM CENTERED SHAPE FUNCTIONS",
                           "3",
                           dealii::Patterns::Integer(0),
@@ -1493,6 +1497,7 @@ namespace dftfe
       DiagonalMassMatrix = prm.get_bool("USE DIAGONAL MASS MATRIX");
       ApproxDelta        = prm.get_bool("USE APPROX DELTA MATRIX");
       memoryOptPmatrix   = prm.get_bool("USE MEMORY OPT METHOD FOR P MATRIX");
+      useGradPhiMixing   = prm.get_bool("USE GRAD PHI MIXING");
       noShapeFnsInPAW =
         prm.get_integer("NUMBER OF ATOM CENTERED SHAPE FUNCTIONS");
       prm.enter_subsection("Optimization");
