@@ -3949,7 +3949,6 @@ namespace dftfe
             for (int mQuantumNo_i = -lQuantumNo_i; mQuantumNo_i <= lQuantumNo_i;
                  mQuantumNo_i++)
               {
-
                 unsigned int projIndex_j = 0;
                 for (unsigned int alpha_j = 0;
                      alpha_j < numberOfRadialProjectors;

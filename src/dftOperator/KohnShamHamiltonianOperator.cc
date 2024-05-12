@@ -1140,27 +1140,31 @@ namespace dftfe
           {
             std::pair<unsigned int, unsigned int> cellRange(
               iCell, std::min(iCell + d_cellsBlockSizeHX, numCells));
-
-            d_BLASWrapperPtr->xgemmStridedBatched(
-              'N',
-              'N',
-              numberWavefunctions,
-              numDoFsPerCell,
-              numDoFsPerCell,
-              &scalarCoeffAlpha,
-              d_cellWaveFunctionMatrixSrc.data() +
-                cellRange.first * numDoFsPerCell * numberWavefunctions,
-              numberWavefunctions,
-              numDoFsPerCell * numberWavefunctions,
-              d_basisOperationsPtr->cellMassMatrix().data() +
-                cellRange.first * numDoFsPerCell * numDoFsPerCell,
-              numDoFsPerCell,
-              numDoFsPerCell * numDoFsPerCell,
-              &scalarCoeffBeta,
-              d_cellWaveFunctionMatrixDst.data(),
-              numberWavefunctions,
-              numDoFsPerCell * numberWavefunctions,
-              cellRange.second - cellRange.first);
+            if (!useApproximateMatrixEntries)
+              {
+                d_BLASWrapperPtr->xgemmStridedBatched(
+                  'N',
+                  'N',
+                  numberWavefunctions,
+                  numDoFsPerCell,
+                  numDoFsPerCell,
+                  &scalarCoeffAlpha,
+                  d_cellWaveFunctionMatrixSrc.data() +
+                    cellRange.first * numDoFsPerCell * numberWavefunctions,
+                  numberWavefunctions,
+                  numDoFsPerCell * numberWavefunctions,
+                  d_basisOperationsPtr->cellMassMatrix().data() +
+                    cellRange.first * numDoFsPerCell * numDoFsPerCell,
+                  numDoFsPerCell,
+                  numDoFsPerCell * numDoFsPerCell,
+                  &scalarCoeffBeta,
+                  d_cellWaveFunctionMatrixDst.data(),
+                  numberWavefunctions,
+                  numDoFsPerCell * numberWavefunctions,
+                  cellRange.second - cellRange.first);
+              }
+            else
+              d_cellWaveFunctionMatrixDst.setValue(0.0);
             if (hasNonlocalComponents)
               d_pseudopotentialNonLocalOperator->applyCOnVCconjtransX(
                 d_cellWaveFunctionMatrixDst.data(), cellRange);
@@ -1181,6 +1185,17 @@ namespace dftfe
         inverseMassVectorScaledConstraintsNoneDataInfoPtr->set_zero(src);
         dst.accumulateAddLocallyOwned();
         dst.zeroOutGhosts();
+        if (useApproximateMatrixEntries)
+          {
+            const unsigned int blockSize = src.numVectors();
+            d_BLASWrapperPtr->stridedBlockAxpy(
+              blockSize,
+              src.locallyOwnedSize(),
+              src.data(),
+              d_basisOperationsPtr->massVector().data(),
+              dataTypes::number(1.0),
+              dst.data());
+          }
       }
   }
 

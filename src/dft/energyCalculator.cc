@@ -956,6 +956,11 @@ namespace dftfe
         //    totalexchangeEnergy + totalcorrelationEnergy +
         //    pseudopotentialConstants[5] + allElectronElectrostaticEnergy +
         //    pseudopotentialConstants[3])<<std::endl;
+        pcout << "Total KE on FEM: " << totalkineticEnergy << std::endl;
+        pcout << "Total Exc on FEM: "
+              << (totalexchangeEnergy + totalcorrelationEnergy) << std::endl;
+        pcout << "Total Electrostatics energy: "
+              << allElectronElectrostaticEnergy << std::endl;
         internal::printPAWEnergyTotal(
           bandEnergy,
           totalkineticEnergy + pseudopotentialConstants[1],
