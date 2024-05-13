@@ -330,6 +330,10 @@ namespace dftfe
     std::vector<ValueType>
     getCmatrixEntries(int kPointIndex, unsigned int atomId, int iElem) const;
 
+    bool
+    atomPresentInCellRange(
+      const std::pair<unsigned int, unsigned int> cellRange) const;
+
 
   protected:
     bool                d_AllReduceCompleted;

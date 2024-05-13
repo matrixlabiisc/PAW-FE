@@ -301,7 +301,6 @@ namespace dftfe
             fe_eval.distribute_local_to_global(rhs);
           }
       }
-    pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
     // rhs contribution from electronic charge
     if (d_rhoValuesPtr)
       {
@@ -367,7 +366,6 @@ namespace dftfe
             for (unsigned int iSubCell = 0; iSubCell < numSubCells; ++iSubCell)
               NormVal += normValueVectorized[iSubCell];
           }
-        pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
       }
 
     // rhs contribution from atomic charge at fem nodes
@@ -510,7 +508,6 @@ namespace dftfe
       }
 
     // MPI operation to sync data
-    pcout << "RHS L2Norm: " << rhs.l2_norm() << std::endl;
     rhs.compress(dealii::VectorOperation::add);
 
     if (d_isReuseSmearedChargeRhs)

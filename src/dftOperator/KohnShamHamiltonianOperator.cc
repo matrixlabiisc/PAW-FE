@@ -1487,20 +1487,23 @@ namespace dftfe
           {
             std::pair<unsigned int, unsigned int> cellRange(
               iCell, std::min(iCell + d_cellsBlockSizeHX, numCells));
-            d_BLASWrapperPtr->stridedCopyToBlock(
-              numberWavefunctions,
-              numDoFsPerCell * (cellRange.second - cellRange.first),
-              d_tempBlockVectorPawSinvHX.data(),
-              d_cellWaveFunctionMatrixSrc.data() +
-                cellRange.first * numDoFsPerCell * numberWavefunctions,
-              d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
-                  .data() +
-                cellRange.first * numDoFsPerCell);
-            if (hasNonlocalComponents)
-              d_pseudopotentialNonLocalOperator->applyCconjtransOnX(
-                d_cellWaveFunctionMatrixSrc.data() +
-                  cellRange.first * numDoFsPerCell * numberWavefunctions,
-                cellRange);
+            if (d_pseudopotentialNonLocalOperator->atomPresentInCellRange(
+                  cellRange))
+              {
+                d_BLASWrapperPtr->stridedCopyToBlock(
+                  numberWavefunctions,
+                  numDoFsPerCell * (cellRange.second - cellRange.first),
+                  d_tempBlockVectorPawSinvHX.data(),
+                  d_cellWaveFunctionMatrixSrc.data() +
+                    cellRange.first * numDoFsPerCell * numberWavefunctions,
+                  d_basisOperationsPtr
+                      ->d_flattenedCellDofIndexToProcessDofIndexMap.data() +
+                    cellRange.first * numDoFsPerCell);
+                d_pseudopotentialNonLocalOperator->applyCconjtransOnX(
+                  d_cellWaveFunctionMatrixSrc.data() +
+                    cellRange.first * numDoFsPerCell * numberWavefunctions,
+                  cellRange);
+              }
           }
         d_pseudopotentialNonLocalProjectorTimesVectorBlock.setValue(0);
         d_pseudopotentialNonLocalOperator->applyAllReduceOnCconjtransX(
@@ -1518,11 +1521,13 @@ namespace dftfe
         for (unsigned int iCell = 0; iCell < numCells;
              iCell += d_cellsBlockSizeHX)
           {
-            d_cellWaveFunctionMatrixDst.setValue(0);
             std::pair<unsigned int, unsigned int> cellRange(
               iCell, std::min(iCell + d_cellsBlockSizeHX, numCells));
-            if (hasNonlocalComponents)
+
+            if (d_pseudopotentialNonLocalOperator->atomPresentInCellRange(
+                  cellRange))
               {
+                d_cellWaveFunctionMatrixDst.setValue(0);
                 d_pseudopotentialNonLocalOperator->applyCOnVCconjtransX(
                   d_cellWaveFunctionMatrixDst.data(), cellRange);
                 d_BLASWrapperPtr->axpyStridedBlockAtomicAdd(

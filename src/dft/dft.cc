@@ -2861,6 +2861,7 @@ namespace dftfe
             d_dftParamsPtr->pawPseudoPotential)
           {
             d_pawClassPtr->computeCompensationCharge(TypeOfField::In);
+            if(d_dftParamsPtr->verbosity >= 5)
             d_pawClassPtr->chargeNeutrality(
               totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]),
               TypeOfField::In,
@@ -3744,6 +3745,7 @@ namespace dftfe
             if (d_dftParamsPtr->pawPseudoPotential)
               {
                 d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
+                if(d_dftParamsPtr->verbosity >= 5)
                 d_pawClassPtr->chargeNeutrality(integralRhoValue,
                                                 TypeOfField::Out,
                                                 false);
@@ -3772,10 +3774,11 @@ namespace dftfe
             if (d_dftParamsPtr->isPseudopotential &&
                 d_dftParamsPtr->pawPseudoPotential)
               {
+                if(d_dftParamsPtr->verbosity >= 5)
                 d_pawClassPtr->chargeNeutrality(
-                  totalCharge(d_dofHandlerRhoNodal, d_densityOutQuadValues[0]),
-                  TypeOfField::Out,
-                  false);
+                totalCharge(d_dofHandlerRhoNodal, d_densityOutQuadValues[0]),
+                TypeOfField::Out,
+                false);
               }
 
             if (d_dftParamsPtr->multipoleBoundaryConditions)
@@ -4056,6 +4059,7 @@ namespace dftfe
             d_dftParamsPtr->pawPseudoPotential)
           {
             d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
+            if(d_dftParamsPtr->verbosity >= 5)
             d_pawClassPtr->chargeNeutrality(
               totalCharge(d_dofHandlerRhoNodal, d_densityOutQuadValues[0]),
               TypeOfField::Out,
