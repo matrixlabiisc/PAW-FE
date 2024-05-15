@@ -525,11 +525,9 @@ namespace dftfe
           d_BasisOperatorHostPtr, d_nlpspQuadratureId, 1E-14, 0);
         pcout << "Computing sparse structure for shapeFunctions: " << std::endl;
         d_atomicShapeFnsContainer->computeSparseStructure(
-          d_BasisOperatorElectroHostPtr, d_densityQuadratureIdElectro, 1E-8, 0);
+          d_BasisOperatorElectroHostPtr, 3, 1.25, 1);
         d_atomicShapeFnsContainer->computeFEEvaluationMaps(
-          d_BasisOperatorElectroHostPtr,
-          d_densityQuadratureIdElectro,
-          dofHanderId);
+          d_BasisOperatorElectroHostPtr, 3, dofHanderId);
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
         if (d_verbosity >= 2)

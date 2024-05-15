@@ -376,6 +376,12 @@ namespace dftfe
                     std::min(BVec, Nfr - jvec);
                   flattenedArrayBlock =
                     &(basisOperationsPtr->getMultiVector(currentBlockSize, 0));
+                  if (dftParams.pawPseudoPotential && pawClassPtr != NULL)
+                    {
+                      pawClassPtr->getNonLocalOperator()
+                        ->initialiseFlattenedDataStructure(
+                          currentBlockSize, projectorKetTimesVector);
+                    }
                   if ((jvec + totalNumWaveFunctions - Nfr + currentBlockSize) <=
                         bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId +
                                                        1] &&
@@ -470,8 +476,45 @@ namespace dftfe
                             {
                               const unsigned int startingCellId =
                                 iblock * cellsBlockSize;
-                              basisOperationsPtr->interpolateKernel(
+                              // basisOperationsPtr->interpolateKernel(
+                              //   *(flattenedArrayBlock),
+                              //   wfcQuadPointData.data(),
+                              //   isEvaluateGradRho ?
+                              //     gradWfcQuadPointData.data() :
+                              //     NULL,
+                              //   std::pair<unsigned int, unsigned int>(
+                              //     startingCellId,
+                              //     startingCellId + currentCellsBlockSize));
+
+                              if (currentCellsBlockSize * currentBlockSize !=
+                                  previousSize)
+                                {
+                                  tempCellNodalData.resize(
+                                    currentCellsBlockSize * currentBlockSize *
+                                    numLocalDofs);
+                                  previousSize =
+                                    currentCellsBlockSize * currentBlockSize;
+                                }
+                              basisOperationsPtr->extractToCellNodalDataKernel(
                                 *(flattenedArrayBlock),
+                                tempCellNodalData.data(),
+                                std::pair<unsigned int, unsigned int>(
+                                  startingCellId,
+                                  startingCellId + currentCellsBlockSize));
+                              if (dftParams.pawPseudoPotential &&
+                                  pawClassPtr != NULL)
+                                {
+                                  pawClassPtr->getNonLocalOperator()
+                                    ->applyCconjtransOnX(
+                                      tempCellNodalData.data(),
+                                      std::pair<unsigned int, unsigned int>(
+                                        startingCellId,
+                                        startingCellId +
+                                          currentCellsBlockSize));
+                                  // Call apply CconjTranspose
+                                }
+                              basisOperationsPtr->interpolateKernel(
+                                tempCellNodalData.data(),
                                 wfcQuadPointData.data(),
                                 isEvaluateGradRho ?
                                   gradWfcQuadPointData.data() :
@@ -502,10 +545,27 @@ namespace dftfe
                                 isEvaluateGradRho);
                             } // non-tivial cells block
                         }     // cells block loop
-                    }
-                } // spectrum split block
-          }
-      }
+                      if (dftParams.pawPseudoPotential && pawClassPtr != NULL)
+                        {
+                          pawClassPtr->getNonLocalOperator()
+                            ->applyAllReduceOnCconjtransX(
+                              projectorKetTimesVector);
+                          pawClassPtr->getNonLocalOperator()
+                            ->copyBackFromDistributedVectorToLocalDataStructure(
+                              projectorKetTimesVector, partialOccupVec);
+                          pawClassPtr->computeDij(
+                            true,
+                            jvec + (totalNumWaveFunctions - Nfr),
+                            currentBlockSize,
+                            spinIndex,
+                            kPoint);
+                          // Call computeDij
+                        }
+
+                    } // if jvec
+                }     // spectrum split block
+          }           // spinIndex
+      }               // kPoint
 
 #if defined(DFTFE_WITH_DEVICE)
     rhoHost.resize(rho.size());
