@@ -304,7 +304,7 @@ namespace dftfe
                               {
                                 tempCellNodalData.resize(currentCellsBlockSize *
                                                          currentBlockSize *
-                                                         numLocalDofs);
+                                                         numNodesPerElement);
                                 previousSize =
                                   currentCellsBlockSize * currentBlockSize;
                               }
@@ -491,7 +491,7 @@ namespace dftfe
                                 {
                                   tempCellNodalData.resize(
                                     currentCellsBlockSize * currentBlockSize *
-                                    numLocalDofs);
+                                    numNodesPerElement);
                                   previousSize =
                                     currentCellsBlockSize * currentBlockSize;
                                 }

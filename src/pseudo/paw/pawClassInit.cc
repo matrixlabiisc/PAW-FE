@@ -4534,6 +4534,9 @@ namespace dftfe
               memorySpace == dftfe::utils::MemorySpace::DEVICE ? 50 : 1;
             const unsigned int numCellBlocks =
               totalLocallyOwnedCells / cellsBlockSize;
+            std::cout << "ProcID LocallyOwnedCells: " << d_this_mpi_process
+                      << " " << totalLocallyOwnedCells << std::endl;
+            MPI_Barrier(d_mpiCommParent);
             const unsigned int remCellBlockSize =
               totalLocallyOwnedCells - numCellBlocks * cellsBlockSize;
             d_BasisOperatorHostPtr->reinit(BVec,
@@ -4636,7 +4639,8 @@ namespace dftfe
                                       {
                                         tempCellNodalData.resize(
                                           currentCellsBlockSize *
-                                          currentBlockSize * numLocalDofs);
+                                          currentBlockSize *
+                                          numNodesPerElement);
                                         previousSize = currentCellsBlockSize *
                                                        currentBlockSize;
                                       }
