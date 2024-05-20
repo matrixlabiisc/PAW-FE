@@ -80,7 +80,9 @@ namespace dftfe
     getScratchFEMultivector(const unsigned int numVectors,
                             const unsigned int index);
 
-
+    dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace> &
+    getScratchFEMultivectorSinglePrec(const unsigned int numVectors,
+                                      const unsigned int index);
     /**
      * @brief Computes effective potential involving exchange-correlation functionals
      * @param rhoValues electron-density
@@ -160,6 +162,15 @@ namespace dftfe
        const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
+    HX(dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace> &src,
+       const double scalarHX,
+       const double scalarY,
+       const double scalarX,
+       dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace> &dst,
+       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
+
+    void
     overlapMatrixTimesX(
       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
       const double scalarOX,
@@ -187,7 +198,18 @@ namespace dftfe
       const double scalarY,
       const double scalarX,
       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst);
-
+    void
+    HXCheby(dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32,
+                                              memorySpace> &src,
+            const double                                    scalarHX,
+            const double                                    scalarY,
+            const double                                    scalarX,
+            dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32,
+                                              memorySpace> &dst,
+            const bool onlyHPrimePartForFirstOrderDensityMatResponse,
+            const bool skip1,
+            const bool skip2,
+            const bool skip3);
     void
     HXRR(
       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
@@ -219,6 +241,8 @@ namespace dftfe
 
     std::vector<dftfe::utils::MemoryStorage<dataTypes::number, memorySpace>>
       d_cellHamiltonianMatrix;
+    std::vector<dftfe::utils::MemoryStorage<dataTypes::numberFP32, memorySpace>>
+      d_cellHamiltonianMatrixSinglePrec;      
     dftfe::utils::MemoryStorage<double, memorySpace>
       d_cellHamiltonianMatrixExtPot;
 
@@ -227,11 +251,19 @@ namespace dftfe
       d_cellWaveFunctionMatrixSrc;
     dftfe::utils::MemoryStorage<dataTypes::number, memorySpace>
       d_cellWaveFunctionMatrixDst;
+    dftfe::utils::MemoryStorage<dataTypes::numberFP32, memorySpace>
+      d_cellWaveFunctionMatrixSrcSinglePrec;
+    dftfe::utils::MemoryStorage<dataTypes::numberFP32, memorySpace>
+      d_cellWaveFunctionMatrixDstSinglePrec;
 
     dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
       d_pseudopotentialNonLocalProjectorTimesVectorBlock;
     dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
+      d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec;      
+    dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
                                                      d_tempBlockVectorPawSinvHX;
+    dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace>
+                                                     d_tempBlockVectorPawSinvHXSinglePrec;                                                     
     dftfe::utils::MemoryStorage<double, memorySpace> d_VeffJxW;
     dftfe::utils::MemoryStorage<double, memorySpace> d_VeffExtPotJxW;
 

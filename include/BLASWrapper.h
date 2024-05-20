@@ -511,6 +511,19 @@ namespace dftfe
                        const ValueType *      scalingVector,
                        const ValueType        a,
                        ValueType *            addToVec) const;
+      template <typename ValueType0,
+                typename ValueType1,
+                typename ValueType2,
+                typename ValueType3,
+                typename ValueType4>
+      void
+      ApaBD(const unsigned int m,
+            const unsigned int n,
+            const ValueType0   alpha,
+            const ValueType1 * A,
+            const ValueType2 * B,
+            const ValueType3 * D,
+            ValueType4 *       C) const;
       template <typename ValueType>
       void
       axpyStridedBlockAtomicAdd(const dftfe::size_type contiguousBlockSize,
@@ -520,14 +533,14 @@ namespace dftfe
                                 const dftfe::global_size_type
                                   *addToVecStartingContiguousBlockIds) const;
 
-      template <typename ValueType1, typename ValueType2>
+      template <typename ValueType1, typename ValueType2, typename ValueType3>
       void
       axpyStridedBlockAtomicAdd(const dftfe::size_type contiguousBlockSize,
                                 const dftfe::size_type numContiguousBlocks,
                                 const ValueType1       a,
                                 const ValueType1 *     s,
                                 const ValueType2 *     addFromVec,
-                                ValueType2 *           addToVec,
+                                ValueType3 *           addToVec,
                                 const dftfe::global_size_type
                                   *addToVecStartingContiguousBlockIds) const;
 
@@ -1036,6 +1049,21 @@ namespace dftfe
             const ValueType1 * x,
             const ValueType2   beta,
             ValueType1 *       y) const;
+
+      template <typename ValueType0,
+                typename ValueType1,
+                typename ValueType2,
+                typename ValueType3,
+                typename ValueType4>
+      void
+      ApaBD(const unsigned int m,
+            const unsigned int n,
+            const ValueType0   alpha,
+            const ValueType1 * A,
+            const ValueType2 * B,
+            const ValueType3 * D,
+            ValueType4 *       C) const;
+
       template <typename ValueType>
       void
       stridedBlockAxpy(const dftfe::size_type contiguousBlockSize,
@@ -1053,14 +1081,14 @@ namespace dftfe
                                 const dftfe::global_size_type
                                   *addToVecStartingContiguousBlockIds) const;
 
-      template <typename ValueType1, typename ValueType2>
+      template <typename ValueType1, typename ValueType2, typename ValueType3>
       void
       axpyStridedBlockAtomicAdd(const dftfe::size_type contiguousBlockSize,
                                 const dftfe::size_type numContiguousBlocks,
                                 const ValueType1       a,
                                 const ValueType1 *     s,
                                 const ValueType2 *     addFromVec,
-                                ValueType2 *           addToVec,
+                                ValueType3 *           addToVec,
                                 const dftfe::global_size_type
                                   *addToVecStartingContiguousBlockIds) const;
 

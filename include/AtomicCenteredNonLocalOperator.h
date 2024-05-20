@@ -61,7 +61,7 @@ namespace dftfe
       std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
         BLASWrapperPtr,
       std::shared_ptr<
-        dftfe::basis::FEBasisOperations<ValueType, double, memorySpace>>
+        dftfe::basis::FEBasisOperations<dataTypes::number, double, memorySpace>>
         basisOperatorPtr,
       std::shared_ptr<AtomCenteredSphericalFunctionContainer>
                       atomCenteredSphericalFunctionContainer,
@@ -103,7 +103,7 @@ namespace dftfe
       const std::vector<double> &kPointCoordinates,
       std::shared_ptr<
         dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+          FEBasisOperations<dataTypes::number, double, dftfe::utils::MemorySpace::HOST>>
                          basisOperationsPtr,
       const unsigned int quadratureIndex);
 #if defined(DFTFE_WITH_DEVICE)
@@ -349,7 +349,7 @@ namespace dftfe
     std::vector<unsigned int> d_numberCellsForEachAtom;
 
     std::shared_ptr<
-      dftfe::basis::FEBasisOperations<ValueType, double, memorySpace>>
+      dftfe::basis::FEBasisOperations<dataTypes::number, double, memorySpace>>
       d_basisOperatorPtr;
 
 
@@ -457,7 +457,7 @@ namespace dftfe
     computeCMatrixEntries(
       std::shared_ptr<
         dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+          FEBasisOperations<dataTypes::number, double, dftfe::utils::MemorySpace::HOST>>
                          basisOperationsPtr,
       const unsigned int quadratureIndex);
 

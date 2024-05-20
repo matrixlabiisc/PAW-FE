@@ -1225,7 +1225,8 @@ namespace dftfe
                                    d_densityQuadratureIdElectro,
                                    d_excManagerPtr,
                                    atomLocations,
-                                   d_numEigenValues);
+                                   d_numEigenValues,
+                                   d_dftParamsPtr->useSinglePrecCheby);
       }
     else if (d_dftParamsPtr->isPseudopotential == true &&
              d_dftParamsPtr->pawPseudoPotential == true)
@@ -1251,7 +1252,8 @@ namespace dftfe
                                   atomLocations,
                                   d_numEigenValues,
                                   d_smearedChargeQuadratureIdElectro,
-                                  d_bQuadValuesAllAtoms);
+                                  d_bQuadValuesAllAtoms,
+                                  d_dftParamsPtr->useSinglePrecCheby);
       }
 
 

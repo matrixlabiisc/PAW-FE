@@ -101,7 +101,8 @@ namespace dftfe
       unsigned int                            densityQuadratureIdElectro,
       std::shared_ptr<excManager>             excFunctionalPtr,
       const std::vector<std::vector<double>> &atomLocations,
-      unsigned int                            numEigenValues);
+      unsigned int                            numEigenValues,
+      const bool                              singlePrecNonLocalOperator);
 
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
@@ -201,6 +202,18 @@ namespace dftfe
       AtomicCenteredNonLocalOperator<ValueType, memorySpace>>
     getNonLocalOperator();
 
+    const dftfe::utils::MemoryStorage<
+      typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+      memorySpace> &
+    getCouplingMatrixSinglePrec();
+
+
+    const std::shared_ptr<AtomicCenteredNonLocalOperator<
+      typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+      memorySpace>>
+    getNonLocalOperatorSinglePrec();
+
+
   private:
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
@@ -241,8 +254,13 @@ namespace dftfe
     std::map<unsigned int, std::vector<double>>
                                                         d_atomicNonLocalPseudoPotentialConstants;
     dftfe::utils::MemoryStorage<ValueType, memorySpace> d_couplingMatrixEntries;
+        dftfe::utils::MemoryStorage<
+      typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+      memorySpace>
+      d_couplingMatrixEntriesSinglePrec;
 
     bool d_HamiltonianCouplingMatrixEntriesUpdated;
+    bool d_HamiltonianCouplingMatrixSinglePrecEntriesUpdated;
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicWaveFnsVector;
     std::shared_ptr<AtomCenteredSphericalFunctionContainer>
@@ -278,6 +296,7 @@ namespace dftfe
 
     std::map<unsigned int, bool>                      d_atomTypeCoreFlagMap;
     bool                                              d_floatingNuclearCharges;
+    bool                             d_singlePrecNonLocalOperator;    
     int                                               d_verbosity;
     std::vector<std::vector<double>>                  d_atomLocations;
     std::set<unsigned int>                            d_atomTypes;
@@ -292,6 +311,10 @@ namespace dftfe
     std::shared_ptr<AtomicCenteredNonLocalOperator<ValueType, memorySpace>>
       d_nonLocalOperator;
 
+    std::shared_ptr<AtomicCenteredNonLocalOperator<
+      typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+      memorySpace>>
+      d_nonLocalOperatorSinglePrec;
 
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicProjectorFnsVector;
