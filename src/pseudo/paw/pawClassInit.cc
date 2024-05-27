@@ -17,6 +17,14 @@
 // @author Kartick Ramakrishnan
 //
 #include <pawClass.h>
+#include <unistd.h>
+
+unsigned long long getTotalSystemMemory()
+{
+    long pages = sysconf(_SC_AVPHYS_PAGES);
+    long page_size = sysconf(_SC_PAGE_SIZE);
+    return pages * page_size;
+}
 namespace dftfe
 {
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -544,8 +552,16 @@ namespace dftfe
       d_BasisOperatorHostPtr,
       d_nlpspQuadratureId);
     pcout << "-----Compensation Charge---" << std::endl;
+                   double meoryInTask1 =  getTotalSystemMemory()/1E9;
+                
+                MPI_Barrier(d_mpiCommParent);
+                std::cout<<"Memory used "<<meoryInTask1<<" in: "<<d_this_mpi_process<<std::endl;
     computeCompensationChargeL0();
     computeCompensationChargeCoeff();
+                   double meoryInTask2 =  getTotalSystemMemory()/1E9;
+                
+                MPI_Barrier(d_mpiCommParent);
+                std::cout<<"Memory used "<<meoryInTask2<<" in: "<<d_this_mpi_process<<std::endl;
     computeNonlocalPseudoPotentialConstants(
       CouplingType::inversePawOverlapEntries);
 
@@ -1065,14 +1081,32 @@ namespace dftfe
                 const ValueType                  alpha1 = 1.0;
                 const std::vector<unsigned int> &atomicNumber =
                   d_atomicShapeFnsContainer->getAtomicNumbers();
+                // std::cout<<"Number of entries in PijMatrix: "<<d_totalProjectors*d_totalProjectors<<" in task: "<<d_this_mpi_process<<" "<<getTotalSystemMemory()<<std::flush<<std::endl;
+                double meoryInTask =  getTotalSystemMemory()/1E9;
+                
+                MPI_Barrier(d_mpiCommParent);
+                std::cout<<"Memory used "<<meoryInTask<<" in: "<<d_this_mpi_process<<std::endl;
+                                MPI_Allreduce(MPI_IN_PLACE,
+                              &meoryInTask,
+                              1,
+                              dataTypes::mpi_type_id(&meoryInTask),
+                              MPI_MIN,
+                              d_mpiCommParent);
+                pcout<<"Max memory utilization: "<<meoryInTask<<std::endl;
+                MPI_Barrier(d_mpiCommParent); 
+                std::vector<ValueType>    PijMatrix(d_totalProjectors *
+                                                   d_totalProjectors,
+                                                 0.0);
+                    std::cout<<"Size of PijMatrix"<<PijMatrix.size()<<std::endl;
+                MPI_Barrier(d_mpiCommParent);
                 const unsigned int natoms = atomicNumber.size();
                 const unsigned int ndofs = d_BasisOperatorHostPtr->nOwnedDofs();
-
+                std::cout<<"Nofs: "<<ndofs<<" in procs: "<<d_this_mpi_process<<std::endl;
                 std::vector<unsigned int> relAtomdIdsInCurrentProcs =
                   relevantAtomdIdsInCurrentProcs();
                 unsigned int              totalProjectorsInProcessor = 0;
                 std::vector<unsigned int> startIndexProcessorVec(
-                  relAtomdIdsInCurrentProcs.size(), 0);
+                  relAtomdIdsInCurrentProcs.size(), 0); 
                 unsigned int startIndex = 0;
                 for (int iAtom = 0; iAtom < relAtomdIdsInCurrentProcs.size();
                      iAtom++)
@@ -1088,13 +1122,17 @@ namespace dftfe
                 std::cout << "Projectors in procs: " << d_this_mpi_process
                           << " is: " << totalProjectorsInProcessor << std::endl;
                 MPI_Barrier(d_mpiCommParent);
+                std::cout<<"Dimenssions in procs: "<<ndofs<<" "<<totalProjectorsInProcessor<<" "<<d_totalProjectors<<" "<<d_this_mpi_process<<std::endl;
+                MPI_Barrier(d_mpiCommParent);
                 std::vector<ValueType> processorLocalPmatrix(
                   ndofs * totalProjectorsInProcessor, 0.0);
+                std::cout<<"Size of processorLocalPmatrix"<<processorLocalPmatrix.size()<<std::endl;
+                MPI_Barrier(d_mpiCommParent);                  
                 std::vector<ValueType> processorLocalPTransPMatrix(
                   totalProjectorsInProcessor * totalProjectorsInProcessor, 0.0);
-                std::vector<ValueType>    PijMatrix(d_totalProjectors *
-                                                   d_totalProjectors,
-                                                 0.0);
+                    std::cout<<"Size of processorLocalPTransPMatrix"<<processorLocalPTransPMatrix.size()<<std::endl;
+                MPI_Barrier(d_mpiCommParent); 
+                                                  
                 std::vector<unsigned int> numProjList;
                 for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
                      it != d_atomTypes.end();
@@ -1105,7 +1143,8 @@ namespace dftfe
                         ->getTotalNumberOfSphericalFunctionsPerAtom(*it));
                   }
 
-
+                pcout<<"DEBUG: Line 1108"<<std::endl;
+                MPI_Barrier(d_mpiCommParent);
                 std::map<
                   unsigned int,
                   dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>>
@@ -1126,7 +1165,8 @@ namespace dftfe
                           numProjList[i]);
                       }
                   }
-
+                pcout<<"DEBUG: Line 1130"<<std::endl;
+                MPI_Barrier(d_mpiCommParent);
 
 
                 for (int kPoint = 0; kPoint < d_kpointWeights.size(); kPoint++)
@@ -1140,7 +1180,8 @@ namespace dftfe
                           d_atomicProjectorFnsContainer
                             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                         Pmatrix[numProj].setValue(0);
-
+                        pcout<<"DEBUG: Line 1145"<<std::endl;
+                        MPI_Barrier(d_mpiCommParent);
                         if (d_atomicProjectorFnsContainer
                               ->atomIdPresentInCurrentProcessor(atomId))
                           {
@@ -1265,11 +1306,13 @@ namespace dftfe
                         &processorLocalPTransPMatrix[0],
                         totalProjectorsInProcessor);
                   } // kPoint
-
+                pcout<<"DEBUG: Line 1271"<<std::endl;
+                MPI_Barrier(d_mpiCommParent);
 
                 for (int iAtom = 0; iAtom < relAtomdIdsInCurrentProcs.size();
                      iAtom++)
                   {
+                    std::cout<<"iAtom No: "<<iAtom<<std::endl;
                     unsigned int atomId = relAtomdIdsInCurrentProcs[iAtom];
                     unsigned int Znum   = atomicNumber[atomId];
                     unsigned int numProj_i =
