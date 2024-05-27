@@ -126,12 +126,15 @@ namespace dftfe
       create_dftfe<4, 6, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<4, 7, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<4, 8, dftfe::utils::MemorySpace::HOST>,
+      create_dftfe<4, 10, dftfe::utils::MemorySpace::HOST>,
+      create_dftfe<4, 14, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<5, 5, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<5, 6, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<5, 7, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<5, 8, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<5, 9, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<5, 10, dftfe::utils::MemorySpace::HOST>,
+      create_dftfe<5, 14, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<6, 6, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<6, 7, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<6, 8, dftfe::utils::MemorySpace::HOST>,
@@ -139,6 +142,7 @@ namespace dftfe
       create_dftfe<6, 10, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<6, 11, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<6, 12, dftfe::utils::MemorySpace::HOST>,
+      create_dftfe<6, 14, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<7, 7, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<7, 8, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<7, 9, dftfe::utils::MemorySpace::HOST>,
@@ -934,12 +938,12 @@ namespace dftfe
             exit(1);
           }
 
-        if (orderElectro < order || orderElectro > order * 2)
-          {
-            std::cout << "Invalid DFT-FE order electrostatics " << orderElectro
-                      << std::endl;
-            exit(1);
-          }
+        // if (orderElectro < order || orderElectro > order * 2)
+        //   {
+        //     std::cout << "Invalid DFT-FE order electrostatics " << orderElectro
+        //               << std::endl;
+        //     exit(1);
+        //   }
 
 
         int listIndex = 0;
