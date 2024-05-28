@@ -1366,8 +1366,6 @@ namespace dftfe
                         ->getTotalNumberOfSphericalFunctionsPerAtom(*it));
                   }
 
-                pcout << "DEBUG: Line 1108" << std::endl;
-                MPI_Barrier(d_mpiCommParent);
                 std::map<
                   unsigned int,
                   dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>>
@@ -1388,9 +1386,6 @@ namespace dftfe
                           numProjList[i]);
                       }
                   }
-                pcout << "DEBUG: Line 1130" << std::endl;
-                MPI_Barrier(d_mpiCommParent);
-
 
                 for (int kPoint = 0; kPoint < d_kpointWeights.size(); kPoint++)
                   {
@@ -1403,8 +1398,6 @@ namespace dftfe
                           d_atomicProjectorFnsContainer
                             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                         Pmatrix[numProj].setValue(0);
-                        pcout << "DEBUG: Line 1145" << std::endl;
-                        MPI_Barrier(d_mpiCommParent);
                         if (d_atomicProjectorFnsContainer
                               ->atomIdPresentInCurrentProcessor(atomId))
                           {
@@ -1529,9 +1522,6 @@ namespace dftfe
                         &processorLocalPTransPMatrix[0],
                         totalProjectorsInProcessor);
                   } // kPoint
-                pcout << "DEBUG: Line 1271" << std::endl;
-                MPI_Barrier(d_mpiCommParent);
-
                 for (int iAtom = 0; iAtom < relAtomdIdsInCurrentProcs.size();
                      iAtom++)
                   {
@@ -4866,9 +4856,6 @@ namespace dftfe
           }
 
 
-
-        std::cout << "DEBUG: " << d_this_mpi_process << " "
-                  << totalLocallyOwnedCells << std::endl;
         MPI_Barrier(d_mpiCommParent);
         communicateDijAcrossAllProcessors(TypeOfField::In,
                                           interpoolcomm,

@@ -125,22 +125,14 @@ namespace dftfe
       dftUtils::printCurrentMemoryUsage(
         mpi_communicator,
         "Created flattened array eigenvectors before update ghost values");
-    MPI_Barrier(d_mpiCommParent);
-    pcout << "DEBUG: Line 127" << std::endl;
     readPSI();
-    MPI_Barrier(d_mpiCommParent);
-    pcout << "DEBUG: Line 129" << std::endl;
     if (d_dftParamsPtr->verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(mpi_communicator,
                                         "Created flattened array eigenvectors");
 
     // if(!(d_dftParamsPtr->chkType==2 && d_dftParamsPtr->restartFromChk))
     //{
-    MPI_Barrier(d_mpiCommParent);
-    pcout << "DEBUG: Line 138" << std::endl;
     initRho();
-    MPI_Barrier(d_mpiCommParent);
-    pcout << "DEBUG: Line 141" << std::endl;
     // d_rhoOutNodalValues.reinit(d_rhoInNodalValues);
     //}
 
