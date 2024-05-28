@@ -171,7 +171,7 @@ namespace dftfe
                 memorySpace>>(d_BLASWrapperHostPtr,
                               d_BasisOperatorHostPtr,
                               d_atomicProjectorFnsContainer,
-                              d_mpiCommParent);            
+                              d_mpiCommParent);
       }
 #if defined(DFTFE_WITH_DEVICE)
     else
@@ -191,7 +191,7 @@ namespace dftfe
                 memorySpace>>(d_BLASWrapperDevicePtr,
                               d_BasisOperatorDevicePtr,
                               d_atomicProjectorFnsContainer,
-                              d_mpiCommParent);            
+                              d_mpiCommParent);
       }
 #endif
 
@@ -300,7 +300,8 @@ namespace dftfe
 
     if (updateNonlocalSparsity)
       {
-        d_HamiltonianCouplingMatrixEntriesUpdated = false;
+        d_HamiltonianCouplingMatrixEntriesUpdated           = false;
+        d_HamiltonianCouplingMatrixSinglePrecEntriesUpdated = false;
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->getDataForSparseStructure(

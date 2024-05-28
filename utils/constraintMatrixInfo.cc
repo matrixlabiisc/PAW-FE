@@ -536,7 +536,7 @@ namespace dftfe
         dftfe::linearAlgebra::MultiVector<dataTypes::number,
                                           dftfe::utils::MemorySpace::HOST>
           &fieldVector) const;
-          
+
     template void
     constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::
       distribute_slave_to_master(

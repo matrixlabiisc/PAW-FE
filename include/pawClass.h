@@ -136,7 +136,8 @@ namespace dftfe
       const std::vector<std::vector<double>> &atomLocations,
       unsigned int                            numEigenValues,
       unsigned int compensationChargeQuadratureIdElectro,
-      std::map<dealii::CellId, std::vector<double>> &bQuadValuesAllAtoms);
+      std::map<dealii::CellId, std::vector<double>> &bQuadValuesAllAtoms,
+      const bool singlePrecNonLocalOperator);
 
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
@@ -249,12 +250,23 @@ namespace dftfe
 
     const dftfe::utils::MemoryStorage<ValueType, memorySpace> &
     getCouplingMatrix(
-      CouplingType copulingtype = CouplingType::HamiltonianEntries);
+      CouplingType couplingtype = CouplingType::HamiltonianEntries);
+
+    const dftfe::utils::MemoryStorage<
+      typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+      memorySpace> &
+    getCouplingMatrixSinglePrec(
+      CouplingType couplingtype = CouplingType::HamiltonianEntries);
 
 
     const std::shared_ptr<
       AtomicCenteredNonLocalOperator<ValueType, memorySpace>>
     getNonLocalOperator();
+
+    const std::shared_ptr<AtomicCenteredNonLocalOperator<
+      typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+      memorySpace>>
+    getNonLocalOperatorSinglePrec();
 
     void
     evaluateNonLocalHamiltonianElectrostaticsValue(
@@ -637,7 +649,11 @@ namespace dftfe
     // Creating Object for Atom Centerd Nonlocal Operator
     std::shared_ptr<AtomicCenteredNonLocalOperator<ValueType, memorySpace>>
       d_nonLocalOperator;
-
+    // Creating Object for Atom Centerd Nonlocal Operator SinglePrec
+    std::shared_ptr<AtomicCenteredNonLocalOperator<
+      typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+      memorySpace>>
+      d_nonLocalOperatorSinglePrec;
 
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicProjectorFnsVector;

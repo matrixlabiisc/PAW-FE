@@ -102,8 +102,9 @@ namespace dftfe
       const std::vector<double> &kPointWeights,
       const std::vector<double> &kPointCoordinates,
       std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<dataTypes::number, double, dftfe::utils::MemorySpace::HOST>>
+        dftfe::basis::FEBasisOperations<dataTypes::number,
+                                        double,
+                                        dftfe::utils::MemorySpace::HOST>>
                          basisOperationsPtr,
       const unsigned int quadratureIndex);
 #if defined(DFTFE_WITH_DEVICE)
@@ -455,11 +456,11 @@ namespace dftfe
      */
     void
     computeCMatrixEntries(
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<dataTypes::number, double, dftfe::utils::MemorySpace::HOST>>
-                         basisOperationsPtr,
-      const unsigned int quadratureIndex);
+      std::shared_ptr<dftfe::basis::FEBasisOperations<
+        dataTypes::number,
+        double,
+        dftfe::utils::MemorySpace::HOST>> basisOperationsPtr,
+      const unsigned int                  quadratureIndex);
 
     std::map<
       unsigned int,

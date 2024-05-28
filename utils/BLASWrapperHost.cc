@@ -129,7 +129,7 @@ namespace dftfe
                                    alpha * B[iCol + n * iRow] * D[iCol];
             }
         }
-    }    
+    }
 
     template <typename ValueType1, typename ValueType2>
     void
@@ -561,7 +561,7 @@ namespace dftfe
       std::transform(x, x + n, y, y, [&alpha, &beta](auto &p, auto &q) {
         return alpha * std::complex<double>(p) + beta * std::complex<double>(q);
       });
-    }    
+    }
 
     void
     BLASWrapper<dftfe::utils::MemorySpace::HOST>::xsymv(
@@ -1100,7 +1100,7 @@ namespace dftfe
       copyValueType1ArrToValueType2Arr(const dftfe::size_type size,
                                        const double *         valueType1Arr,
                                        float *                valueType2Arr);
-   template void
+    template void
     BLASWrapper<dftfe::utils::MemorySpace::HOST>::
       copyValueType1ArrToValueType2Arr(
         const dftfe::size_type      size,

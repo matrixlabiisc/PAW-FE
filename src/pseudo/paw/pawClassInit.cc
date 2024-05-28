@@ -370,7 +370,8 @@ namespace dftfe
     const std::vector<std::vector<double>> &atomLocations,
     unsigned int                            numEigenValues,
     unsigned int compensationChargeQuadratureIdElectro,
-    std::map<dealii::CellId, std::vector<double>> &bQuadValuesAllAtoms)
+    std::map<dealii::CellId, std::vector<double>> &bQuadValuesAllAtoms,
+    const bool                                     singlePrecNonLocalOperator)
   {
     MPI_Barrier(d_mpiCommParent);
     d_BasisOperatorHostPtr        = basisOperationsHostPtr;
@@ -2286,7 +2287,14 @@ namespace dftfe
     return d_nonLocalOperator;
   }
 
-
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  const std::shared_ptr<AtomicCenteredNonLocalOperator<
+    typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+    memorySpace>>
+  pawClass<ValueType, memorySpace>::getNonLocalOperatorSinglePrec()
+  {
+    return d_nonLocalOperatorSinglePrec;
+  }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   unsigned int

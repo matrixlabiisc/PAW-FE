@@ -139,7 +139,7 @@ namespace dftfe
     bool         deviceFineGrainedTimings;
     bool         allowFullCPUMemSubspaceRot;
     bool         useMixedPrecCheby;
-    bool         useSinglePrecCheby;    
+    bool         useSinglePrecCheby;
     bool         overlapComputeCommunCheby;
     bool         overlapComputeCommunOrthoRR;
     bool         autoDeviceBlockSizes;

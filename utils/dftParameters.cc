@@ -1043,7 +1043,7 @@ namespace dftfe
             dealii::Patterns::Bool(),
             "[Advanced] Use mixed precision communication only for XtX and XtHX instead of mixed precision compute and communication. This setting has been found to be more optimal on certain architectures. Default setting is false.");
 
-         prm.declare_entry(
+          prm.declare_entry(
             "USE SINGLE PREC CHEBY",
             "false",
             dealii::Patterns::Bool(),

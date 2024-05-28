@@ -704,6 +704,17 @@ namespace dftfe
     return d_couplingMatrixEntries[couplingtype];
   }
 
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  const dftfe::utils::MemoryStorage<
+    typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+    memorySpace> &
+  pawClass<ValueType, memorySpace>::getCouplingMatrixSinglePrec(
+    CouplingType couplingtype)
+  {}
+
+
+
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
   pawClass<ValueType, memorySpace>::computeDij(

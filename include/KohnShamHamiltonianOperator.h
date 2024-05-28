@@ -162,11 +162,13 @@ namespace dftfe
        const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
-    HX(dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace> &src,
+    HX(dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace>
+         &          src,
        const double scalarHX,
        const double scalarY,
        const double scalarX,
-       dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace> &dst,
+       dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace>
+         &        dst,
        const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
 
@@ -222,6 +224,9 @@ namespace dftfe
       AtomicCenteredNonLocalOperator<dataTypes::number, memorySpace>>
       d_pseudopotentialNonLocalOperator;
 
+    std::shared_ptr<
+      AtomicCenteredNonLocalOperator<dataTypes::numberFP32, memorySpace>>
+      d_pseudopotentialNonLocalOperatorSinglePrec;
     std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
       d_BLASWrapperPtr;
     std::shared_ptr<
@@ -242,7 +247,7 @@ namespace dftfe
     std::vector<dftfe::utils::MemoryStorage<dataTypes::number, memorySpace>>
       d_cellHamiltonianMatrix;
     std::vector<dftfe::utils::MemoryStorage<dataTypes::numberFP32, memorySpace>>
-      d_cellHamiltonianMatrixSinglePrec;      
+      d_cellHamiltonianMatrixSinglePrec;
     dftfe::utils::MemoryStorage<double, memorySpace>
       d_cellHamiltonianMatrixExtPot;
 
@@ -259,11 +264,11 @@ namespace dftfe
     dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
       d_pseudopotentialNonLocalProjectorTimesVectorBlock;
     dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
-      d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec;      
+      d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec;
     dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
-                                                     d_tempBlockVectorPawSinvHX;
+      d_tempBlockVectorPawSinvHX;
     dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace>
-                                                     d_tempBlockVectorPawSinvHXSinglePrec;                                                     
+                                                     d_tempBlockVectorPawSinvHXSinglePrec;
     dftfe::utils::MemoryStorage<double, memorySpace> d_VeffJxW;
     dftfe::utils::MemoryStorage<double, memorySpace> d_VeffExtPotJxW;
 

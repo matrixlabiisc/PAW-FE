@@ -213,7 +213,6 @@ namespace dftfe
       memorySpace>>
     getNonLocalOperatorSinglePrec();
 
-
   private:
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
@@ -254,7 +253,7 @@ namespace dftfe
     std::map<unsigned int, std::vector<double>>
                                                         d_atomicNonLocalPseudoPotentialConstants;
     dftfe::utils::MemoryStorage<ValueType, memorySpace> d_couplingMatrixEntries;
-        dftfe::utils::MemoryStorage<
+    dftfe::utils::MemoryStorage<
       typename dftfe::dataTypes::singlePrecType<ValueType>::type,
       memorySpace>
       d_couplingMatrixEntriesSinglePrec;
@@ -294,12 +293,12 @@ namespace dftfe
       d_BasisOperatorDevicePtr;
 #endif
 
-    std::map<unsigned int, bool>                      d_atomTypeCoreFlagMap;
-    bool                                              d_floatingNuclearCharges;
-    bool                             d_singlePrecNonLocalOperator;    
-    int                                               d_verbosity;
-    std::vector<std::vector<double>>                  d_atomLocations;
-    std::set<unsigned int>                            d_atomTypes;
+    std::map<unsigned int, bool>     d_atomTypeCoreFlagMap;
+    bool                             d_floatingNuclearCharges;
+    bool                             d_singlePrecNonLocalOperator;
+    int                              d_verbosity;
+    std::vector<std::vector<double>> d_atomLocations;
+    std::set<unsigned int>           d_atomTypes;
     std::map<unsigned int, std::vector<unsigned int>> d_atomTypesList;
     std::string                                       d_dftfeScratchFolderName;
     std::vector<int>                                  d_imageIds;
@@ -315,6 +314,7 @@ namespace dftfe
       typename dftfe::dataTypes::singlePrecType<ValueType>::type,
       memorySpace>>
       d_nonLocalOperatorSinglePrec;
+
 
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicProjectorFnsVector;

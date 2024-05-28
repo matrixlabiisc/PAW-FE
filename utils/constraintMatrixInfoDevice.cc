@@ -778,7 +778,7 @@ namespace dftfe
     // set the constrained degrees of freedom to values so that constraints
     // are satisfied for flattened array
     //
-template <typename NumberType>
+    template <typename NumberType>
     void
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
       distribute_slave_to_master(
