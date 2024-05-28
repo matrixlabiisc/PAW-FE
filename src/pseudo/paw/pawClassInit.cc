@@ -3327,12 +3327,12 @@ namespace dftfe
 
 
 
-                const std::vector<double> &TensorWfcAE = d_tensorWfcAE[Znum];
-                const std::vector<double> &TensorWfcPS = d_tensorWfcPS[Znum];
-                const std::vector<double> &TensorWfcDerAE =
-                  d_tensorWfcDerAE[Znum];
-                const std::vector<double> &TensorWfcDerPS =
-                  d_tensorWfcDerPS[Znum];
+                // const std::vector<double> &TensorWfcAE = d_tensorWfcAE[Znum];
+                // const std::vector<double> &TensorWfcPS = d_tensorWfcPS[Znum];
+                // const std::vector<double> &TensorWfcDerAE =
+                //   d_tensorWfcDerAE[Znum];
+                // const std::vector<double> &TensorWfcDerPS =
+                //   d_tensorWfcDerPS[Znum];
                 std::vector<double> productOfPSpartialWfcDer =
                   d_productOfPSpartialWfcDer[Znum];
                 std::vector<double> productOfAEpartialWfcDer =
@@ -4561,22 +4561,12 @@ namespace dftfe
 
             std::vector<double> productValsPS(npj_2 * radialMeshSize, 0.0);
             std::vector<double> productValsAE(npj_2 * radialMeshSize, 0.0);
-
-            std::vector<double> productValsijklAE(radialMeshSize * npj_4, 0.0);
-            std::vector<double> productValsijklPS(radialMeshSize * npj_4, 0.0);
-
-            std::vector<double> productDerValsijklAE(radialMeshSize * npj_4,
-                                                     0.0);
-            std::vector<double> productDerValsijklPS(radialMeshSize * npj_4,
-                                                     0.0);
-
             std::vector<double> derCoreRhoAE = d_radialCoreDerAE[*it];
             std::vector<double> derCoreRhoPS = d_radialCoreDerPS[*it];
-
-            std::vector<double> derWfcAE = d_radialWfcDerAE[*it];
-            std::vector<double> derWfcPS = d_radialWfcDerPS[*it];
-            std::vector<double> WfcAE    = d_radialWfcValAE[*it];
-            std::vector<double> WfcPS    = d_radialWfcValPS[*it];
+            std::vector<double> derWfcAE     = d_radialWfcDerAE[*it];
+            std::vector<double> derWfcPS     = d_radialWfcDerPS[*it];
+            std::vector<double> WfcAE        = d_radialWfcValAE[*it];
+            std::vector<double> WfcPS        = d_radialWfcValPS[*it];
 
             // map of projectroIndex tot radialProjectorId
             std::vector<unsigned int> projectorIndexRadialIndexMap(
@@ -4656,45 +4646,9 @@ namespace dftfe
                           r <= 1E-8 ? 0.0 : ValAEij / pow(r, 2);
                         productValsPS[index] =
                           r <= 1E-8 ? 0.0 : ValPSij / pow(r, 2);
-                        for (int projectorIndex_k = 0;
-                             projectorIndex_k < numberOfProjectors;
-                             projectorIndex_k++)
-                          {
-                            unsigned int alpha_k =
-                              projectorIndexRadialIndexMap[projectorIndex_k];
-                            for (int projectorIndex_l = 0;
-                                 projectorIndex_l < numberOfProjectors;
-                                 projectorIndex_l++)
-                              {
-                                unsigned int alpha_l =
-                                  projectorIndexRadialIndexMap
-                                    [projectorIndex_l];
-                                unsigned int indexijkl =
-                                  rpoint * npj_4 + projectorIndex_i * npj_3 +
-                                  projectorIndex_j * npj_2 +
-                                  projectorIndex_k * numberOfProjectors +
-                                  projectorIndex_l;
-                                productValsijklAE[indexijkl] =
-                                  ValAEij *
-                                  WfcAE[alpha_k * radialMeshSize + rpoint] *
-                                  WfcAE[alpha_l * radialMeshSize + rpoint];
-                                productValsijklPS[indexijkl] =
-                                  ValPSij *
-                                  WfcPS[alpha_k * radialMeshSize + rpoint] *
-                                  WfcPS[alpha_l * radialMeshSize + rpoint];
-                                productDerValsijklAE[indexijkl] =
-                                  DerAEij *
-                                  WfcAE[alpha_k * radialMeshSize + rpoint] *
-                                  derWfcAE[alpha_l * radialMeshSize + rpoint];
-                                productDerValsijklPS[indexijkl] =
-                                  DerPSij *
-                                  WfcPS[alpha_k * radialMeshSize + rpoint] *
-                                  derWfcPS[alpha_l * radialMeshSize + rpoint];
-                              } // projectorIndex_l
 
-                          } // projectorIndex_k
-                      }     // projectorIndex_j
-                  }         // projectorIndex_i
+                      } // projectorIndex_j
+                  }     // projectorIndex_i
 
 
 
@@ -4707,11 +4661,6 @@ namespace dftfe
             d_productOfPSpartialWfcValue[*it]       = productValsPS;
             d_productDerCoreDensityWfcDerWfcAE[*it] = derAECoreWfc;
             d_productDerCoreDensityWfcDerWfcPS[*it] = derPSCoreWfc;
-            d_tensorWfcAE[*it]                      = productValsijklAE;
-            d_tensorWfcPS[*it]                      = productValsijklPS;
-            d_tensorWfcDerAE[*it]                   = productDerValsijklAE;
-            d_tensorWfcDerPS[*it]                   = productDerValsijklPS;
-
           } // isGGA
 
       } //*it
