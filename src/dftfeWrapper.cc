@@ -132,6 +132,10 @@ namespace dftfe
       create_dftfe<5, 8, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<5, 9, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<5, 10, dftfe::utils::MemorySpace::HOST>,
+      create_dftfe<5, 11, dftfe::utils::MemorySpace::HOST>,
+      create_dftfe<5, 12, dftfe::utils::MemorySpace::HOST>,
+      create_dftfe<5, 13, dftfe::utils::MemorySpace::HOST>,
+      create_dftfe<5, 14, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<6, 6, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<6, 7, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<6, 8, dftfe::utils::MemorySpace::HOST>,
@@ -139,6 +143,8 @@ namespace dftfe
       create_dftfe<6, 10, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<6, 11, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<6, 12, dftfe::utils::MemorySpace::HOST>,
+      create_dftfe<6, 13, dftfe::utils::MemorySpace::HOST>,
+      create_dftfe<6, 14, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<7, 7, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<7, 8, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<7, 9, dftfe::utils::MemorySpace::HOST>,
@@ -934,18 +940,21 @@ namespace dftfe
             exit(1);
           }
 
-        if (orderElectro < order || orderElectro > order * 2)
-          {
-            std::cout << "Invalid DFT-FE order electrostatics " << orderElectro
-                      << std::endl;
-            exit(1);
-          }
+        // if (orderElectro < order || orderElectro > order * 2)
+        //   {
+        //     std::cout << "Invalid DFT-FE order electrostatics " <<
+        //     orderElectro
+        //               << std::endl;
+        //     exit(1);
+        //   }
 
 
         int listIndex = 0;
         for (int i = 1; i <= order; i++)
           {
-            int maxElectroOrder = (i < order) ? 2 * i : orderElectro;
+            int maxElectroOrder = (i < order) ?
+                                    (i <= 4 ? 2 * i : std::max(14, 2 * i)) :
+                                    orderElectro;
             for (int j = i; j <= maxElectroOrder; j++)
               listIndex++;
           }

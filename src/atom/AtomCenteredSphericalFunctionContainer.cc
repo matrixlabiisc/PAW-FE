@@ -442,8 +442,8 @@ namespace dftfe
                               }
                           }
                         else if (cutOffType == 1 &&
-                                 r < cutOffVal *
-                                       SphericalFunction->getRadialCutOff())
+                                 r <= cutOffVal *
+                                        SphericalFunction->getRadialCutOff())
                           {
                             sparseFlag = 1;
                             break;

@@ -471,15 +471,6 @@ namespace dftfe
                   d_productDerCoreDensityWfcDerWfcAE[Znum];
                 const std::vector<double> &productDerCoreDensityWfcDerWfcPS =
                   d_productDerCoreDensityWfcDerWfcPS[Znum];
-
-
-
-                const std::vector<double> &TensorWfcAE = d_tensorWfcAE[Znum];
-                const std::vector<double> &TensorWfcPS = d_tensorWfcPS[Znum];
-                const std::vector<double> &TensorWfcDerAE =
-                  d_tensorWfcDerAE[Znum];
-                const std::vector<double> &TensorWfcDerPS =
-                  d_tensorWfcDerPS[Znum];
                 std::vector<double> productOfPSpartialWfcDer =
                   d_productOfPSpartialWfcDer[Znum];
                 std::vector<double> productOfAEpartialWfcDer =

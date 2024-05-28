@@ -17,6 +17,22 @@
 // @author Kartick Ramakrishnan
 //
 #include <pawClass.h>
+#include <unistd.h>
+
+unsigned long long
+getTotalSystemMemory()
+{
+  long pages     = sysconf(_SC_PHYS_PAGES);
+  long page_size = sysconf(_SC_PAGE_SIZE);
+  return pages * page_size;
+}
+unsigned long long
+getTotalAvaliableMemory()
+{
+  long pages     = sysconf(_SC_AVPHYS_PAGES);
+  long page_size = sysconf(_SC_PAGE_SIZE);
+  return pages * page_size;
+}
 namespace dftfe
 {
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -40,14 +56,30 @@ namespace dftfe
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
     , d_dftParamsPtr(dftParamsPtr)
   {
-    d_dftfeScratchFolderName = scratchFolderName;
-    d_atomTypes              = atomTypes;
-    d_floatingNuclearCharges = floatingNuclearCharges;
-    d_nOMPThreads            = nOMPThreads;
-    d_reproducible_output    = reproducibleOutput;
-    d_verbosity              = verbosity;
-    d_atomTypeAtributes      = atomAttributes;
-    d_useDevice              = useDevice;
+    d_dftfeScratchFolderName  = scratchFolderName;
+    d_atomTypes               = atomTypes;
+    d_floatingNuclearCharges  = floatingNuclearCharges;
+    d_nOMPThreads             = nOMPThreads;
+    d_reproducible_output     = reproducibleOutput;
+    d_verbosity               = verbosity;
+    d_atomTypeAtributes       = atomAttributes;
+    d_useDevice               = useDevice;
+    double totalSystemMemory  = double(getTotalSystemMemory()) / 1E9 / 48.0;
+    double minAvailableMemory = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    pcout << "Min memory and total system memory: " << minAvailableMemory << " "
+          << totalSystemMemory << std::endl;
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
@@ -356,7 +388,22 @@ namespace dftfe
       {
         atomicNumbers.push_back(atomLocations[iAtom][0]);
       }
-
+    double totalSystemMemory1  = double(getTotalSystemMemory()) / 1E9 / 48.0;
+    double minAvailableMemory1 = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory1,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory1,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    pcout << "Min memory and total system memory: " << minAvailableMemory1
+          << " " << totalSystemMemory1 << std::flush << std::endl;
     d_densityQuadratureId           = densityQuadratureId;
     d_localContributionQuadratureId = localContributionQuadratureId;
     d_densityQuadratureIdElectro    = densityQuadratureIdElectro;
@@ -367,6 +414,23 @@ namespace dftfe
     d_compensationChargeQuadratureIdElectro =
       compensationChargeQuadratureIdElectro;
     // Read Derivative File
+    double totalSystemMemory2  = double(getTotalSystemMemory()) / 1E9 / 48.0;
+    double minAvailableMemory2 = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory2,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory2,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    pcout << "Min memory and total system memory: " << minAvailableMemory2
+          << " " << totalSystemMemory2 << std::flush << std::endl;
+
     for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
          it != d_atomTypes.end();
          ++it)
@@ -430,6 +494,22 @@ namespace dftfe
         pcout << "PAW Initialization: Warning!! PAW RmaxAug is reset to: "
               << d_RmaxAug[*it] << " from: " << Rold << std::endl;
       }
+    double totalSystemMemory3  = double(getTotalSystemMemory()) / 1E9 / 48.0;
+    double minAvailableMemory3 = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory3,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory3,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    pcout << "Min memory and total system memory: " << minAvailableMemory3
+          << " " << totalSystemMemory3 << std::flush << std::endl;
     // Reading ZeroPotential Data
     createAtomCenteredSphericalFunctionsForZeroPotential();
     // Reading Core Density Data
@@ -451,7 +531,22 @@ namespace dftfe
       std::make_shared<AtomCenteredSphericalFunctionContainer>();
 
     d_atomicShapeFnsContainer->init(atomicNumbers, d_atomicShapeFnsMap);
-
+    double totalSystemMemory4  = double(getTotalSystemMemory()) / 1E9 / 48.0;
+    double minAvailableMemory4 = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory4,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory4,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    pcout << "Min memory and total system memory: " << minAvailableMemory4
+          << " " << totalSystemMemory4 << std::flush << std::endl;
     if (!d_useDevice)
       {
         if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
@@ -477,12 +572,93 @@ namespace dftfe
 
     computeRadialMultipoleData();
     computeMultipoleInverse();
+    double totalSystemMemory5  = double(getTotalSystemMemory()) / 1E9 / 48.0;
+    double minAvailableMemory5 = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory5,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory5,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    pcout << "Min memory and total system memory: " << minAvailableMemory5
+          << " " << totalSystemMemory5 << std::flush << std::endl;
     computeNonlocalPseudoPotentialConstants(CouplingType::pawOverlapEntries);
+    double totalSystemMemory6  = double(getTotalSystemMemory()) / 1E9 / 48.0;
+    double minAvailableMemory6 = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory6,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory6,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    pcout << "Min memory and total system memory: " << minAvailableMemory6
+          << " " << totalSystemMemory6 << std::flush << std::endl;
     initialiseKineticEnergyCorrection();
     initialiseColoumbicEnergyCorrection();
     initialiseZeroPotential();
+    double totalSystemMemory7  = double(getTotalSystemMemory()) / 1E9 / 48.0;
+    double minAvailableMemory7 = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory7,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory7,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    pcout << "Min memory and total system memory: " << minAvailableMemory7
+          << " " << totalSystemMemory7 << std::flush << std::endl;
     initialiseDataonRadialMesh();
+    double totalSystemMemory8  = double(getTotalSystemMemory()) / 1E9 / 48.0;
+    double minAvailableMemory8 = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory8,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory8,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    pcout << "Min memory and total system memory: " << minAvailableMemory8
+          << " " << totalSystemMemory8 << std::flush << std::endl;
     computeCoreDeltaExchangeCorrelationEnergy();
+    double totalSystemMemory  = double(getTotalSystemMemory()) / 1E9 / 48.0;
+    double minAvailableMemory = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    pcout << "Min memory and total system memory: " << minAvailableMemory << " "
+          << totalSystemMemory << std::flush << std::endl;
+    MPI_Barrier(d_mpiCommParent);
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
@@ -525,11 +701,9 @@ namespace dftfe
           d_BasisOperatorHostPtr, d_nlpspQuadratureId, 1E-14, 0);
         pcout << "Computing sparse structure for shapeFunctions: " << std::endl;
         d_atomicShapeFnsContainer->computeSparseStructure(
-          d_BasisOperatorElectroHostPtr, d_densityQuadratureIdElectro, 1E-8, 0);
+          d_BasisOperatorElectroHostPtr, 3, 1.25, 1);
         d_atomicShapeFnsContainer->computeFEEvaluationMaps(
-          d_BasisOperatorElectroHostPtr,
-          d_densityQuadratureIdElectro,
-          dofHanderId);
+          d_BasisOperatorElectroHostPtr, 3, dofHanderId);
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
         if (d_verbosity >= 2)
@@ -545,9 +719,57 @@ namespace dftfe
       kPointCoordinates,
       d_BasisOperatorHostPtr,
       d_nlpspQuadratureId);
+    double totalSystemMemory  = double(getTotalSystemMemory()) / 1E9 / 48.0;
+    double minAvailableMemory = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    pcout << "Min memory and total system memory: " << minAvailableMemory << " "
+          << totalSystemMemory << std::endl;
     pcout << "-----Compensation Charge---" << std::endl;
     computeCompensationChargeL0();
+    double totalSystemMemory1  = double(getTotalSystemMemory()) / 1E9 / 48.0;
+    double minAvailableMemory1 = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory1,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory1,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    pcout << "Min memory and total system memory: " << minAvailableMemory1
+          << " " << totalSystemMemory1 << std::endl;
     computeCompensationChargeCoeff();
+    double totalSystemMemory2  = double(getTotalSystemMemory()) / 1E9 / 48.0;
+    double minAvailableMemory2 = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory2,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory2,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+    pcout << "Min memory and total system memory: " << minAvailableMemory2
+          << " " << totalSystemMemory2 << std::endl;
     computeNonlocalPseudoPotentialConstants(
       CouplingType::inversePawOverlapEntries);
 
@@ -773,8 +995,6 @@ namespace dftfe
                           ->d_elementIndexesInAtomCompactSupport[atomId];
                     int numberElementsInAtomCompactSupport =
                       elementIndexesInAtomCompactSupport.size();
-                    pcout << "Number of elements in compact support: "
-                          << numberElementsInAtomCompactSupport << std::endl;
                     for (int iElem = 0;
                          iElem < numberElementsInAtomCompactSupport;
                          iElem++)
@@ -1062,6 +1282,25 @@ namespace dftfe
           {
             pcout << "PAWClass: Pmatrix construction in MemoryOpt Mode "
                   << std::endl;
+            double totalSystemMemory =
+              double(getTotalSystemMemory()) / 1E9 / 48.0;
+            double minAvailableMemory =
+              double(getTotalAvaliableMemory()) / 1E9 / 48.0;
+            MPI_Allreduce(MPI_IN_PLACE,
+                          &totalSystemMemory,
+                          1,
+                          MPI_DOUBLE,
+                          MPI_SUM,
+                          d_mpiCommParent);
+            MPI_Allreduce(MPI_IN_PLACE,
+                          &minAvailableMemory,
+                          1,
+                          MPI_DOUBLE,
+                          MPI_SUM,
+                          d_mpiCommParent);
+            pcout << "Min memory and total system memory: "
+                  << minAvailableMemory << " " << totalSystemMemory
+                  << std::endl;
             if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
               {
                 const unsigned int numberNodesPerElement =
@@ -1069,9 +1308,18 @@ namespace dftfe
                 const ValueType                  alpha1 = 1.0;
                 const std::vector<unsigned int> &atomicNumber =
                   d_atomicShapeFnsContainer->getAtomicNumbers();
+
+                MPI_Barrier(d_mpiCommParent);
+                std::vector<ValueType> PijMatrix(d_totalProjectors *
+                                                   d_totalProjectors,
+                                                 0.0);
+                std::cout << "Size of PijMatrix" << PijMatrix.size()
+                          << std::endl;
+                MPI_Barrier(d_mpiCommParent);
                 const unsigned int natoms = atomicNumber.size();
                 const unsigned int ndofs = d_BasisOperatorHostPtr->nOwnedDofs();
-
+                std::cout << "Nofs: " << ndofs
+                          << " in procs: " << d_this_mpi_process << std::endl;
                 std::vector<unsigned int> relAtomdIdsInCurrentProcs =
                   relevantAtomdIdsInCurrentProcs();
                 unsigned int              totalProjectorsInProcessor = 0;
@@ -1092,13 +1340,22 @@ namespace dftfe
                 std::cout << "Projectors in procs: " << d_this_mpi_process
                           << " is: " << totalProjectorsInProcessor << std::endl;
                 MPI_Barrier(d_mpiCommParent);
+                std::cout << "Dimenssions in procs: " << ndofs << " "
+                          << totalProjectorsInProcessor << " "
+                          << d_totalProjectors << " " << d_this_mpi_process
+                          << std::endl;
+                MPI_Barrier(d_mpiCommParent);
                 std::vector<ValueType> processorLocalPmatrix(
                   ndofs * totalProjectorsInProcessor, 0.0);
+                std::cout << "Size of processorLocalPmatrix"
+                          << processorLocalPmatrix.size() << std::endl;
+                MPI_Barrier(d_mpiCommParent);
                 std::vector<ValueType> processorLocalPTransPMatrix(
                   totalProjectorsInProcessor * totalProjectorsInProcessor, 0.0);
-                std::vector<ValueType>    PijMatrix(d_totalProjectors *
-                                                   d_totalProjectors,
-                                                 0.0);
+                std::cout << "Size of processorLocalPTransPMatrix"
+                          << processorLocalPTransPMatrix.size() << std::endl;
+                MPI_Barrier(d_mpiCommParent);
+
                 std::vector<unsigned int> numProjList;
                 for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
                      it != d_atomTypes.end();
@@ -1109,7 +1366,8 @@ namespace dftfe
                         ->getTotalNumberOfSphericalFunctionsPerAtom(*it));
                   }
 
-
+                pcout << "DEBUG: Line 1108" << std::endl;
+                MPI_Barrier(d_mpiCommParent);
                 std::map<
                   unsigned int,
                   dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>>
@@ -1130,7 +1388,8 @@ namespace dftfe
                           numProjList[i]);
                       }
                   }
-
+                pcout << "DEBUG: Line 1130" << std::endl;
+                MPI_Barrier(d_mpiCommParent);
 
 
                 for (int kPoint = 0; kPoint < d_kpointWeights.size(); kPoint++)
@@ -1144,7 +1403,8 @@ namespace dftfe
                           d_atomicProjectorFnsContainer
                             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                         Pmatrix[numProj].setValue(0);
-
+                        pcout << "DEBUG: Line 1145" << std::endl;
+                        MPI_Barrier(d_mpiCommParent);
                         if (d_atomicProjectorFnsContainer
                               ->atomIdPresentInCurrentProcessor(atomId))
                           {
@@ -1269,11 +1529,13 @@ namespace dftfe
                         &processorLocalPTransPMatrix[0],
                         totalProjectorsInProcessor);
                   } // kPoint
-
+                pcout << "DEBUG: Line 1271" << std::endl;
+                MPI_Barrier(d_mpiCommParent);
 
                 for (int iAtom = 0; iAtom < relAtomdIdsInCurrentProcs.size();
                      iAtom++)
                   {
+                    std::cout << "iAtom No: " << iAtom << std::endl;
                     unsigned int atomId = relAtomdIdsInCurrentProcs[iAtom];
                     unsigned int Znum   = atomicNumber[atomId];
                     unsigned int numProj_i =
@@ -2821,9 +3083,8 @@ namespace dftfe
 
             std::vector<double> rab            = d_radialJacobianData[Znum];
             unsigned int        RadialMeshSize = RadialMesh.size();
-            const unsigned int  numberofValues =
-              std::min(RmaxIndex + 5, RadialMeshSize);
-            const unsigned int numberOfProjectors =
+            const unsigned int  numberofValues = RmaxIndex + 5;
+            const unsigned int  numberOfProjectors =
               d_atomicProjectorFnsContainer
                 ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
             const unsigned int numberOfRadialProjectors =
@@ -3088,15 +3349,6 @@ namespace dftfe
                   d_productDerCoreDensityWfcDerWfcAE[Znum];
                 const std::vector<double> &productDerCoreDensityWfcDerWfcPS =
                   d_productDerCoreDensityWfcDerWfcPS[Znum];
-
-
-
-                const std::vector<double> &TensorWfcAE = d_tensorWfcAE[Znum];
-                const std::vector<double> &TensorWfcPS = d_tensorWfcPS[Znum];
-                const std::vector<double> &TensorWfcDerAE =
-                  d_tensorWfcDerAE[Znum];
-                const std::vector<double> &TensorWfcDerPS =
-                  d_tensorWfcDerPS[Znum];
                 std::vector<double> productOfPSpartialWfcDer =
                   d_productOfPSpartialWfcDer[Znum];
                 std::vector<double> productOfAEpartialWfcDer =
@@ -4225,8 +4477,8 @@ namespace dftfe
         unsigned int        Znum           = *it;
         std::vector<double> radialMesh     = d_radialMesh[*it];
         std::vector<double> jacobianData   = d_radialJacobianData[*it];
-        const unsigned int  radialMeshSize = radialMesh.size();
         const unsigned int  rmaxAugIndex   = d_RmaxAugIndex[*it];
+        const unsigned int  radialMeshSize = radialMesh.size();
         const unsigned int  numberOfProjectors =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
@@ -4325,22 +4577,12 @@ namespace dftfe
 
             std::vector<double> productValsPS(npj_2 * radialMeshSize, 0.0);
             std::vector<double> productValsAE(npj_2 * radialMeshSize, 0.0);
-
-            std::vector<double> productValsijklAE(radialMeshSize * npj_4, 0.0);
-            std::vector<double> productValsijklPS(radialMeshSize * npj_4, 0.0);
-
-            std::vector<double> productDerValsijklAE(radialMeshSize * npj_4,
-                                                     0.0);
-            std::vector<double> productDerValsijklPS(radialMeshSize * npj_4,
-                                                     0.0);
-
             std::vector<double> derCoreRhoAE = d_radialCoreDerAE[*it];
             std::vector<double> derCoreRhoPS = d_radialCoreDerPS[*it];
-
-            std::vector<double> derWfcAE = d_radialWfcDerAE[*it];
-            std::vector<double> derWfcPS = d_radialWfcDerPS[*it];
-            std::vector<double> WfcAE    = d_radialWfcValAE[*it];
-            std::vector<double> WfcPS    = d_radialWfcValPS[*it];
+            std::vector<double> derWfcAE     = d_radialWfcDerAE[*it];
+            std::vector<double> derWfcPS     = d_radialWfcDerPS[*it];
+            std::vector<double> WfcAE        = d_radialWfcValAE[*it];
+            std::vector<double> WfcPS        = d_radialWfcValPS[*it];
 
             // map of projectroIndex tot radialProjectorId
             std::vector<unsigned int> projectorIndexRadialIndexMap(
@@ -4420,45 +4662,9 @@ namespace dftfe
                           r <= 1E-8 ? 0.0 : ValAEij / pow(r, 2);
                         productValsPS[index] =
                           r <= 1E-8 ? 0.0 : ValPSij / pow(r, 2);
-                        for (int projectorIndex_k = 0;
-                             projectorIndex_k < numberOfProjectors;
-                             projectorIndex_k++)
-                          {
-                            unsigned int alpha_k =
-                              projectorIndexRadialIndexMap[projectorIndex_k];
-                            for (int projectorIndex_l = 0;
-                                 projectorIndex_l < numberOfProjectors;
-                                 projectorIndex_l++)
-                              {
-                                unsigned int alpha_l =
-                                  projectorIndexRadialIndexMap
-                                    [projectorIndex_l];
-                                unsigned int indexijkl =
-                                  rpoint * npj_4 + projectorIndex_i * npj_3 +
-                                  projectorIndex_j * npj_2 +
-                                  projectorIndex_k * numberOfProjectors +
-                                  projectorIndex_l;
-                                productValsijklAE[indexijkl] =
-                                  ValAEij *
-                                  WfcAE[alpha_k * radialMeshSize + rpoint] *
-                                  WfcAE[alpha_l * radialMeshSize + rpoint];
-                                productValsijklPS[indexijkl] =
-                                  ValPSij *
-                                  WfcPS[alpha_k * radialMeshSize + rpoint] *
-                                  WfcPS[alpha_l * radialMeshSize + rpoint];
-                                productDerValsijklAE[indexijkl] =
-                                  DerAEij *
-                                  WfcAE[alpha_k * radialMeshSize + rpoint] *
-                                  derWfcAE[alpha_l * radialMeshSize + rpoint];
-                                productDerValsijklPS[indexijkl] =
-                                  DerPSij *
-                                  WfcPS[alpha_k * radialMeshSize + rpoint] *
-                                  derWfcPS[alpha_l * radialMeshSize + rpoint];
-                              } // projectorIndex_l
 
-                          } // projectorIndex_k
-                      }     // projectorIndex_j
-                  }         // projectorIndex_i
+                      } // projectorIndex_j
+                  }     // projectorIndex_i
 
 
 
@@ -4471,11 +4677,6 @@ namespace dftfe
             d_productOfPSpartialWfcValue[*it]       = productValsPS;
             d_productDerCoreDensityWfcDerWfcAE[*it] = derAECoreWfc;
             d_productDerCoreDensityWfcDerWfcPS[*it] = derPSCoreWfc;
-            d_tensorWfcAE[*it]                      = productValsijklAE;
-            d_tensorWfcPS[*it]                      = productValsijklPS;
-            d_tensorWfcDerAE[*it]                   = productDerValsijklAE;
-            d_tensorWfcDerPS[*it]                   = productDerValsijklPS;
-
           } // isGGA
 
       } //*it
@@ -4499,188 +4700,182 @@ namespace dftfe
         const unsigned int numLocalDofs = d_BasisOperatorHostPtr->nOwnedDofs();
         const unsigned int totalLocallyOwnedCells =
           d_BasisOperatorHostPtr->nCells();
-        if (totalLocallyOwnedCells > 0)
+        const unsigned int numNodesPerElement =
+          d_BasisOperatorHostPtr->nDofsPerCell();
+        // band group parallelization data structures
+        const unsigned int numberBandGroups =
+          dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
+        const unsigned int bandGroupTaskId =
+          dealii::Utilities::MPI::this_mpi_process(interBandGroupComm);
+        std::vector<unsigned int> bandGroupLowHighPlusOneIndices;
+        dftUtils::createBandParallelizationIndices(
+          interBandGroupComm,
+          totalNumWaveFunctions,
+          bandGroupLowHighPlusOneIndices);
+
+        const unsigned int BVec = std::min(d_dftParamsPtr->chebyWfcBlockSize,
+                                           bandGroupLowHighPlusOneIndices[1]);
+
+        dftfe::utils::MemoryStorage<ValueType, memorySpace> tempCellNodalData;
+
+        const double spinPolarizedFactor =
+          (d_dftParamsPtr->spinPolarized == 1) ? 1.0 : 2.0;
+        const unsigned int numSpinComponents =
+          (d_dftParamsPtr->spinPolarized == 1) ? 2 : 1;
+
+        const ValueType zero                    = 0;
+        const ValueType scalarCoeffAlphaRho     = 1.0;
+        const ValueType scalarCoeffBetaRho      = 1.0;
+        const ValueType scalarCoeffAlphaGradRho = 1.0;
+        const ValueType scalarCoeffBetaGradRho  = 1.0;
+
+        const unsigned int cellsBlockSize =
+          memorySpace == dftfe::utils::MemorySpace::DEVICE ? 50 : 1;
+        const unsigned int numCellBlocks =
+          totalLocallyOwnedCells / cellsBlockSize;
+        MPI_Barrier(d_mpiCommParent);
+        const unsigned int remCellBlockSize =
+          totalLocallyOwnedCells - numCellBlocks * cellsBlockSize;
+        d_BasisOperatorHostPtr->reinit(BVec, cellsBlockSize, quadratureIndex);
+        const unsigned int numQuadPoints =
+          d_BasisOperatorHostPtr->nQuadsPerCell();
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+              partialOccupVecHost(BVec, 0.0);
+        auto &partialOccupVec = partialOccupVecHost;
+
+        dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
+          *flattenedArrayBlock;
+
+        dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
+                     projectorKetTimesVector;
+        unsigned int previousSize = 0;
+
+        for (unsigned int kPoint = 0; kPoint < kPointWeights.size(); ++kPoint)
           {
-            const unsigned int numNodesPerElement =
-              d_BasisOperatorHostPtr->nDofsPerCell();
-            // band group parallelization data structures
-            const unsigned int numberBandGroups =
-              dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
-            const unsigned int bandGroupTaskId =
-              dealii::Utilities::MPI::this_mpi_process(interBandGroupComm);
-            std::vector<unsigned int> bandGroupLowHighPlusOneIndices;
-            dftUtils::createBandParallelizationIndices(
-              interBandGroupComm,
-              totalNumWaveFunctions,
-              bandGroupLowHighPlusOneIndices);
-
-            const unsigned int BVec =
-              std::min(d_dftParamsPtr->chebyWfcBlockSize,
-                       bandGroupLowHighPlusOneIndices[1]);
-
-            dftfe::utils::MemoryStorage<ValueType, memorySpace>
-              tempCellNodalData;
-
-            const double spinPolarizedFactor =
-              (d_dftParamsPtr->spinPolarized == 1) ? 1.0 : 2.0;
-            const unsigned int numSpinComponents =
-              (d_dftParamsPtr->spinPolarized == 1) ? 2 : 1;
-
-            const ValueType zero                    = 0;
-            const ValueType scalarCoeffAlphaRho     = 1.0;
-            const ValueType scalarCoeffBetaRho      = 1.0;
-            const ValueType scalarCoeffAlphaGradRho = 1.0;
-            const ValueType scalarCoeffBetaGradRho  = 1.0;
-
-            const unsigned int cellsBlockSize =
-              memorySpace == dftfe::utils::MemorySpace::DEVICE ? 50 : 1;
-            const unsigned int numCellBlocks =
-              totalLocallyOwnedCells / cellsBlockSize;
-            const unsigned int remCellBlockSize =
-              totalLocallyOwnedCells - numCellBlocks * cellsBlockSize;
-            d_BasisOperatorHostPtr->reinit(BVec,
-                                           cellsBlockSize,
-                                           quadratureIndex);
-            const unsigned int numQuadPoints =
-              d_BasisOperatorHostPtr->nQuadsPerCell();
-            dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-                  partialOccupVecHost(BVec, 0.0);
-            auto &partialOccupVec = partialOccupVecHost;
-
-            dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
-              *flattenedArrayBlock;
-
-            dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
-                         projectorKetTimesVector;
-            unsigned int previousSize = 0;
-
-            for (unsigned int kPoint = 0; kPoint < kPointWeights.size();
-                 ++kPoint)
+            unsigned int numberOfRemainingElectrons = numberOfElectrons;
+            for (unsigned int spinIndex = 0; spinIndex < numSpinComponents;
+                 ++spinIndex)
               {
-                unsigned int numberOfRemainingElectrons = numberOfElectrons;
-                for (unsigned int spinIndex = 0; spinIndex < numSpinComponents;
-                     ++spinIndex)
+                d_nonLocalOperator->initialiseOperatorActionOnX(kPoint);
+
+                for (unsigned int jvec = 0; jvec < totalNumWaveFunctions;
+                     jvec += BVec)
                   {
-                    d_nonLocalOperator->initialiseOperatorActionOnX(kPoint);
-
-                    for (unsigned int jvec = 0; jvec < totalNumWaveFunctions;
-                         jvec += BVec)
+                    const unsigned int currentBlockSize =
+                      std::min(BVec, totalNumWaveFunctions - jvec);
+                    d_BasisOperatorHostPtr->reinit(currentBlockSize,
+                                                   cellsBlockSize,
+                                                   quadratureIndex);
+                    flattenedArrayBlock =
+                      &(d_BasisOperatorHostPtr->getMultiVector(currentBlockSize,
+                                                               0));
+                    d_nonLocalOperator->initialiseFlattenedDataStructure(
+                      currentBlockSize, projectorKetTimesVector);
+                    if ((jvec + currentBlockSize) <=
+                          bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId +
+                                                         1] &&
+                        (jvec + currentBlockSize) >
+                          bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
                       {
-                        const unsigned int currentBlockSize =
-                          std::min(BVec, totalNumWaveFunctions - jvec);
-                        d_BasisOperatorHostPtr->reinit(currentBlockSize,
-                                                       cellsBlockSize,
-                                                       quadratureIndex);
-                        flattenedArrayBlock =
-                          &(d_BasisOperatorHostPtr->getMultiVector(
-                            currentBlockSize, 0));
-                        d_nonLocalOperator->initialiseFlattenedDataStructure(
-                          currentBlockSize, projectorKetTimesVector);
-                        if ((jvec + currentBlockSize) <=
-                              bandGroupLowHighPlusOneIndices[2 *
-                                                               bandGroupTaskId +
-                                                             1] &&
-                            (jvec + currentBlockSize) >
-                              bandGroupLowHighPlusOneIndices[2 *
-                                                             bandGroupTaskId])
+                        // compute occupancy Vector
+                        for (unsigned int iEigenVec = 0;
+                             iEigenVec < currentBlockSize;
+                             ++iEigenVec)
                           {
-                            // compute occupancy Vector
-                            for (unsigned int iEigenVec = 0;
-                                 iEigenVec < currentBlockSize;
-                                 ++iEigenVec)
+                            double OccupancyFactor = 0.0;
+                            if (numberOfRemainingElectrons == 1)
                               {
-                                double OccupancyFactor = 0.0;
-                                if (numberOfRemainingElectrons == 1)
-                                  {
-                                    OccupancyFactor            = 0.5;
-                                    numberOfRemainingElectrons = 0;
-                                  }
-                                else if (numberOfRemainingElectrons > 1)
-                                  {
-                                    OccupancyFactor = 1.0;
-                                    numberOfRemainingElectrons -=
-                                      spinPolarizedFactor;
-                                  }
-
-
-
-                                *(partialOccupVecHost.begin() + iEigenVec) =
-                                  OccupancyFactor * kPointWeights[kPoint] *
+                                OccupancyFactor            = 0.5;
+                                numberOfRemainingElectrons = 0;
+                              }
+                            else if (numberOfRemainingElectrons > 1)
+                              {
+                                OccupancyFactor = 1.0;
+                                numberOfRemainingElectrons -=
                                   spinPolarizedFactor;
                               }
-                            for (unsigned int iNode = 0; iNode < numLocalDofs;
-                                 ++iNode)
-                              std::memcpy(
-                                flattenedArrayBlock->data() +
-                                  iNode * currentBlockSize,
-                                X->data() +
-                                  numLocalDofs * totalNumWaveFunctions *
-                                    (numSpinComponents * kPoint + spinIndex) +
-                                  iNode * totalNumWaveFunctions + jvec,
-                                currentBlockSize * sizeof(ValueType));
-                            flattenedArrayBlock->updateGhostValues();
-                            d_BasisOperatorHostPtr->distribute(
-                              *(flattenedArrayBlock));
 
-                            for (int iblock = 0; iblock < (numCellBlocks + 1);
-                                 iblock++)
+
+
+                            *(partialOccupVecHost.begin() + iEigenVec) =
+                              OccupancyFactor * kPointWeights[kPoint] *
+                              spinPolarizedFactor;
+                          }
+                        for (unsigned int iNode = 0; iNode < numLocalDofs;
+                             ++iNode)
+                          std::memcpy(flattenedArrayBlock->data() +
+                                        iNode * currentBlockSize,
+                                      X->data() +
+                                        numLocalDofs * totalNumWaveFunctions *
+                                          (numSpinComponents * kPoint +
+                                           spinIndex) +
+                                        iNode * totalNumWaveFunctions + jvec,
+                                      currentBlockSize * sizeof(ValueType));
+                        flattenedArrayBlock->updateGhostValues();
+                        d_BasisOperatorHostPtr->distribute(
+                          *(flattenedArrayBlock));
+
+                        for (int iblock = 0; iblock < (numCellBlocks + 1);
+                             iblock++)
+                          {
+                            const unsigned int currentCellsBlockSize =
+                              (iblock == numCellBlocks) ? remCellBlockSize :
+                                                          cellsBlockSize;
+                            if (currentCellsBlockSize > 0)
                               {
-                                const unsigned int currentCellsBlockSize =
-                                  (iblock == numCellBlocks) ? remCellBlockSize :
-                                                              cellsBlockSize;
-                                if (currentCellsBlockSize > 0)
+                                const unsigned int startingCellId =
+                                  iblock * cellsBlockSize;
+                                if (currentCellsBlockSize * currentBlockSize !=
+                                    previousSize)
                                   {
-                                    const unsigned int startingCellId =
-                                      iblock * cellsBlockSize;
-                                    if (currentCellsBlockSize *
-                                          currentBlockSize !=
-                                        previousSize)
-                                      {
-                                        tempCellNodalData.resize(
-                                          currentCellsBlockSize *
-                                          currentBlockSize * numLocalDofs);
-                                        previousSize = currentCellsBlockSize *
-                                                       currentBlockSize;
-                                      }
-                                    d_BasisOperatorHostPtr
-                                      ->extractToCellNodalDataKernel(
-                                        *(flattenedArrayBlock),
-                                        tempCellNodalData.data(),
-                                        std::pair<unsigned int, unsigned int>(
-                                          startingCellId,
-                                          startingCellId +
-                                            currentCellsBlockSize));
-                                    d_nonLocalOperator->applyCconjtransOnX(
-                                      tempCellNodalData.data(),
-                                      std::pair<unsigned int, unsigned int>(
-                                        startingCellId,
-                                        startingCellId +
-                                          currentCellsBlockSize));
-                                    // Call apply CconjTranspose
+                                    tempCellNodalData.resize(
+                                      currentCellsBlockSize * currentBlockSize *
+                                      numNodesPerElement);
+                                    previousSize =
+                                      currentCellsBlockSize * currentBlockSize;
+                                  }
+                                d_BasisOperatorHostPtr
+                                  ->extractToCellNodalDataKernel(
+                                    *(flattenedArrayBlock),
+                                    tempCellNodalData.data(),
+                                    std::pair<unsigned int, unsigned int>(
+                                      startingCellId,
+                                      startingCellId + currentCellsBlockSize));
+                                d_nonLocalOperator->applyCconjtransOnX(
+                                  tempCellNodalData.data(),
+                                  std::pair<unsigned int, unsigned int>(
+                                    startingCellId,
+                                    startingCellId + currentCellsBlockSize));
+                                // Call apply CconjTranspose
 
 
-                                  } // non-trivial cell block check
-                              }     // cells block loop
+                              } // non-trivial cell block check
+                          }     // cells block loop
 
-                            d_nonLocalOperator->applyAllReduceOnCconjtransX(
-                              projectorKetTimesVector);
-                            d_nonLocalOperator
-                              ->copyBackFromDistributedVectorToLocalDataStructure(
-                                projectorKetTimesVector, partialOccupVec);
-                            computeDij(
-                              false, jvec, currentBlockSize, spinIndex, kPoint);
-                            // Call computeDij
-                          } // if
-                      }
+                        d_nonLocalOperator->applyAllReduceOnCconjtransX(
+                          projectorKetTimesVector);
+                        d_nonLocalOperator
+                          ->copyBackFromDistributedVectorToLocalDataStructure(
+                            projectorKetTimesVector, partialOccupVec);
+                        computeDij(
+                          false, jvec, currentBlockSize, spinIndex, kPoint);
+                        // Call computeDij
+                      } // if
                   }
               }
-
-
-            MPI_Barrier(d_mpiCommParent);
-            communicateDijAcrossAllProcessors(TypeOfField::In,
-                                              interpoolcomm,
-                                              interBandGroupComm);
           }
+
+
+
+        std::cout << "DEBUG: " << d_this_mpi_process << " "
+                  << totalLocallyOwnedCells << std::endl;
+        MPI_Barrier(d_mpiCommParent);
+        communicateDijAcrossAllProcessors(TypeOfField::In,
+                                          interpoolcomm,
+                                          interBandGroupComm);
+        std::cout << "Size of D_ij in: " << D_ij[TypeOfField::In].size() << " "
+                  << d_this_mpi_process << std::endl;
+        MPI_Barrier(d_mpiCommParent);
       }
   }
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
