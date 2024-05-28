@@ -21,6 +21,12 @@
 
 unsigned long long getTotalSystemMemory()
 {
+    long pages = sysconf(_SC_PHYS_PAGES);
+    long page_size = sysconf(_SC_PAGE_SIZE);
+    return pages * page_size;
+}
+unsigned long long getTotalAvaliableMemory()
+{
     long pages = sysconf(_SC_AVPHYS_PAGES);
     long page_size = sysconf(_SC_PAGE_SIZE);
     return pages * page_size;
@@ -56,6 +62,21 @@ namespace dftfe
     d_verbosity              = verbosity;
     d_atomTypeAtributes      = atomAttributes;
     d_useDevice              = useDevice;
+    double totalSystemMemory = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory<<" "<<totalSystemMemory<<std::endl;                     
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
@@ -364,7 +385,21 @@ namespace dftfe
       {
         atomicNumbers.push_back(atomLocations[iAtom][0]);
       }
-
+    double totalSystemMemory1 = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory1 = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory1,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory1,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory1<<" "<<totalSystemMemory1<<std::flush<<std::endl;
     d_densityQuadratureId           = densityQuadratureId;
     d_localContributionQuadratureId = localContributionQuadratureId;
     d_densityQuadratureIdElectro    = densityQuadratureIdElectro;
@@ -375,6 +410,22 @@ namespace dftfe
     d_compensationChargeQuadratureIdElectro =
       compensationChargeQuadratureIdElectro;
     // Read Derivative File
+    double totalSystemMemory2 = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory2 = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory2,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory2,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory2<<" "<<totalSystemMemory2<<std::flush<<std::endl;
+
     for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
          it != d_atomTypes.end();
          ++it)
@@ -438,6 +489,21 @@ namespace dftfe
         pcout << "PAW Initialization: Warning!! PAW RmaxAug is reset to: "
               << d_RmaxAug[*it] << " from: " << Rold << std::endl;
       }
+    double totalSystemMemory3 = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory3 = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory3,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory3,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory3<<" "<<totalSystemMemory3<<std::flush<<std::endl;  
     // Reading ZeroPotential Data
     createAtomCenteredSphericalFunctionsForZeroPotential();
     // Reading Core Density Data
@@ -459,7 +525,21 @@ namespace dftfe
       std::make_shared<AtomCenteredSphericalFunctionContainer>();
 
     d_atomicShapeFnsContainer->init(atomicNumbers, d_atomicShapeFnsMap);
-
+    double totalSystemMemory4 = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory4 = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory4,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory4,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory4<<" "<<totalSystemMemory4<<std::flush<<std::endl;
     if (!d_useDevice)
       {
         if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
@@ -485,12 +565,88 @@ namespace dftfe
 
     computeRadialMultipoleData();
     computeMultipoleInverse();
+    double totalSystemMemory5 = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory5 = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory5,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory5,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory5<<" "<<totalSystemMemory5<<std::flush<<std::endl;    
     computeNonlocalPseudoPotentialConstants(CouplingType::pawOverlapEntries);
+    double totalSystemMemory6 = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory6 = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory6,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory6,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory6<<" "<<totalSystemMemory6<<std::flush<<std::endl;    
     initialiseKineticEnergyCorrection();
     initialiseColoumbicEnergyCorrection();
     initialiseZeroPotential();
+    double totalSystemMemory7 = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory7 = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory7,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory7,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory7<<" "<<totalSystemMemory7<<std::flush<<std::endl; 
     initialiseDataonRadialMesh();
+    double totalSystemMemory8 = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory8 = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory8,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory8,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory8<<" "<<totalSystemMemory8<<std::flush<<std::endl;     
     computeCoreDeltaExchangeCorrelationEnergy();
+    double totalSystemMemory = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory<<" "<<totalSystemMemory<<std::flush<<std::endl; 
+      MPI_Barrier(d_mpiCommParent);   
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
@@ -551,17 +707,54 @@ namespace dftfe
       kPointCoordinates,
       d_BasisOperatorHostPtr,
       d_nlpspQuadratureId);
+    double totalSystemMemory = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory<<" "<<totalSystemMemory<<std::endl;      
     pcout << "-----Compensation Charge---" << std::endl;
-                   double meoryInTask1 =  getTotalSystemMemory()/1E9;
-                
-                MPI_Barrier(d_mpiCommParent);
-                std::cout<<"Memory used "<<meoryInTask1<<" in: "<<d_this_mpi_process<<std::endl;
     computeCompensationChargeL0();
+    double totalSystemMemory1 = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory1 = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory1,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory1,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory1<<" "<<totalSystemMemory1<<std::endl;    
     computeCompensationChargeCoeff();
-                   double meoryInTask2 =  getTotalSystemMemory()/1E9;
-                
-                MPI_Barrier(d_mpiCommParent);
-                std::cout<<"Memory used "<<meoryInTask2<<" in: "<<d_this_mpi_process<<std::endl;
+    double totalSystemMemory2 = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory2 = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory2,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory2,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory2<<" "<<totalSystemMemory2<<std::endl;    
     computeNonlocalPseudoPotentialConstants(
       CouplingType::inversePawOverlapEntries);
 
@@ -1074,6 +1267,21 @@ namespace dftfe
           {
             pcout << "PAWClass: Pmatrix construction in MemoryOpt Mode "
                   << std::endl;
+    double totalSystemMemory = double(getTotalSystemMemory())/1E9/48.0;
+    double minAvailableMemory = double(getTotalAvaliableMemory())/1E9/48.0;
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &totalSystemMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);
+        MPI_Allreduce(MPI_IN_PLACE,
+                  &minAvailableMemory,
+                  1,
+                  MPI_DOUBLE,
+                  MPI_SUM,
+                  d_mpiCommParent);   
+      pcout<<"Min memory and total system memory: "<<minAvailableMemory<<" "<<totalSystemMemory<<std::endl;
             if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
               {
                 const unsigned int numberNodesPerElement =
@@ -1081,18 +1289,7 @@ namespace dftfe
                 const ValueType                  alpha1 = 1.0;
                 const std::vector<unsigned int> &atomicNumber =
                   d_atomicShapeFnsContainer->getAtomicNumbers();
-                // std::cout<<"Number of entries in PijMatrix: "<<d_totalProjectors*d_totalProjectors<<" in task: "<<d_this_mpi_process<<" "<<getTotalSystemMemory()<<std::flush<<std::endl;
-                double meoryInTask =  getTotalSystemMemory()/1E9;
-                
-                MPI_Barrier(d_mpiCommParent);
-                std::cout<<"Memory used "<<meoryInTask<<" in: "<<d_this_mpi_process<<std::endl;
-                                MPI_Allreduce(MPI_IN_PLACE,
-                              &meoryInTask,
-                              1,
-                              dataTypes::mpi_type_id(&meoryInTask),
-                              MPI_MIN,
-                              d_mpiCommParent);
-                pcout<<"Max memory utilization: "<<meoryInTask<<std::endl;
+
                 MPI_Barrier(d_mpiCommParent); 
                 std::vector<ValueType>    PijMatrix(d_totalProjectors *
                                                    d_totalProjectors,
