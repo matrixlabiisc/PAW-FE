@@ -940,7 +940,8 @@ namespace dftfe
 
         // if (orderElectro < order || orderElectro > order * 2)
         //   {
-        //     std::cout << "Invalid DFT-FE order electrostatics " << orderElectro
+        //     std::cout << "Invalid DFT-FE order electrostatics " <<
+        //     orderElectro
         //               << std::endl;
         //     exit(1);
         //   }
