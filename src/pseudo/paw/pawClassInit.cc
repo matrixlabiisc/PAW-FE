@@ -3057,8 +3057,7 @@ namespace dftfe
 
             std::vector<double> rab            = d_radialJacobianData[Znum];
             unsigned int        RadialMeshSize = RadialMesh.size();
-            const unsigned int  numberofValues =
-              std::min(RmaxIndex + 5, RadialMeshSize);
+            const unsigned int  numberofValues = RmaxIndex + 5;
             const unsigned int numberOfProjectors =
               d_atomicProjectorFnsContainer
                 ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
@@ -3324,15 +3323,6 @@ namespace dftfe
                   d_productDerCoreDensityWfcDerWfcAE[Znum];
                 const std::vector<double> &productDerCoreDensityWfcDerWfcPS =
                   d_productDerCoreDensityWfcDerWfcPS[Znum];
-
-
-
-                // const std::vector<double> &TensorWfcAE = d_tensorWfcAE[Znum];
-                // const std::vector<double> &TensorWfcPS = d_tensorWfcPS[Znum];
-                // const std::vector<double> &TensorWfcDerAE =
-                //   d_tensorWfcDerAE[Znum];
-                // const std::vector<double> &TensorWfcDerPS =
-                //   d_tensorWfcDerPS[Znum];
                 std::vector<double> productOfPSpartialWfcDer =
                   d_productOfPSpartialWfcDer[Znum];
                 std::vector<double> productOfAEpartialWfcDer =
@@ -4460,9 +4450,9 @@ namespace dftfe
       {
         unsigned int        Znum           = *it;
         std::vector<double> radialMesh     = d_radialMesh[*it];
-        std::vector<double> jacobianData   = d_radialJacobianData[*it];
-        const unsigned int  radialMeshSize = radialMesh.size();
+        std::vector<double> jacobianData   = d_radialJacobianData[*it];        
         const unsigned int  rmaxAugIndex   = d_RmaxAugIndex[*it];
+        const unsigned int  radialMeshSize = rmaxAugIndex+10;
         const unsigned int  numberOfProjectors =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);

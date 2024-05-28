@@ -611,10 +611,6 @@ namespace dftfe
     std::map<unsigned int, std::vector<double>> d_productOfPSpartialWfcValue,
       d_productOfAEpartialWfcValue;
     std::map<unsigned int, std::vector<double>> d_gradCoreSqAE, d_gradCoreSqPS;
-
-    std::map<unsigned int, std::vector<double>> d_tensorWfcAE, d_tensorWfcPS,
-      d_tensorWfcDerAE, d_tensorWfcDerPS;
-
     std::map<unsigned int, std::vector<double>> d_radialWfcDerAE,
       d_radialWfcValAE, d_radialWfcDerPS, d_radialWfcValPS, d_radialCoreDerAE,
       d_radialCoreDerPS;
