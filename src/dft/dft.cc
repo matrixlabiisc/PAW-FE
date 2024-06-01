@@ -2861,7 +2861,7 @@ namespace dftfe
             d_dftParamsPtr->pawPseudoPotential)
           {
             d_pawClassPtr->computeCompensationCharge(TypeOfField::In);
-            if (d_dftParamsPtr->verbosity >= 5 || scfIter == 1)
+            if (d_dftParamsPtr->verbosity >= 5 || scfIter == 0)
               d_pawClassPtr->chargeNeutrality(
                 totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]),
                 TypeOfField::In,
@@ -3174,7 +3174,7 @@ namespace dftfe
                             pcout << "Beginning Chebyshev filter pass " << j + 1
                                   << " for spin " << s + 1 << std::endl;
                           }
-                        if (d_dftParamsPtr->verbosity >= 5)
+                        if (d_dftParamsPtr->verbosity >= 4)
                           computeTraceXtHX(d_numEigenValues);
 
 #ifdef DFTFE_WITH_DEVICE
@@ -3356,7 +3356,7 @@ namespace dftfe
                                 computing_timer.leave_subsection(
                                   "Hamiltonian Matrix Computation");
                               }
-                            if (d_dftParamsPtr->verbosity >= 5)
+                            if (d_dftParamsPtr->verbosity >= 4)
                               computeTraceXtHX(d_numEigenValues);
 
 #ifdef DFTFE_WITH_DEVICE
@@ -3512,7 +3512,7 @@ namespace dftfe
                         pcout << "Beginning Chebyshev filter pass " << j + 1
                               << std::endl;
                       }
-                    if (d_dftParamsPtr->verbosity >= 5)
+                    if (d_dftParamsPtr->verbosity >= 4)
                       computeTraceXtHX(d_numEigenValues);
 
 #ifdef DFTFE_WITH_DEVICE
@@ -3627,7 +3627,7 @@ namespace dftfe
                             computing_timer.leave_subsection(
                               "Hamiltonian Matrix Computation");
                           }
-                        if (d_dftParamsPtr->verbosity >= 5)
+                        if (d_dftParamsPtr->verbosity >= 4)
                           computeTraceXtHX(d_numEigenValues);
 #ifdef DFTFE_WITH_DEVICE
                         if constexpr (dftfe::utils::MemorySpace::DEVICE ==
@@ -3745,7 +3745,7 @@ namespace dftfe
             if (d_dftParamsPtr->pawPseudoPotential)
               {
                 d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
-                if (d_dftParamsPtr->verbosity >= 5)
+                if (d_dftParamsPtr->verbosity >= 4)
                   d_pawClassPtr->chargeNeutrality(integralRhoValue,
                                                   TypeOfField::Out,
                                                   false);
@@ -3774,7 +3774,7 @@ namespace dftfe
             if (d_dftParamsPtr->isPseudopotential &&
                 d_dftParamsPtr->pawPseudoPotential)
               {
-                if (d_dftParamsPtr->verbosity >= 5)
+                if (d_dftParamsPtr->verbosity >= 4)
                   d_pawClassPtr->chargeNeutrality(
                     totalCharge(d_dofHandlerRhoNodal,
                                 d_densityOutQuadValues[0]),
@@ -4060,7 +4060,7 @@ namespace dftfe
             d_dftParamsPtr->pawPseudoPotential)
           {
             d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
-            if (d_dftParamsPtr->verbosity >= 5)
+            if (d_dftParamsPtr->verbosity >= 4)
               d_pawClassPtr->chargeNeutrality(
                 totalCharge(d_dofHandlerRhoNodal, d_densityOutQuadValues[0]),
                 TypeOfField::Out,
