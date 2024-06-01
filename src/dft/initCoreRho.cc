@@ -159,17 +159,17 @@ namespace dftfe
                     double distanceToAtom = quadPoint.distance(atom);
 
                     if (d_dftParamsPtr->floatingNuclearCharges &&
-                        distanceToAtom < 1.0e-4)
+                        distanceToAtom < 1.0e-8)
                       {
                         if (d_dftParamsPtr->verbosity >= 4)
                           std::cout
                             << "Atom close to quad point, iatom: " << iAtom
                             << std::endl;
 
-                        distanceToAtom = 1.0e-4;
-                        diff[0]        = (1.0e-4) / std::sqrt(3.0);
-                        diff[1]        = (1.0e-4) / std::sqrt(3.0);
-                        diff[2]        = (1.0e-4) / std::sqrt(3.0);
+                        distanceToAtom = 1.0e-8;
+                        diff[0]        = (1.0e-8) / std::sqrt(3.0);
+                        diff[1]        = (1.0e-8) / std::sqrt(3.0);
+                        diff[2]        = (1.0e-8) / std::sqrt(3.0);
                       }
 
                     double value, radialDensityFirstDerivative,

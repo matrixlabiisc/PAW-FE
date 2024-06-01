@@ -1314,13 +1314,9 @@ namespace dftfe
                 std::vector<ValueType> PijMatrix(d_totalProjectors *
                                                    d_totalProjectors,
                                                  0.0);
-                std::cout << "Size of PijMatrix" << PijMatrix.size()
-                          << std::endl;
                 MPI_Barrier(d_mpiCommParent);
                 const unsigned int natoms = atomicNumber.size();
                 const unsigned int ndofs = d_BasisOperatorHostPtr->nOwnedDofs();
-                std::cout << "Nofs: " << ndofs
-                          << " in procs: " << d_this_mpi_process << std::endl;
                 std::vector<unsigned int> relAtomdIdsInCurrentProcs =
                   relevantAtomdIdsInCurrentProcs();
                 unsigned int              totalProjectorsInProcessor = 0;
@@ -1338,25 +1334,10 @@ namespace dftfe
                         ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                   }
                 totalProjectorsInProcessor = startIndex;
-                std::cout << "Projectors in procs: " << d_this_mpi_process
-                          << " is: " << totalProjectorsInProcessor << std::endl;
-                MPI_Barrier(d_mpiCommParent);
-                std::cout << "Dimenssions in procs: " << ndofs << " "
-                          << totalProjectorsInProcessor << " "
-                          << d_totalProjectors << " " << d_this_mpi_process
-                          << std::endl;
-                MPI_Barrier(d_mpiCommParent);
                 std::vector<ValueType> processorLocalPmatrix(
                   ndofs * totalProjectorsInProcessor, 0.0);
-                std::cout << "Size of processorLocalPmatrix"
-                          << processorLocalPmatrix.size() << std::endl;
-                MPI_Barrier(d_mpiCommParent);
                 std::vector<ValueType> processorLocalPTransPMatrix(
                   totalProjectorsInProcessor * totalProjectorsInProcessor, 0.0);
-                std::cout << "Size of processorLocalPTransPMatrix"
-                          << processorLocalPTransPMatrix.size() << std::endl;
-                MPI_Barrier(d_mpiCommParent);
-
                 std::vector<unsigned int> numProjList;
                 for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
                      it != d_atomTypes.end();
@@ -1367,8 +1348,6 @@ namespace dftfe
                         ->getTotalNumberOfSphericalFunctionsPerAtom(*it));
                   }
 
-                pcout << "DEBUG: Line 1108" << std::endl;
-                MPI_Barrier(d_mpiCommParent);
                 std::map<
                   unsigned int,
                   dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>>
@@ -1389,9 +1368,6 @@ namespace dftfe
                           numProjList[i]);
                       }
                   }
-                pcout << "DEBUG: Line 1130" << std::endl;
-                MPI_Barrier(d_mpiCommParent);
-
 
                 for (int kPoint = 0; kPoint < d_kpointWeights.size(); kPoint++)
                   {
@@ -1404,8 +1380,6 @@ namespace dftfe
                           d_atomicProjectorFnsContainer
                             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                         Pmatrix[numProj].setValue(0);
-                        pcout << "DEBUG: Line 1145" << std::endl;
-                        MPI_Barrier(d_mpiCommParent);
                         if (d_atomicProjectorFnsContainer
                               ->atomIdPresentInCurrentProcessor(atomId))
                           {
@@ -1530,13 +1504,9 @@ namespace dftfe
                         &processorLocalPTransPMatrix[0],
                         totalProjectorsInProcessor);
                   } // kPoint
-                pcout << "DEBUG: Line 1271" << std::endl;
-                MPI_Barrier(d_mpiCommParent);
-
                 for (int iAtom = 0; iAtom < relAtomdIdsInCurrentProcs.size();
                      iAtom++)
                   {
-                    std::cout << "iAtom No: " << iAtom << std::endl;
                     unsigned int atomId = relAtomdIdsInCurrentProcs[iAtom];
                     unsigned int Znum   = atomicNumber[atomId];
                     unsigned int numProj_i =
@@ -1656,6 +1626,19 @@ namespace dftfe
                   }
                 dftfe::linearAlgebraOperations::inverse(&deltaMatrix2[0],
                                                         d_totalProjectors);
+                if (d_verbosity >= 5)
+                  {
+                    pcout << " Delta Matrix After Inversion: " << std::endl;
+                    for (int i = 0; i < d_totalProjectors; i++)
+                      {
+                        for (int j = 0; j < d_totalProjectors; j++)
+                          {
+                            pcout << deltaMatrix2[i * d_totalProjectors + j]
+                                  << " ";
+                          } // j
+                        pcout << std::endl;
+                      } // i
+                  }
                 for (unsigned int atomId = 0; atomId < atomicNumber.size();
                      atomId++)
                   {
@@ -4303,7 +4286,7 @@ namespace dftfe
                                                          jacobianData,
                                                          L,
                                                          0,
-                                                         rmaxAugIndex + 1) -
+                                                         rmaxAugIndex) -
                                 multipoleIntegrationGrid(psPhi.data() +
                                                            (alpha_i)*meshSize,
                                                          psPhi.data() +
@@ -4312,7 +4295,7 @@ namespace dftfe
                                                          jacobianData,
                                                          L,
                                                          0,
-                                                         rmaxAugIndex + 1);
+                                                         rmaxAugIndex);
                       }
                     multipoleTable[L * numberOfRadialProjectors *
                                      numberOfRadialProjectors +
@@ -4874,16 +4857,14 @@ namespace dftfe
           }
 
 
-
-        std::cout << "DEBUG: " << d_this_mpi_process << " "
-                  << totalLocallyOwnedCells << std::endl;
         MPI_Barrier(d_mpiCommParent);
         communicateDijAcrossAllProcessors(TypeOfField::In,
                                           interpoolcomm,
                                           interBandGroupComm);
-        std::cout << "Size of D_ij in: " << D_ij[TypeOfField::In].size() << " "
-                  << d_this_mpi_process << std::endl;
-        MPI_Barrier(d_mpiCommParent);
+        // std::cout << "Size of D_ij in: " << D_ij[TypeOfField::In].size() << "
+        // "
+        //           << d_this_mpi_process << std::endl;
+        // MPI_Barrier(d_mpiCommParent);
       }
   }
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
