@@ -32,7 +32,7 @@ namespace dftfe
       std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
         BLASWrapperPtr,
       std::shared_ptr<
-        dftfe::basis::FEBasisOperations<ataTypes::number, double, memorySpace>>
+        dftfe::basis::FEBasisOperations<dataTypes::number, double, memorySpace>>
         basisOperatorPtr,
       std::shared_ptr<AtomCenteredSphericalFunctionContainer>
                       atomCenteredSphericalFunctionContainer,
@@ -118,7 +118,7 @@ namespace dftfe
   void
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::computeCMatrixEntries(
     std::shared_ptr<dftfe::basis::FEBasisOperations<
-      ataTypes::number,
+      dataTypes::number,
       double,
       dftfe::utils::MemorySpace::HOST>> basisOperationsPtr,
     const unsigned int                  quadratureIndex)
@@ -138,7 +138,7 @@ namespace dftfe
           ->shapeFunctionBasisData(); // shapeFunctionData() for complex
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       quadraturePointsVector = basisOperationsPtr->quadPoints();
-    const dftfe::utils::MemoryStorage<ataTypes::number,
+    const dftfe::utils::MemoryStorage<dataTypes::number,
                                       dftfe::utils::MemorySpace::HOST>
                                      JxwVector = basisOperationsPtr->JxW();
     const std::vector<unsigned int> &atomicNumber =
@@ -1682,6 +1682,7 @@ namespace dftfe
                           d_sphericalFunctionIdsNumberingMapCurrentProcess
                             .find(std::make_pair(atomId, alpha))
                             ->second);
+
                     std::transform(
                       sphericalFunctionKetTimesVectorParFlattened.begin() +
                         localId * d_numberWaveFunctions,
@@ -1690,7 +1691,9 @@ namespace dftfe
                       scalingVector.begin(),
                       d_sphericalFnTimesWavefunMatrix[atomId].begin() +
                         d_numberWaveFunctions * alpha,
-                      [&](auto &a, auto &b) { return sqrt(b) * a; });
+                      [&](auto &a, auto &b) {
+                        return sqrt(b) * dataTypes::number(a);
+                      });
                   }
               }
           }

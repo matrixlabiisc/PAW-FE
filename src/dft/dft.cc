@@ -2752,7 +2752,9 @@ namespace dftfe
                   {
                     if (d_dftParamsPtr->useGradPhiMixing)
                       d_mixingScheme.computeAndersonMixingCoeff(
-                        std::vector<mixingVariable>{mixingVariable::gradPhi,mixingVariable::rho,mixingVariable::DijMatrix});
+                        std::vector<mixingVariable>{mixingVariable::gradPhi,
+                                                    mixingVariable::rho,
+                                                    mixingVariable::DijMatrix});
                     else
                       d_mixingScheme.computeAndersonMixingCoeff(
                         d_dftParamsPtr->spinPolarized == 1 ?

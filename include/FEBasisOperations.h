@@ -705,6 +705,19 @@ namespace dftfe
         dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace>
           &multiVector) const;
 
+
+      /**
+       * @brief Creates a multivector.
+       * @param[in] blocksize Number of vectors in the multivector.
+       * @param[out] multiVector the created multivector.
+       */
+      void
+      createMultiVectorSinglePrec(
+        const unsigned int blocksize,
+        dftfe::linearAlgebra::MultiVector<
+          typename dftfe::dataTypes::singlePrecType<ValueTypeBasisCoeff>::type,
+          memorySpace> &multiVector) const;
+
       /**
        * @brief Creates scratch multivectors.
        * @param[in] vecBlockSize Number of vectors in the multivector.

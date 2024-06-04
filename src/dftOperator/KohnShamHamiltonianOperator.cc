@@ -1660,8 +1660,8 @@ namespace dftfe
       (d_pseudopotentialNonLocalOperatorSinglePrec
          ->getTotalNonLocalElementsInCurrentProcessor() > 0) &&
       !onlyHPrimePartForFirstOrderDensityMatResponse;
-    const dataTypes::number scalarCoeffAlpha = dataTypes::number(1.0),
-                            scalarCoeffBeta  = dataTypes::number(0.0);
+    const dataTypes::numberFP32 scalarCoeffAlpha = dataTypes::numberFP32(1.0),
+                                scalarCoeffBeta  = dataTypes::numberFP32(0.0);
     if ((!d_dftParamsPtr->pawPseudoPotential &&
          d_dftParamsPtr->isPseudopotential) ||
         !d_dftParamsPtr->isPseudopotential)
@@ -1670,7 +1670,9 @@ namespace dftfe
           src.updateGhostValues();
         if (!skip1)
           {
-            d_basisOperationsPtr->distribute(src);
+            d_basisOperationsPtr
+              ->d_constraintInfo[d_basisOperationsPtr->d_dofHandlerID]
+              .distribute(src);
             if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
               if (d_dftParamsPtr->isPseudopotential)
                 d_pseudopotentialNonLocalOperatorSinglePrec
@@ -1691,10 +1693,10 @@ namespace dftfe
                     cellRange.first * numDoFsPerCell);
                 if (hasNonlocalComponents)
                   d_pseudopotentialNonLocalOperatorSinglePrec
-                    ->applyCconjtransOnX(d_cellWaveFunctionMatrixSrc.data() +
-                                           cellRange.first * numDoFsPerCell *
-                                             numberWavefunctions,
-                                         cellRange);
+                    ->applyCconjtransOnX(
+                      d_cellWaveFunctionMatrixSrcSinglePrec.data() +
+                        cellRange.first * numDoFsPerCell * numberWavefunctions,
+                      cellRange);
               }
           }
         if (!skip2)
@@ -1811,7 +1813,9 @@ namespace dftfe
           d_tempBlockVectorPawSinvHX.data());
 
         d_tempBlockVectorPawSinvHXSinglePrec.updateGhostValues();
-        d_basisOperationsPtr->distribute(d_tempBlockVectorPawSinvHXSinglePrec);
+        d_basisOperationsPtr
+          ->d_constraintInfo[d_basisOperationsPtr->d_dofHandlerID]
+          .distribute(d_tempBlockVectorPawSinvHXSinglePrec);
         if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
           if (d_dftParamsPtr->isPseudopotential)
             d_pseudopotentialNonLocalOperatorSinglePrec
@@ -1844,7 +1848,7 @@ namespace dftfe
         d_pseudopotentialNonLocalOperatorSinglePrec
           ->applyAllReduceOnCconjtransX(
             d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec);
-        d_pseudopotentialNonLocalOperator->applyVOnCconjtransX(
+        d_pseudopotentialNonLocalOperatorSinglePrec->applyVOnCconjtransX(
           CouplingStructure::dense,
           d_pawClassPtr->getCouplingMatrixSinglePrec(
             CouplingType::inversePawOverlapEntries),
@@ -1891,7 +1895,12 @@ namespace dftfe
           ->distribute_slave_to_master(d_tempBlockVectorPawSinvHXSinglePrec);
         d_tempBlockVectorPawSinvHXSinglePrec.accumulateAddLocallyOwned();
         d_tempBlockVectorPawSinvHXSinglePrec.zeroOutGhosts();
-        dst.add(scalarHX, d_tempBlockVectorPawSinvHXSinglePrec);
+        // dst.add(scalarHX, d_tempBlockVectorPawSinvHXSinglePrec);
+        d_BLASWrapperPtr->axpby(src.locallyOwnedSize() * src.numVectors(),
+                                scalarHX,
+                                d_tempBlockVectorPawSinvHXSinglePrec.data(),
+                                1.0,
+                                dst.data());
         dst.zeroOutGhosts();
       }
   }
@@ -1925,17 +1934,18 @@ namespace dftfe
                             dst.data());
 
     src.updateGhostValues();
-    d_basisOperationsPtr->distribute(src);
-    const dataTypes::number scalarCoeffAlpha = scalarHX,
-                            scalarCoeffBeta  = dataTypes::number(0.0);
+    d_basisOperationsPtr->d_constraintInfo[d_basisOperationsPtr->d_dofHandlerID]
+      .distribute(src);
+    const dataTypes::numberFP32 scalarCoeffAlpha = dataTypes::numberFP32(1.0),
+                                scalarCoeffBeta  = dataTypes::numberFP32(0.0);
 
     if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
       if (d_dftParamsPtr->isPseudopotential)
-        d_pseudopotentialNonLocalOperator->initialiseOperatorActionOnX(
-          d_kPointIndex);
+        d_pseudopotentialNonLocalOperatorSinglePrec
+          ->initialiseOperatorActionOnX(d_kPointIndex);
     const bool hasNonlocalComponents =
       d_dftParamsPtr->isPseudopotential &&
-      (d_pseudopotentialNonLocalOperator
+      (d_pseudopotentialNonLocalOperatorSinglePrec
          ->getTotalNonLocalElementsInCurrentProcessor() > 0) &&
       !onlyHPrimePartForFirstOrderDensityMatResponse;
     for (unsigned int iCell = 0; iCell < numCells; iCell += d_cellsBlockSizeHX)
@@ -1946,14 +1956,14 @@ namespace dftfe
           numberWavefunctions,
           numDoFsPerCell * (cellRange.second - cellRange.first),
           src.data(),
-          d_cellWaveFunctionMatrixSrc.data() +
+          d_cellWaveFunctionMatrixSrcSinglePrec.data() +
             cellRange.first * numDoFsPerCell * numberWavefunctions,
           d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
               .data() +
             cellRange.first * numDoFsPerCell);
         if (hasNonlocalComponents)
-          d_pseudopotentialNonLocalOperator->applyCconjtransOnX(
-            d_cellWaveFunctionMatrixSrc.data() +
+          d_pseudopotentialNonLocalOperatorSinglePrec->applyCconjtransOnX(
+            d_cellWaveFunctionMatrixSrcSinglePrec.data() +
               cellRange.first * numDoFsPerCell * numberWavefunctions,
             cellRange);
       }
@@ -1962,10 +1972,11 @@ namespace dftfe
       {
         d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec.setValue(
           0);
-        d_pseudopotentialNonLocalOperator->applyAllReduceOnCconjtransX(
-          d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec);
+        d_pseudopotentialNonLocalOperatorSinglePrec
+          ->applyAllReduceOnCconjtransX(
+            d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec);
 
-        d_pseudopotentialNonLocalOperator->applyVOnCconjtransX(
+        d_pseudopotentialNonLocalOperatorSinglePrec->applyVOnCconjtransX(
           d_dftParamsPtr->pawPseudoPotential ? CouplingStructure::dense :
                                                CouplingStructure::diagonal,
           d_dftParamsPtr->pawPseudoPotential ?
@@ -1987,26 +1998,26 @@ namespace dftfe
           numDoFsPerCell,
           numDoFsPerCell,
           &scalarCoeffAlpha,
-          d_cellWaveFunctionMatrixSrc.data() +
+          d_cellWaveFunctionMatrixSrcSinglePrec.data() +
             cellRange.first * numDoFsPerCell * numberWavefunctions,
           numberWavefunctions,
           numDoFsPerCell * numberWavefunctions,
-          d_cellHamiltonianMatrix[d_HamiltonianIndex].data() +
+          d_cellHamiltonianMatrixSinglePrec[d_HamiltonianIndex].data() +
             cellRange.first * numDoFsPerCell * numDoFsPerCell,
           numDoFsPerCell,
           numDoFsPerCell * numDoFsPerCell,
           &scalarCoeffBeta,
-          d_cellWaveFunctionMatrixDst.data(),
+          d_cellWaveFunctionMatrixDstSinglePrec.data(),
           numberWavefunctions,
           numDoFsPerCell * numberWavefunctions,
           cellRange.second - cellRange.first);
         if (hasNonlocalComponents)
-          d_pseudopotentialNonLocalOperator->applyCOnVCconjtransX(
-            d_cellWaveFunctionMatrixDst.data(), cellRange);
+          d_pseudopotentialNonLocalOperatorSinglePrec->applyCOnVCconjtransX(
+            d_cellWaveFunctionMatrixDstSinglePrec.data(), cellRange);
         d_BLASWrapperPtr->axpyStridedBlockAtomicAdd(
           numberWavefunctions,
           numDoFsPerCell * (cellRange.second - cellRange.first),
-          d_cellWaveFunctionMatrixDst.data(),
+          d_cellWaveFunctionMatrixDstSinglePrec.data(),
           dst.data(),
           d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
               .data() +

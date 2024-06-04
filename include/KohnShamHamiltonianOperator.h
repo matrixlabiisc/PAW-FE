@@ -263,7 +263,7 @@ namespace dftfe
 
     dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
       d_pseudopotentialNonLocalProjectorTimesVectorBlock;
-    dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
+    dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace>
       d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec;
     dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
       d_tempBlockVectorPawSinvHX;

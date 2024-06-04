@@ -1120,10 +1120,23 @@ namespace dftfe
     BLASWrapper<dftfe::utils::MemorySpace::HOST>::axpyStridedBlockAtomicAdd(
       const dftfe::size_type         contiguousBlockSize,
       const dftfe::size_type         numContiguousBlocks,
+      const float *                  addFromVec,
+      float *                        addToVec,
+      const dftfe::global_size_type *addToVecStartingContiguousBlockIds) const;
+    template void
+    BLASWrapper<dftfe::utils::MemorySpace::HOST>::axpyStridedBlockAtomicAdd(
+      const dftfe::size_type         contiguousBlockSize,
+      const dftfe::size_type         numContiguousBlocks,
       const std::complex<double> *   addFromVec,
       std::complex<double> *         addToVec,
       const dftfe::global_size_type *addToVecStartingContiguousBlockIds) const;
-
+    template void
+    BLASWrapper<dftfe::utils::MemorySpace::HOST>::axpyStridedBlockAtomicAdd(
+      const dftfe::size_type         contiguousBlockSize,
+      const dftfe::size_type         numContiguousBlocks,
+      const std::complex<float> *    addFromVec,
+      std::complex<float> *          addToVec,
+      const dftfe::global_size_type *addToVecStartingContiguousBlockIds) const;
     template void
     BLASWrapper<dftfe::utils::MemorySpace::HOST>::axpyStridedBlockAtomicAdd(
       const dftfe::size_type         contiguousBlockSize,

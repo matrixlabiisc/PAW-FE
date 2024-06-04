@@ -2111,6 +2111,21 @@ namespace dftfe
               dftfe::utils::MemorySpace memorySpace>
     void
     FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      createMultiVectorSinglePrec(
+        const unsigned int blocksize,
+        dftfe::linearAlgebra::MultiVector<
+          typename dftfe::dataTypes::singlePrecType<ValueTypeBasisCoeff>::type,
+          memorySpace> &multiVector) const
+    {
+      multiVector.reinit(mpiPatternP2P, blocksize);
+    }
+
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    void
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
       createScratchMultiVectors(const unsigned int vecBlockSize,
                                 const unsigned int numMultiVecs) const
     {
