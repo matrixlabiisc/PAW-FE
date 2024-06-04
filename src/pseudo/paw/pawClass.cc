@@ -711,7 +711,94 @@ namespace dftfe
     memorySpace> &
   pawClass<ValueType, memorySpace>::getCouplingMatrixSinglePrec(
     CouplingType couplingtype)
-  {}
+  {
+    if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+      {
+        if (couplingtype == CouplingType::HamiltonianEntries)
+          {
+            if (!d_HamiltonianCouplingMatrixEntriesUpdatedSinglePrec)
+              {
+                dftfe::utils::MemoryStorage<ValueType,
+                                            dftfe::utils::MemorySpace::HOST>
+                  couplingEntriesHost =
+                    getCouplingMatrix(CouplingType::HamiltonianEntries);
+                dftfe::utils::MemoryStorage<
+                  typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+                  dftfe::utils::MemorySpace::HOST>
+                  couplingEntriesHostSinglePrec;
+                couplingEntriesHostSinglePrec.resize(
+                  couplingEntriesHost.size());
+                d_BLASWrapperHostPtr->copyValueType1ArrToValueType2Arr(
+                  couplingEntriesHostSinglePrec.size(),
+                  couplingEntriesHost.data(),
+                  couplingEntriesHostSinglePrec.data());
+
+                d_couplingMatrixEntriesSinglePrec
+                  [CouplingType::HamiltonianEntries] =
+                    couplingEntriesHostSinglePrec;
+                d_HamiltonianCouplingMatrixEntriesUpdatedSinglePrec = true;
+              }
+          }
+        else if (couplingtype == CouplingType::pawOverlapEntries)
+          {
+            if (!d_overlapCouplingMatrixEntriesUpdatedSinglePrec)
+              {
+                dftfe::utils::MemoryStorage<ValueType,
+                                            dftfe::utils::MemorySpace::HOST>
+                  couplingEntriesHost =
+                    getCouplingMatrix(CouplingType::pawOverlapEntries);
+                dftfe::utils::MemoryStorage<
+                  typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+                  dftfe::utils::MemorySpace::HOST>
+                  couplingEntriesHostSinglePrec;
+                couplingEntriesHostSinglePrec.resize(
+                  couplingEntriesHost.size());
+                d_BLASWrapperHostPtr->copyValueType1ArrToValueType2Arr(
+                  couplingEntriesHostSinglePrec.size(),
+                  couplingEntriesHost.data(),
+                  couplingEntriesHostSinglePrec.data());
+
+                d_couplingMatrixEntriesSinglePrec
+                  [CouplingType::pawOverlapEntries] =
+                    couplingEntriesHostSinglePrec;
+                d_overlapCouplingMatrixEntriesUpdatedSinglePrec = true;
+              }
+          }
+        else if (couplingtype == CouplingType::inversePawOverlapEntries)
+          {
+            if (!d_inverseCouplingMatrixEntriesUpdatedSinglePrec)
+              {
+                dftfe::utils::MemoryStorage<ValueType,
+                                            dftfe::utils::MemorySpace::HOST>
+                  couplingEntriesHost =
+                    getCouplingMatrix(CouplingType::inversePawOverlapEntries);
+                dftfe::utils::MemoryStorage<
+                  typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+                  dftfe::utils::MemorySpace::HOST>
+                  couplingEntriesHostSinglePrec;
+                couplingEntriesHostSinglePrec.resize(
+                  couplingEntriesHost.size());
+                d_BLASWrapperHostPtr->copyValueType1ArrToValueType2Arr(
+                  couplingEntriesHostSinglePrec.size(),
+                  couplingEntriesHost.data(),
+                  couplingEntriesHostSinglePrec.data());
+
+                d_couplingMatrixEntriesSinglePrec
+                  [CouplingType::inversePawOverlapEntries] =
+                    couplingEntriesHostSinglePrec;
+                d_inverseCouplingMatrixEntriesUpdatedSinglePrec = true;
+              }
+          }
+      }
+    else
+      {
+        AssertThrow(dftfe::utils::MemorySpace::HOST == memorySpace,
+                    dealii::ExcMessage(
+                      "DFT-FE Error: Not yet implemented on GPUs."));
+      }
+
+    return d_couplingMatrixEntriesSinglePrec[couplingtype];
+  }
 
 
 

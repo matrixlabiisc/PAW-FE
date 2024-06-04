@@ -538,10 +538,17 @@ namespace dftfe
       d_atomicNonLocalPseudoPotentialConstants;
     std::map<CouplingType, dftfe::utils::MemoryStorage<ValueType, memorySpace>>
       d_couplingMatrixEntries;
-
+    std::map<CouplingType,
+             dftfe::utils::MemoryStorage<
+               typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+               memorySpace>>
+         d_couplingMatrixEntriesSinglePrec;
     bool d_HamiltonianCouplingMatrixEntriesUpdated,
       d_overlapCouplingMatrixEntriesUpdated,
       d_inverseCouplingMatrixEntriesUpdated;
+    bool d_HamiltonianCouplingMatrixEntriesUpdatedSinglePrec,
+      d_overlapCouplingMatrixEntriesUpdatedSinglePrec,
+      d_inverseCouplingMatrixEntriesUpdatedSinglePrec;
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicWaveFnsVector;
     std::shared_ptr<AtomCenteredSphericalFunctionContainer>

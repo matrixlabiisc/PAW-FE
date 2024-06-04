@@ -474,15 +474,6 @@ namespace dftfe
     computingTimerStandard.leave_subsection("Chebyshev filtering on CPU");
     if (d_dftParams.verbosity >= 4)
       pcout << "ChebyShev Filtering Done: " << std::endl;
-    //
-    // scale the eigenVectors (initial guess of single atom wavefunctions or
-    // previous guess) to convert into Lowden Orthonormalized FE basis multiply
-    // by M^{1/2}
-    chebyshevOrthogonalizedSubspaceIterationSolverInternal::
-      pointWiseScaleWithDiagonal(operatorMatrix.getSqrtMassVector().data(),
-                                 totalNumberWaveFunctions,
-                                 localVectorSize,
-                                 eigenVectorsFlattened);
 
 
     if (d_dftParams.orthogType.compare("CGS") == 0)
@@ -649,26 +640,6 @@ namespace dftfe
         pcout << std::endl;
       }
 
-    //
-    // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
-    // the usual FE basis
-    //
-    chebyshevOrthogonalizedSubspaceIterationSolverInternal::
-      pointWiseScaleWithDiagonal(
-        operatorMatrix.getInverseSqrtMassVector().data(),
-        totalNumberWaveFunctions,
-        localVectorSize,
-        eigenVectorsFlattened);
-
-    if (eigenValues.size() != totalNumberWaveFunctions)
-      {
-        chebyshevOrthogonalizedSubspaceIterationSolverInternal::
-          pointWiseScaleWithDiagonal(
-            operatorMatrix.getInverseSqrtMassVector().data(),
-            eigenValues.size(),
-            localVectorSize,
-            eigenVectorsRotFracDensityFlattened);
-      }
 
 
     if (d_dftParams.verbosity >= 4)

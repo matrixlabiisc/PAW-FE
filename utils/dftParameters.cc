@@ -268,11 +268,6 @@ namespace dftfe
                           "2",
                           dealii::Patterns::Integer(0),
                           "[Standard] ");
-
-        prm.declare_entry("USE DIAGONAL MASS MATRIX",
-                          "false",
-                          dealii::Patterns::Bool(),
-                          "[Standard] ");
         prm.declare_entry("USE APPROX DELTA MATRIX",
                           "false",
                           dealii::Patterns::Bool(),
@@ -989,7 +984,7 @@ namespace dftfe
 
           prm.declare_entry(
             "USE DIAGONAL MASS MATRIX IN RR_ORTHO",
-            "true",
+            "false",
             dealii::Patterns::Bool(),
             "[Standard] Use diagonal approximation of FEM overlap matrix in RR step and Orthogonalization");
 
@@ -1499,11 +1494,9 @@ namespace dftfe
         prm.get_integer("ZERO POTENTIAL QUADRATURE ORDER");
       QuadratureCopyZeroPotential =
         prm.get_integer("ZERO POTENTIAL QUADRATURE COPY");
-
-      DiagonalMassMatrix = prm.get_bool("USE DIAGONAL MASS MATRIX");
-      ApproxDelta        = prm.get_bool("USE APPROX DELTA MATRIX");
-      memoryOptPmatrix   = prm.get_bool("USE MEMORY OPT METHOD FOR P MATRIX");
-      useGradPhiMixing   = prm.get_bool("USE GRAD PHI MIXING");
+      ApproxDelta      = prm.get_bool("USE APPROX DELTA MATRIX");
+      memoryOptPmatrix = prm.get_bool("USE MEMORY OPT METHOD FOR P MATRIX");
+      useGradPhiMixing = prm.get_bool("USE GRAD PHI MIXING");
       noShapeFnsInPAW =
         prm.get_integer("NUMBER OF ATOM CENTERED SHAPE FUNCTIONS");
       prm.enter_subsection("Optimization");

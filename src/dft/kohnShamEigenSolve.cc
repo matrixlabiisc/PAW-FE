@@ -900,6 +900,13 @@ namespace dftfe
 
 
     std::vector<double> eigenValuesTemp(d_numEigenValues, 0.0);
+    if (d_dftParamsPtr->useSinglePrecCheby)
+      for (unsigned int i = 0; i < d_numEigenValues; i++)
+        {
+          eigenValuesTemp[i] =
+            eigenValues[kPointIndex][spinType * d_numEigenValues + i];
+        }
+
 
     if (d_isFirstFilteringCall[(1 + d_dftParamsPtr->spinPolarized) *
                                  kPointIndex +
