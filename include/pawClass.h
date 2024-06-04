@@ -580,6 +580,7 @@ namespace dftfe
     unsigned int               d_densityQuadratureIdElectro;
     unsigned int               d_sparsityPatternQuadratureId;
     unsigned int               d_nlpspQuadratureId;
+    bool                       d_singlePrecNonLocalOperator;
     // unsigned int                d_dofHandlerID;
     std::shared_ptr<excManager> d_excManagerPtr;
     dftParameters *             d_dftParamsPtr;

@@ -191,6 +191,7 @@ namespace dftfe
       const unsigned int incy) const
     {
       scopy_(&n, x, &incx, y, &incy);
+      // std::memcpy(y,x,n*sizeof(float));
     }
 
     void

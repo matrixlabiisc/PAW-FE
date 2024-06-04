@@ -1896,7 +1896,7 @@ namespace dftfe
         d_tempBlockVectorPawSinvHXSinglePrec.accumulateAddLocallyOwned();
         d_tempBlockVectorPawSinvHXSinglePrec.zeroOutGhosts();
         // dst.add(scalarHX, d_tempBlockVectorPawSinvHXSinglePrec);
-        d_BLASWrapperPtr->axpby(src.locallyOwnedSize() * src.numVectors(),
+        d_BLASWrapperPtr->axpby(dst.locallyOwnedSize() * dst.numVectors(),
                                 scalarHX,
                                 d_tempBlockVectorPawSinvHXSinglePrec.data(),
                                 1.0,

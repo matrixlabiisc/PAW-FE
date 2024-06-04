@@ -414,6 +414,7 @@ namespace dftfe
     d_numEigenValues                = numEigenValues;
     d_compensationChargeQuadratureIdElectro =
       compensationChargeQuadratureIdElectro;
+    d_singlePrecNonLocalOperator = singlePrecNonLocalOperator;
     // Read Derivative File
     double totalSystemMemory2  = double(getTotalSystemMemory()) / 1E9 / 48.0;
     double minAvailableMemory2 = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
@@ -557,6 +558,15 @@ namespace dftfe
             d_BasisOperatorHostPtr,
             d_atomicProjectorFnsContainer,
             d_mpiCommParent);
+        if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+          if (d_singlePrecNonLocalOperator)
+            d_nonLocalOperatorSinglePrec =
+              std::make_shared<AtomicCenteredNonLocalOperator<
+                typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+                memorySpace>>(d_BLASWrapperHostPtr,
+                              d_BasisOperatorHostPtr,
+                              d_atomicProjectorFnsContainer,
+                              d_mpiCommParent);
       }
 #if defined(DFTFE_WITH_DEVICE)
     else
@@ -568,6 +578,15 @@ namespace dftfe
             d_BasisOperatorDevicePtr,
             d_atomicProjectorFnsContainer,
             d_mpiCommParent);
+        if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+          if (d_singlePrecNonLocalOperator)
+            d_nonLocalOperatorSinglePrec =
+              std::make_shared<AtomicCenteredNonLocalOperator<
+                typename dftfe::dataTypes::singlePrecType<ValueType>::type,
+                memorySpace>>(d_BLASWrapperDevicePtr,
+                              d_BasisOperatorDevicePtr,
+                              d_atomicProjectorFnsContainer,
+                              d_mpiCommParent);
       }
 #endif
 
@@ -693,9 +712,12 @@ namespace dftfe
 
     if (updateNonlocalSparsity)
       {
-        d_HamiltonianCouplingMatrixEntriesUpdated = false;
-        d_overlapCouplingMatrixEntriesUpdated     = false;
-        d_inverseCouplingMatrixEntriesUpdated     = false;
+        d_HamiltonianCouplingMatrixEntriesUpdated           = false;
+        d_overlapCouplingMatrixEntriesUpdated               = false;
+        d_inverseCouplingMatrixEntriesUpdated               = false;
+        d_HamiltonianCouplingMatrixEntriesUpdatedSinglePrec = false;
+        d_overlapCouplingMatrixEntriesUpdatedSinglePrec     = false;
+        d_inverseCouplingMatrixEntriesUpdatedSinglePrec     = false;
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
@@ -720,6 +742,14 @@ namespace dftfe
       kPointCoordinates,
       d_BasisOperatorHostPtr,
       d_nlpspQuadratureId);
+    if (d_singlePrecNonLocalOperator)
+      d_nonLocalOperatorSinglePrec
+        ->intitialisePartitionerKPointsAndComputeCMatrixEntries(
+          updateNonlocalSparsity,
+          kPointWeights,
+          kPointCoordinates,
+          d_BasisOperatorHostPtr,
+          d_nlpspQuadratureId);
     double totalSystemMemory  = double(getTotalSystemMemory()) / 1E9 / 48.0;
     double minAvailableMemory = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
     MPI_Allreduce(MPI_IN_PLACE,
@@ -818,9 +848,12 @@ namespace dftfe
 
     if (updateNonlocalSparsity)
       {
-        d_HamiltonianCouplingMatrixEntriesUpdated = false;
-        d_overlapCouplingMatrixEntriesUpdated     = false;
-        d_inverseCouplingMatrixEntriesUpdated     = false;
+        d_HamiltonianCouplingMatrixEntriesUpdated           = false;
+        d_overlapCouplingMatrixEntriesUpdated               = false;
+        d_inverseCouplingMatrixEntriesUpdated               = false;
+        d_HamiltonianCouplingMatrixEntriesUpdatedSinglePrec = false;
+        d_overlapCouplingMatrixEntriesUpdatedSinglePrec     = false;
+        d_inverseCouplingMatrixEntriesUpdatedSinglePrec     = false;
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->getDataForSparseStructure(
@@ -845,7 +878,16 @@ namespace dftfe
       kPointCoordinates,
       d_BasisOperatorHostPtr,
       d_nlpspQuadratureId);
+    if (d_singlePrecNonLocalOperator)
+      d_nonLocalOperatorSinglePrec
+        ->intitialisePartitionerKPointsAndComputeCMatrixEntries(
+          updateNonlocalSparsity,
+          kPointWeights,
+          kPointCoordinates,
+          d_BasisOperatorHostPtr,
+          d_nlpspQuadratureId);
     MPI_Barrier(d_mpiCommParent);
+
     double TotalTime = MPI_Wtime() - InitTimeTotal;
     if (d_verbosity >= 2)
       pcout << "pawclass: Time taken for non local psp init: " << TotalTime
@@ -1936,7 +1978,8 @@ namespace dftfe
               } // i in atomList
 
           } // *it
-        d_HamiltonianCouplingMatrixEntriesUpdated = false;
+        d_HamiltonianCouplingMatrixEntriesUpdated           = false;
+        d_HamiltonianCouplingMatrixEntriesUpdatedSinglePrec = false;
       }
   }
 
