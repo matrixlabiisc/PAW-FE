@@ -63,7 +63,7 @@ namespace dftfe
     if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
       {
         std::vector<dataTypes::number> ProjHam, ProjS, projPawHam, ProjI,
-          ProjSinv;
+          ProjSinv, projPawHamSinglePrec, projHamSinglePrec;
 
         // linearAlgebraOperations::XtHX(, ProjHam);
         // linearAlgebraOperations::XtOX(, ProjS);
@@ -145,6 +145,36 @@ namespace dftfe
           interBandGroupComm,
           *d_dftParamsPtr,
           ProjSinv);
+        pcout << "XtpawHXSinglePrec called: " << std::endl;
+        MPI_Barrier(d_mpiCommParent);
+        linearAlgebraOperations::XtpawHXsinglePrecision(
+          *d_kohnShamDFTOperatorPtr,
+          d_eigenVectorsFlattenedHost.data() +
+            ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
+              d_numEigenValues *
+              matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          d_numEigenValues,
+          matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          mpi_communicator,
+          interBandGroupComm,
+          *d_dftParamsPtr,
+          projPawHamSinglePrec);
+        MPI_Barrier(d_mpiCommParent);
+        pcout << "XtpawHXSinglePrec called: " << std::endl;
+        MPI_Barrier(d_mpiCommParent);
+        linearAlgebraOperations::XtHXsinglePrecision(
+          *d_kohnShamDFTOperatorPtr,
+          d_eigenVectorsFlattenedHost.data() +
+            ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
+              d_numEigenValues *
+              matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          d_numEigenValues,
+          matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          mpi_communicator,
+          interBandGroupComm,
+          *d_dftParamsPtr,
+          projHamSinglePrec);
+        MPI_Barrier(d_mpiCommParent);
         // d_BLASWrapperHostPtr->xnrm2();
         pcout << "XtIX: ";
         for (int i = 0; i < d_numEigenValues; i++)
@@ -165,6 +195,14 @@ namespace dftfe
         pcout << "XtSinvX: ";
         for (int i = 0; i < d_numEigenValues; i++)
           pcout << ProjSinv[i * d_numEigenValues + i] << " ";
+        pcout << std::endl;
+        pcout << "XtpawHXSinglePrec: ";
+        for (int i = 0; i < d_numEigenValues; i++)
+          pcout << projPawHamSinglePrec[i * d_numEigenValues + i] << " ";
+        pcout << std::endl;
+        pcout << "XtHXSinglePrec: ";
+        for (int i = 0; i < d_numEigenValues; i++)
+          pcout << projHamSinglePrec[i * d_numEigenValues + i] << " ";
         pcout << std::endl;
         // std::exit(0);
       }

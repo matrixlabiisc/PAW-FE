@@ -72,7 +72,15 @@ namespace dftfe
     virtual void
     reinitNumberWavefunctions(const unsigned int numWfc) = 0;
 
-
+    virtual void
+    HX(dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace>
+         &          src,
+       const double scalarHX,
+       const double scalarY,
+       const double scalarX,
+       dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace>
+         &        dst,
+       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false) = 0;
     virtual void
     HX(dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
        const double scalarHX,

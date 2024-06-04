@@ -1807,10 +1807,10 @@ namespace dftfe
                                 dst.data());
         d_BLASWrapperPtr->stridedBlockScale(
           numberWavefunctions,
-          d_tempBlockVectorPawSinvHX.locallyOwnedSize(),
+          d_tempBlockVectorPawSinvHXSinglePrec.locallyOwnedSize(),
           1.0,
           d_basisOperationsPtr->inverseMassVectorBasisData().data(),
-          d_tempBlockVectorPawSinvHX.data());
+          d_tempBlockVectorPawSinvHXSinglePrec.data());
 
         d_tempBlockVectorPawSinvHXSinglePrec.updateGhostValues();
         d_basisOperationsPtr
