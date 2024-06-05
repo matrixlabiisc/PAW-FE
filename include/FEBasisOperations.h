@@ -628,6 +628,14 @@ namespace dftfe
       const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
       cellInverseMassVectorBasisData() const;
 
+      /**
+       * @brief Cell level inverse  diagonal mass matrix in ValueTypeBasisData
+       */
+      const dftfe::utils::MemoryStorage<
+        typename dftfe::dataTypes::singlePrecType<ValueTypeBasisData>::type,
+        memorySpace> &
+      cellInverseMassVectorBasisDataSinglePrec() const;
+
 
       /**
        * @brief Cell level sqrt diagonal mass matrix in ValueTypeBasisData
@@ -653,6 +661,14 @@ namespace dftfe
        */
       const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
       inverseMassVectorBasisData() const;
+
+      /**
+       * @brief Inverse diagonal mass matrix in ValueTypeBasisData
+       */
+      const dftfe::utils::MemoryStorage<
+        typename dftfe::dataTypes::singlePrecType<ValueTypeBasisData>::type,
+        memorySpace> &
+      inverseMassVectorBasisDataSinglePrec() const;
 
       /**
        * @brief sqrt diagonal mass matrix in ValueTypeBasisData
@@ -862,6 +878,12 @@ namespace dftfe
         d_cellMassMatrixCoeffType;
       dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
         d_cellInverseMassVectorBasisType;
+
+      dftfe::utils::MemoryStorage<
+        typename dftfe::dataTypes::singlePrecType<ValueTypeBasisData>::type,
+        memorySpace>
+        d_cellInverseMassVectorBasisTypeSinglePrec;
+
       dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
         d_cellInverseMassVectorCoeffType;
       dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
@@ -882,6 +904,10 @@ namespace dftfe
         d_massVectorCoeffType;
       dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
         d_inverseMassVectorBasisType;
+      dftfe::utils::MemoryStorage<
+        typename dftfe::dataTypes::singlePrecType<ValueTypeBasisData>::type,
+        memorySpace>
+        d_inverseMassVectorBasisTypeSinglePrec;
       dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
         d_inverseMassVectorCoeffType;
       dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>

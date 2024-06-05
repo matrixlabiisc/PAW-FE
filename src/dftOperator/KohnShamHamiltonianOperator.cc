@@ -1808,8 +1808,8 @@ namespace dftfe
         d_BLASWrapperPtr->stridedBlockScale(
           numberWavefunctions,
           d_tempBlockVectorPawSinvHXSinglePrec.locallyOwnedSize(),
-          1.0,
-          d_basisOperationsPtr->inverseMassVectorBasisData().data(),
+          scalarCoeffAlpha,
+          d_basisOperationsPtr->inverseMassVectorBasisDataSinglePrec().data(),
           d_tempBlockVectorPawSinvHXSinglePrec.data());
 
         d_tempBlockVectorPawSinvHXSinglePrec.updateGhostValues();
@@ -1874,8 +1874,9 @@ namespace dftfe
                 d_BLASWrapperPtr->axpyStridedBlockAtomicAdd(
                   numberWavefunctions,
                   numDoFsPerCell * (cellRange.second - cellRange.first),
-                  -1.0,
-                  d_basisOperationsPtr->cellInverseMassVectorBasisData()
+                  -scalarCoeffAlpha,
+                  d_basisOperationsPtr
+                      ->cellInverseMassVectorBasisDataSinglePrec()
                       .data() +
                     cellRange.first * numDoFsPerCell,
                   d_cellWaveFunctionMatrixDstSinglePrec.data(),
@@ -1895,7 +1896,6 @@ namespace dftfe
           ->distribute_slave_to_master(d_tempBlockVectorPawSinvHXSinglePrec);
         d_tempBlockVectorPawSinvHXSinglePrec.accumulateAddLocallyOwned();
         d_tempBlockVectorPawSinvHXSinglePrec.zeroOutGhosts();
-        // dst.add(scalarHX, d_tempBlockVectorPawSinvHXSinglePrec);
         d_BLASWrapperPtr->axpby(dst.locallyOwnedSize() * dst.numVectors(),
                                 scalarHX,
                                 d_tempBlockVectorPawSinvHXSinglePrec.data(),
