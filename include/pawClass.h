@@ -499,6 +499,9 @@ namespace dftfe
     computeCoreDeltaExchangeCorrelationEnergy();
 
 
+    void
+    computeAugmentationOverlap();
+
     std::vector<unsigned int>
     relevantAtomdIdsInCurrentProcs();
 
