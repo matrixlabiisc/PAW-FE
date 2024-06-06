@@ -1217,6 +1217,96 @@ namespace dftfe
     MPI_Allreduce(MPI_IN_PLACE, &norm, 1, MPI_DOUBLE, MPI_SUM, d_mpiCommParent);
     return sqrt(norm);
   }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::computeAugmentationOverlap()
+  {
+    double maxOverlap = 0.0;
+    int    srcAtom    = -1;
+    int    dstAtom    = -1;
+    if (d_LocallyOwnedAtomId.size() > 0)
+      {
+        const std::map<std::pair<unsigned int, unsigned int>,
+                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+          sphericalFunction =
+            d_atomicProjectorFnsContainer->getSphericalFunctions();
+        std::vector<unsigned int> atomicNumbers =
+          d_atomicProjectorFnsContainer->getAtomicNumbers();
+        const std::vector<double> &atomCoordinates =
+          d_atomicProjectorFnsContainer->getAtomCoordinates();
+        const std::map<unsigned int, std::vector<double>> &periodicImageCoord =
+          d_atomicProjectorFnsContainer->getPeriodicImageCoordinatesList();
+        std::vector<double> dCord(3, 0.0);
+
+        for (int iAtomList = 0; iAtomList < d_LocallyOwnedAtomId.size();
+             iAtomList++)
+          {
+            unsigned int        atomId     = d_LocallyOwnedAtomId[iAtomList];
+            const unsigned int  Znum       = atomicNumbers[atomId];
+            const double        rmaxAugsrc = d_RmaxAug[Znum];
+            std::vector<double> sourceCoord(3, 0.0);
+            sourceCoord[0] = atomCoordinates[3 * atomId + 0];
+            sourceCoord[1] = atomCoordinates[3 * atomId + 1];
+            sourceCoord[2] = atomCoordinates[3 * atomId + 2];
+            for (unsigned int iAtom = 0; iAtom < atomicNumbers.size(); iAtom++)
+              {
+                if (iAtom != atomId)
+                  {
+                    std::vector<double> imageCoordinates =
+                      periodicImageCoord.find(iAtom)->second;
+                    const double rmaxAugDst   = d_RmaxAug[atomicNumbers[iAtom]];
+                    double       idleDistance = rmaxAugsrc + rmaxAugDst;
+                    unsigned int imageIdsSize = imageCoordinates.size() / 3;
+                    for (int iImage = 0; iImage < imageIdsSize; iImage++)
+                      {
+                        if (iImage == 0)
+                          {
+                            dCord[0] = (sourceCoord[0] -
+                                        imageCoordinates[3 * iImage + 0]);
+                            dCord[1] = (sourceCoord[1] -
+                                        imageCoordinates[3 * iImage + 1]);
+                            dCord[2] = (sourceCoord[2] -
+                                        imageCoordinates[3 * iImage + 2]);
+                          }
+                        else
+                          {
+                            dCord[0] =
+                              (sourceCoord[0] - atomCoordinates[3 * iAtom + 0]);
+                            dCord[1] =
+                              (sourceCoord[1] - atomCoordinates[3 * iAtom + 1]);
+                            dCord[2] =
+                              (sourceCoord[2] - atomCoordinates[3 * iAtom + 2]);
+                          }
+
+                        double distance =
+                          std::sqrt(dCord[0] * dCord[0] + dCord[1] * dCord[1] +
+                                    dCord[2] * dCord[2]);
+                        double ratio =
+                          (idleDistance - distance) / idleDistance * 100;
+                        if (maxOverlap < ratio)
+                          {
+                            maxOverlap = ratio;
+                            srcAtom    = atomId;
+                            dstAtom    = iAtom;
+                          }
+                      }
+                  }
+              }
+          }
+      }
+    double maxOverlapOverall;
+    MPI_Allreduce(
+      &maxOverlap, &maxOverlapOverall, 1, MPI_DOUBLE, MPI_MAX, d_mpiCommParent);
+    if (std::fabs(maxOverlapOverall - maxOverlap) < 1E-8)
+      {
+        std::cout << "Overlap between atoms: " << srcAtom << " and " << dstAtom
+                  << " is: " << maxOverlap << std::flush << std::endl;
+      }
+    MPI_Barrier(d_mpiCommParent);
+  }
+
+
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>;
