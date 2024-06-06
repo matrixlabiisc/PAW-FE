@@ -1021,6 +1021,43 @@ namespace dftfe
 
 
     /**
+     * @brief C
+     *
+     * @param X Vector of Vectors containing multi-wavefunction fields
+     * @param numberComponents number of wavefunctions associated with a given node
+     * @param processGrid two-dimensional processor grid corresponding to the parallel projHamPar
+     * @param projHamPar parallel ScaLAPACKMatrix which stores the computed projection
+     * of the operation into the given subspace
+     */
+    void
+    XtHXXtOX(operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+             const dataTypes::number *                          X,
+             const unsigned int                               numberComponents,
+             const unsigned int                               numberLocalDofs,
+             const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+             const MPI_Comm &                                 mpiCommDomain,
+             const MPI_Comm &                           interBandGroupComm,
+             const dftParameters &                      dftParams,
+             dftfe::ScaLAPACKMatrix<dataTypes::number> &projHamPar,
+             dftfe::ScaLAPACKMatrix<dataTypes::number> &projOverlapPar,
+             const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
+    void
+    XtHXXtOXMixedPrec(
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      const dataTypes::number *                          X,
+      const unsigned int                                 totalNumberComponents,
+      const unsigned int                                 singlePrecComponents,
+      const unsigned int                                 numberLocalDofs,
+      const std::shared_ptr<const dftfe::ProcessGrid> &  processGrid,
+      const MPI_Comm &                                   mpiCommDomain,
+      const MPI_Comm &                                   interBandGroupComm,
+      const dftParameters &                              dftParams,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &        projHamPar,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &        projOverlapPar,
+      const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
+    /**
      * @brief Compute projection of the operator into a subspace spanned by a given orthogonal basis HProjConj=X^{T}*HConj*XConj
      *
      * @param X Vector of Vectors containing multi-wavefunction fields
