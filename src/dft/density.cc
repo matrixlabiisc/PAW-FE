@@ -32,23 +32,36 @@ namespace dftfe
     const bool isConsiderSpectrumSplitting,
     const bool isGroundState)
   {
-    if (d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_KERKER" ||
-        d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_RESTA" ||
-        d_dftParamsPtr->mixingMethod == "LOW_RANK_DIELECM_PRECOND")
+    if ((d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_KERKER" ||
+         d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_RESTA" ||
+         d_dftParamsPtr->mixingMethod == "LOW_RANK_DIELECM_PRECOND") ||
+        d_dftParamsPtr->pawPseudoPotential)
       {
+        pcout << "Compute Rho Out Nodal: " << std::endl;
         computeRhoNodalFromPSI(isConsiderSpectrumSplitting);
 
         // normalize rho
-        const double charge =
-          totalCharge(d_matrixFreeDataPRefined, d_densityOutNodalValues[0]);
+        if (!d_dftParamsPtr->pawPseudoPotential)
+          {
+            const double charge =
+              totalCharge(d_matrixFreeDataPRefined, d_densityOutNodalValues[0]);
 
 
-        const double scalingFactor = ((double)numElectrons) / charge;
+            const double scalingFactor = ((double)numElectrons) / charge;
 
-        // scale nodal vector with scalingFactor
-        for (unsigned int iComp = 0; iComp < d_densityOutNodalValues.size();
-             ++iComp)
-          d_densityOutNodalValues[iComp] *= scalingFactor;
+            // scale nodal vector with scalingFactor
+            for (unsigned int iComp = 0; iComp < d_densityOutNodalValues.size();
+                 ++iComp)
+              d_densityOutNodalValues[iComp] *= scalingFactor;
+            if (d_dftParamsPtr->verbosity >= 3)
+              {
+                pcout << "Total Charge before scaling: " << charge << std::endl;
+                pcout << "Total Charge using nodal Rho out: "
+                      << totalCharge(d_matrixFreeDataPRefined,
+                                     d_densityOutNodalValues[0])
+                      << std::endl;
+              }
+          }
 
         // interpolate nodal rhoOut data to quadrature data
         for (unsigned int iComp = 0; iComp < d_densityOutNodalValues.size();
@@ -63,15 +76,6 @@ namespace dftfe
             d_gradDensityOutQuadValues[iComp],
             d_excManagerPtr->getDensityBasedFamilyType() ==
               densityFamilyType::GGA);
-
-        if (d_dftParamsPtr->verbosity >= 3)
-          {
-            pcout << "Total Charge before scaling: " << charge << std::endl;
-            pcout << "Total Charge using nodal Rho out: "
-                  << totalCharge(d_matrixFreeDataPRefined,
-                                 d_densityOutNodalValues[0])
-                  << std::endl;
-          }
       }
     else
       {
@@ -170,49 +174,50 @@ namespace dftfe
 
     if (d_dftParamsPtr->computeEnergyEverySCF || isGroundState)
       {
-        // d_rhoOutNodalValuesDistributed = d_densityOutNodalValues[0];
-        // d_rhoOutNodalValuesDistributed.update_ghost_values();
-        // d_constraintsRhoNodalInfo.distribute(d_rhoOutNodalValuesDistributed);
-        // interpolateDensityNodalDataToQuadratureDataLpsp(
-        //   d_basisOperationsPtrElectroHost,
-        //   d_densityDofHandlerIndexElectro,
-        //   d_lpspQuadratureIdElectro,
-        //   d_densityOutNodalValues[0],
-        //   d_densityTotalOutValuesLpspQuad,
-        //   d_gradDensityTotalOutValuesLpspQuad,
-        //   true);
+        d_rhoOutNodalValuesDistributed = d_densityOutNodalValues[0];
+        d_rhoOutNodalValuesDistributed.update_ghost_values();
+        d_constraintsRhoNodalInfo.distribute(d_rhoOutNodalValuesDistributed);
+        interpolateDensityNodalDataToQuadratureDataLpsp(
+          d_basisOperationsPtrElectroHost,
+          d_densityDofHandlerIndexElectro,
+          d_lpspQuadratureIdElectro,
+          d_densityOutNodalValues[0],
+          d_densityTotalOutValuesLpspQuad,
+          d_gradDensityTotalOutValuesLpspQuad,
+          true);
 
-        std::vector<
-          dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-          TempVector, TempVector2;
+        // std::vector<
+        //   dftfe::utils::MemoryStorage<double,
+        //   dftfe::utils::MemorySpace::HOST>> TempVector, TempVector2;
 
-        TempVector.resize(d_dftParamsPtr->spinPolarized == 1 ? 2 : 1);
-        computeRhoFromPSI(
-          &d_eigenVectorsFlattenedHost,
-          &d_eigenVectorsRotFracDensityFlattenedHost,
-          d_numEigenValues,
-          d_numEigenValuesRR,
-          eigenValues,
-          fermiEnergy,
-          fermiEnergyUp,
-          fermiEnergyDown,
-          d_basisOperationsPtrHost,
-          d_BLASWrapperPtrHost,
-          d_densityDofHandlerIndex,
-          d_lpspQuadratureId,
-          d_kPointWeights,
-          TempVector,
-          TempVector2,
-          false,
-          d_mpiCommParent,
-          interpoolcomm,
-          interBandGroupComm,
-          *d_dftParamsPtr,
-          isConsiderSpectrumSplitting && d_numEigenValues != d_numEigenValuesRR,
-          std::shared_ptr<dftfe::pawClass<dataTypes::number,
-                                          dftfe::utils::MemorySpace::HOST>>(
-            nullptr));
-        d_densityTotalOutValuesLpspQuad = TempVector[0];
+        // TempVector.resize(d_dftParamsPtr->spinPolarized == 1 ? 2 : 1);
+        // computeRhoFromPSI(
+        //   &d_eigenVectorsFlattenedHost,
+        //   &d_eigenVectorsRotFracDensityFlattenedHost,
+        //   d_numEigenValues,
+        //   d_numEigenValuesRR,
+        //   eigenValues,
+        //   fermiEnergy,
+        //   fermiEnergyUp,
+        //   fermiEnergyDown,
+        //   d_basisOperationsPtrHost,
+        //   d_BLASWrapperPtrHost,
+        //   d_densityDofHandlerIndex,
+        //   d_lpspQuadratureId,
+        //   d_kPointWeights,
+        //   TempVector,
+        //   TempVector2,
+        //   false,
+        //   d_mpiCommParent,
+        //   interpoolcomm,
+        //   interBandGroupComm,
+        //   *d_dftParamsPtr,
+        //   isConsiderSpectrumSplitting && d_numEigenValues !=
+        //   d_numEigenValuesRR,
+        //   std::shared_ptr<dftfe::pawClass<dataTypes::number,
+        //                                   dftfe::utils::MemorySpace::HOST>>(
+        //     nullptr));
+        // d_densityTotalOutValuesLpspQuad = TempVector[0];
       }
 
     if (isGroundState &&

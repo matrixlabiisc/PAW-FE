@@ -151,7 +151,8 @@ namespace dftfe
     // to do this initialization every SCF
     if (d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_KERKER" ||
         d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_RESTA" ||
-        d_dftParamsPtr->mixingMethod == "LOW_RANK_DIELECM_PRECOND")
+        d_dftParamsPtr->mixingMethod == "LOW_RANK_DIELECM_PRECOND" ||
+        d_dftParamsPtr->pawPseudoPotential)
       {
         d_densityOutQuadValues.resize(d_dftParamsPtr->spinPolarized == 1 ? 2 :
                                                                            1);
@@ -176,7 +177,8 @@ namespace dftfe
 
     if (d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_KERKER" ||
         d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_RESTA" ||
-        d_dftParamsPtr->mixingMethod == "LOW_RANK_DIELECM_PRECOND")
+        d_dftParamsPtr->mixingMethod == "LOW_RANK_DIELECM_PRECOND" ||
+        d_dftParamsPtr->pawPseudoPotential)
       {
         const dealii::IndexSet &locallyOwnedSet =
           d_dofHandlerRhoNodal.locally_owned_dofs();
@@ -328,25 +330,27 @@ namespace dftfe
         MPI_Barrier(interpoolcomm);
 
         // normalize rho
-        const double charge =
+        // const double charge =
+        //   totalCharge(d_matrixFreeDataPRefined, d_densityInNodalValues[0]);
+
+
+        // const double scalingFactor = ((double)numElectrons) / charge;
+
+        // // scale nodal vector with scalingFactor
+        // d_densityInNodalValues[0] *= scalingFactor;
+
+        // if (d_dftParamsPtr->verbosity >= 3)
+        //   {
+        //     pcout << "Total Charge before Normalizing nodal Rho:  " << charge
+        //           << std::endl;
+        //     pcout << "Total Charge after Normalizing nodal Rho: "
+        //           << totalCharge(d_matrixFreeDataPRefined,
+        //                          d_densityInNodalValues[0])
+        //           << std::endl;
+        //   }
+        const double chargeNodalBefore2 =
           totalCharge(d_matrixFreeDataPRefined, d_densityInNodalValues[0]);
-
-
-        const double scalingFactor = ((double)numElectrons) / charge;
-
-        // scale nodal vector with scalingFactor
-        d_densityInNodalValues[0] *= scalingFactor;
-
-        if (d_dftParamsPtr->verbosity >= 3)
-          {
-            pcout << "Total Charge before Normalizing nodal Rho:  " << charge
-                  << std::endl;
-            pcout << "Total Charge after Normalizing nodal Rho: "
-                  << totalCharge(d_matrixFreeDataPRefined,
-                                 d_densityInNodalValues[0])
-                  << std::endl;
-          }
-
+        pcout << "Total RhoNodal charge: " << chargeNodalBefore2 << std::endl;
         interpolateDensityNodalDataToQuadratureDataGeneral(
           d_basisOperationsPtrElectroHost,
           d_densityDofHandlerIndexElectro,
@@ -388,6 +392,15 @@ namespace dftfe
           }
         if (!d_dftParamsPtr->pawPseudoPotential)
           normalizeRhoInQuadValues();
+        // // scale nodal vector with scalingFactor
+        const double chargeNodalBefore =
+          totalCharge(d_matrixFreeDataPRefined, d_densityInNodalValues[0]);
+        pcout << "Total RhoNodal charge: " << chargeNodalBefore << std::endl;
+        const double charge =
+          totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
+        pcout << "Total RHoQuad charge: " << charge << std::endl;
+        pcout << "Finished compute rho nodal and quad points from PAW data: "
+              << std::endl;
       }
     else
       {
@@ -1262,12 +1275,21 @@ namespace dftfe
                                                    3 * q + idim] *= scaling;
           }
       }
+    // // scale nodal vector with scalingFactor
+    const double chargeNodalBefore =
+      totalCharge(d_matrixFreeDataPRefined, d_densityInNodalValues[0]);
+    d_densityInNodalValues[0] *= scaling;
+    const double chargeNodalAfter =
+      totalCharge(d_matrixFreeDataPRefined, d_densityInNodalValues[0]);
     double chargeAfterScaling =
       totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
 
     if (d_dftParamsPtr->verbosity >= 1)
       pcout << "Initial total charge after scaling: " << chargeAfterScaling
             << std::endl;
+    if (d_dftParamsPtr->verbosity >= 1)
+      pcout << "Initial total Nodal charge before and after scaling: "
+            << chargeNodalBefore << " " << chargeNodalAfter << std::endl;
   }
 
   //

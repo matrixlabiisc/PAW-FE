@@ -568,8 +568,11 @@ namespace dftfe
     template <typename ValueTypeBasisCoeff,
               typename ValueTypeBasisData,
               dftfe::utils::MemorySpace memorySpace>
-    const dftfe::utils::MemoryStorage<typename dftfe::dataTypes::singlePrecType<ValueTypeBasisData>::type, memorySpace> &
-    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::inverseMassVectorBasisDataSinglePrec() const
+    const dftfe::utils::MemoryStorage<
+      typename dftfe::dataTypes::singlePrecType<ValueTypeBasisData>::type,
+      memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      inverseMassVectorBasisDataSinglePrec() const
     {
       return d_inverseMassVectorBasisTypeSinglePrec;
     }

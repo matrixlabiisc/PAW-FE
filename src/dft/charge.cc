@@ -152,15 +152,18 @@ namespace dftfe
     const dealii::MatrixFree<3, double> &matrixFreeDataObject,
     const distributedCPUVec<double> &    nodalField)
   {
-    dealii::FEEvaluation<
-      3,
-      C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>(),
-      C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>(),
-      1,
-      double>
-                                    fe_evalField(matrixFreeDataObject,
-                   d_densityDofHandlerIndexElectro,
-                   d_densityQuadratureIdElectro);
+    // dealii::FEEvaluation<
+    //   3,
+    //   C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>(),
+    //   C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>(),
+    //   1,
+    //   double>
+    //                                 fe_evalField(matrixFreeDataObject,
+    //                d_densityDofHandlerIndexElectro,
+    //                d_densityQuadratureIdElectro);
+    dealii::FEEvaluation<3, -1>     fe_evalField(matrixFreeDataObject,
+                                             d_densityDofHandlerIndexElectro,
+                                             d_densityQuadratureIdElectro);
     dealii::VectorizedArray<double> normValueVectorized =
       dealii::make_vectorized_array(0.0);
     const unsigned int numQuadPoints = fe_evalField.n_q_points;
@@ -257,13 +260,17 @@ namespace dftfe
     const unsigned int                   quadratureId)
 
   {
-    dealii::FEEvaluation<
-      3,
-      C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>(),
-      C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>(),
-      1,
-      double>
-                                    fe_evalField(matrixFreeDataObject, dofHandlerId, quadratureId);
+    // dealii::FEEvaluation<
+    //   3,
+    //   C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>(),
+    //   C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>(),
+    //   1,
+    //   double>
+    //                                 fe_evalField(matrixFreeDataObject,
+    //                                 dofHandlerId, quadratureId);
+    dealii::FEEvaluation<3, -1>     fe_evalField(matrixFreeDataObject,
+                                             dofHandlerId,
+                                             quadratureId);
     dealii::VectorizedArray<double> normValueVectorized =
       dealii::make_vectorized_array(0.0);
     const unsigned int numQuadPoints = fe_evalField.n_q_points;
