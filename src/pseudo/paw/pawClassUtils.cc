@@ -1298,15 +1298,94 @@ namespace dftfe
     double maxOverlapOverall;
     MPI_Allreduce(
       &maxOverlap, &maxOverlapOverall, 1, MPI_DOUBLE, MPI_MAX, d_mpiCommParent);
-    if (std::fabs(maxOverlapOverall - maxOverlap) < 1E-8)
+    pcout << "Max Overlap in system: " << maxOverlapOverall << std::endl;
+    if (std::fabs(maxOverlapOverall - maxOverlap) < 1E-8 &&
+        maxOverlapOverall > 1E-8)
       {
         std::cout << "Overlap between atoms: " << srcAtom << " and " << dstAtom
                   << " is: " << maxOverlap << std::flush << std::endl;
       }
     MPI_Barrier(d_mpiCommParent);
   }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::checkOverlapAugmentation()
+  {
+    const unsigned int totalLocallyOwnedCells =
+      d_BasisOperatorHostPtr->nCells();
+    const unsigned int nodesPerElement = d_BasisOperatorHostPtr->nDofsPerCell();
+    const std::vector<unsigned int> &atomicNumber =
+      d_atomicProjectorFnsContainer->getAtomicNumbers();
+    std::vector<int>                elementsPerAtom(atomicNumber.size(), 0);
+    const std::vector<unsigned int> atomIdsInCurrentProcess =
+      d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
+    for (int iAtom = 0; iAtom < atomIdsInCurrentProcess.size(); iAtom++)
+      {
+        unsigned int              atomId = atomIdsInCurrentProcess[iAtom];
+        std::vector<unsigned int> elementIndexesInAtomCompactSupport =
+          d_atomicProjectorFnsContainer
+            ->d_elementIndexesInAtomCompactSupport[atomId];
+        elementsPerAtom[atomId] = elementIndexesInAtomCompactSupport.size();
+        if (atomId == 0)
+          std::cout << "Rank and No of elements: " << d_this_mpi_process << " "
+                    << elementIndexesInAtomCompactSupport.size() << std::endl;
+      }
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &elementsPerAtom[0],
+                  atomicNumber.size(),
+                  MPI_INT,
+                  MPI_SUM,
+                  d_mpiCommParent);
 
-
+    for (int iAtom = 0; iAtom < atomicNumber.size(); iAtom++)
+      {
+        pcout << "Number of elements for AtomID: " << iAtom << " "
+              << elementsPerAtom[iAtom] << std::endl;
+      }
+    std::cout << std::flush;
+    MPI_Barrier(d_mpiCommParent);
+    for (unsigned int iCell = 0; iCell < totalLocallyOwnedCells; iCell++)
+      {
+        const std::vector<int> atomIdsInCell =
+          d_atomicProjectorFnsContainer->getAtomIdsInElement(iCell);
+        if (atomIdsInCell.size() > 1)
+          {
+            std::cout << "More than 1 atom present in iCell in rank: " << iCell
+                      << " " << d_this_mpi_process << " "
+                      << atomIdsInCell.size() << std::endl;
+            std::vector<std::vector<ValueType>> CMatrixEntries;
+            for (int iAtom = 0; iAtom < atomIdsInCell.size(); iAtom++)
+              {
+                CMatrixEntries.push_back(d_nonLocalOperator->getCmatrixEntries(
+                  0, atomIdsInCell[iAtom], iCell));
+              }
+            for (int iNode = 0; iNode < nodesPerElement; iNode++)
+              {
+                std::vector<double> Values(atomIdsInCell.size(), 0.0);
+                for (int iAtom = 0; iAtom < atomIdsInCell.size(); iAtom++)
+                  {
+                    unsigned int atomId = atomIdsInCell[iAtom];
+                    unsigned int Znum   = atomicNumber[atomId];
+                    unsigned int numProj =
+                      d_atomicProjectorFnsContainer
+                        ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+                    for (int iProj = 0; iProj < numProj; iProj++)
+                      {
+                        if (Values[iAtom] <
+                            std::abs(
+                              CMatrixEntries[iAtom][iNode * numProj + iProj]))
+                          Values[iAtom] = std::abs(
+                            CMatrixEntries[iAtom][iNode * numProj + iProj]);
+                      }
+                  }
+                std::sort(Values.begin(), Values.end(), std::greater<double>());
+                if (Values[0] > 1E-8)
+                  std::cout << "PAW Warning: Nodal overlap of atoms "
+                            << Values[0] << " " << Values[1] << std::endl;
+              }
+          }
+      }
+  }
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>;

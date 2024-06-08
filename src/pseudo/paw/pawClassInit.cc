@@ -712,6 +712,8 @@ namespace dftfe
 
     if (updateNonlocalSparsity)
       {
+        computeAugmentationOverlap();
+
         d_HamiltonianCouplingMatrixEntriesUpdated           = false;
         d_overlapCouplingMatrixEntriesUpdated               = false;
         d_inverseCouplingMatrixEntriesUpdated               = false;
@@ -721,10 +723,11 @@ namespace dftfe
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
-          d_BasisOperatorHostPtr, d_nlpspQuadratureId, 1E-14, 0);
+          d_BasisOperatorHostPtr, d_nlpspQuadratureId, 1.02, 1);
+        MPI_Barrier(d_mpiCommParent);
         pcout << "Computing sparse structure for shapeFunctions: " << std::endl;
         d_atomicShapeFnsContainer->computeSparseStructure(
-          d_BasisOperatorElectroHostPtr, 3, 1.25, 1);
+          d_BasisOperatorElectroHostPtr, 3, 1.02, 1);
         d_atomicShapeFnsContainer->computeFEEvaluationMaps(
           d_BasisOperatorElectroHostPtr, 3, dofHanderId);
         MPI_Barrier(d_mpiCommParent);
@@ -803,7 +806,7 @@ namespace dftfe
           << " " << totalSystemMemory2 << std::endl;
     computeNonlocalPseudoPotentialConstants(
       CouplingType::inversePawOverlapEntries);
-
+    checkOverlapAugmentation();
     MPI_Barrier(d_mpiCommParent);
     double TotalTime = MPI_Wtime() - InitTimeTotal;
     if (d_verbosity >= 2)
@@ -848,6 +851,8 @@ namespace dftfe
 
     if (updateNonlocalSparsity)
       {
+        computeAugmentationOverlap();
+
         d_HamiltonianCouplingMatrixEntriesUpdated           = false;
         d_overlapCouplingMatrixEntriesUpdated               = false;
         d_inverseCouplingMatrixEntriesUpdated               = false;
@@ -862,7 +867,7 @@ namespace dftfe
           elementIndexesInAtomCompactSupport,
           atomIdsInCurrentProcess,
           numberElements);
-
+        checkOverlapAugmentation();
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
         if (d_verbosity >= 2)
@@ -1121,7 +1126,7 @@ namespace dftfe
                           dataTypes::mpi_type_id(&PijMatrix[0]),
                           MPI_SUM,
                           d_mpiCommParent);
-            if (d_verbosity >= 5)
+            if (d_verbosity >= 4)
               {
                 pcout << "Pmatrix Entries: " << std::endl;
                 for (int i = 0; i < d_totalProjectors; i++)
@@ -1139,6 +1144,7 @@ namespace dftfe
             // If Approzimate Delta is allowed
             if (d_dftParamsPtr->ApproxDelta)
               {
+                pcout << "Using ApproxDelta: " << std::endl;
                 for (unsigned int atomId = 0; atomId < atomicNumber.size();
                      atomId++)
                   {
@@ -1168,7 +1174,7 @@ namespace dftfe
                             pcout << std::endl;
                           } // i
                       }
-                    if (d_verbosity >= 5)
+                    if (d_verbosity >= 4)
                       pcout << "Delta Matrix: " << std::endl;
                     for (int i = 0; i < numberOfProjectors; i++)
                       {
@@ -1186,7 +1192,7 @@ namespace dftfe
                       } // i
                     dftfe::linearAlgebraOperations::inverse(&Pij[0],
                                                             numberOfProjectors);
-                    if (d_verbosity >= 5)
+                    if (d_verbosity >= 4)
                       {
                         pcout << "Inverse Delta Matrix: " << std::endl;
                         for (int i = 0; i < numberOfProjectors; i++)
@@ -2119,6 +2125,12 @@ namespace dftfe
                         noOfProjectors + 1,
                         d_RmaxAug[*it],
                         true);
+                    pcout
+                      << "Projector cutoff-radius: " << Znum << " " << alpha
+                      << " "
+                      << d_atomicProjectorFnsMap[std::make_pair(Znum, alpha)]
+                           ->getRadialCutOff()
+                      << std::endl;
                     d_atomicAEPartialWaveFnsMap[std::make_pair(Znum, alpha)] =
                       std::make_shared<
                         AtomCenteredSphericalFunctionPAWProjectorSpline>(

@@ -514,6 +514,9 @@ namespace dftfe
     void
     computeAugmentationOverlap();
 
+    void
+    checkOverlapAugmentation();
+
     std::vector<unsigned int>
     relevantAtomdIdsInCurrentProcs();
 

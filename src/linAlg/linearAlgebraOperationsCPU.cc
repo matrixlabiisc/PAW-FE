@@ -3381,6 +3381,181 @@ namespace dftfe
     }
 
     void
+    XtSinvSX(operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+             const dataTypes::number *                          X,
+             const unsigned int              numberWaveFunctions,
+             const unsigned int              numberDofs,
+             const MPI_Comm &                mpiCommDomain,
+             const MPI_Comm &                interBandGroupComm,
+             const dftParameters &           dftParams,
+             std::vector<dataTypes::number> &ProjSinv)
+    {
+      //
+      // Get access to number of locally owned nodes on the current processor
+      //
+
+      //
+      // Resize ProjHam
+      //
+      ProjSinv.clear();
+      ProjSinv.resize(numberWaveFunctions * numberWaveFunctions, 0.0);
+
+      //
+      // create temporary array XTemp
+      //
+
+      distributedCPUMultiVec<dataTypes::number> &XTemp =
+        operatorMatrix.getScratchFEMultivector(numberWaveFunctions, 0);
+      for (unsigned int iNode = 0; iNode < numberDofs; ++iNode)
+        for (unsigned int iWave = 0; iWave < numberWaveFunctions; ++iWave)
+          XTemp.data()[iNode * numberWaveFunctions + iWave] =
+            X[iNode * numberWaveFunctions + iWave];
+
+      //
+      // create temporary array Y
+      //
+      distributedCPUMultiVec<dataTypes::number> &Y =
+        operatorMatrix.getScratchFEMultivector(numberWaveFunctions, 1);
+
+      //
+      // evaluate H times XTemp and store in Y
+      //
+      operatorMatrix.overlapMatrixTimesX(
+        XTemp, 1.0, 0.0, 0.0, Y, dftParams.diagonalMassMatrix);
+      operatorMatrix.SinvX(Y, 1.0, 0.0, 0.0, XTemp);
+
+
+#ifdef USE_COMPLEX
+      for (unsigned int i = 0; i < XTemp.locallyOwnedSize(); ++i)
+        XTemp.data()[i] = std::conj(XTemp.data()[i]);
+
+      char                       transA = 'N';
+      char                       transB = 'T';
+      const std::complex<double> alpha = 1.0, beta = 0.0;
+      zgemm_(&transA,
+             &transB,
+             &numberWaveFunctions,
+             &numberWaveFunctions,
+             &numberDofs,
+             &alpha,
+             XTemp.begin(),
+             &numberWaveFunctions,
+             &X[0],
+             &numberWaveFunctions,
+             &beta,
+             &ProjSinv[0],
+             &numberWaveFunctions);
+#else
+      char transA = 'N';
+      char transB = 'T';
+      const double alpha = 1.0, beta = 0.0;
+
+      dgemm_(&transA,
+             &transB,
+             &numberWaveFunctions,
+             &numberWaveFunctions,
+             &numberDofs,
+             &alpha,
+             &X[0],
+             &numberWaveFunctions,
+             XTemp.begin(),
+             &numberWaveFunctions,
+             &beta,
+             &ProjSinv[0],
+             &numberWaveFunctions);
+#endif
+      dealii::Utilities::MPI::sum(ProjSinv, mpiCommDomain, ProjSinv);
+    }
+
+    void
+    XtSSinvX(operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+             const dataTypes::number *                          X,
+             const unsigned int              numberWaveFunctions,
+             const unsigned int              numberDofs,
+             const MPI_Comm &                mpiCommDomain,
+             const MPI_Comm &                interBandGroupComm,
+             const dftParameters &           dftParams,
+             std::vector<dataTypes::number> &ProjSinv)
+    {
+      //
+      // Get access to number of locally owned nodes on the current processor
+      //
+
+      //
+      // Resize ProjHam
+      //
+      ProjSinv.clear();
+      ProjSinv.resize(numberWaveFunctions * numberWaveFunctions, 0.0);
+
+      //
+      // create temporary array XTemp
+      //
+
+      distributedCPUMultiVec<dataTypes::number> &XTemp =
+        operatorMatrix.getScratchFEMultivector(numberWaveFunctions, 0);
+      for (unsigned int iNode = 0; iNode < numberDofs; ++iNode)
+        for (unsigned int iWave = 0; iWave < numberWaveFunctions; ++iWave)
+          XTemp.data()[iNode * numberWaveFunctions + iWave] =
+            X[iNode * numberWaveFunctions + iWave];
+
+      //
+      // create temporary array Y
+      //
+      distributedCPUMultiVec<dataTypes::number> &Y =
+        operatorMatrix.getScratchFEMultivector(numberWaveFunctions, 1);
+
+      //
+      // evaluate H times XTemp and store in Y
+      //
+      operatorMatrix.SinvX(XTemp, 1.0, 0.0, 0.0, Y);
+      operatorMatrix.overlapMatrixTimesX(
+        Y, 1.0, 0.0, 0.0, XTemp, dftParams.diagonalMassMatrix);
+
+
+#ifdef USE_COMPLEX
+      for (unsigned int i = 0; i < XTemp.locallyOwnedSize(); ++i)
+        XTemp.data()[i] = std::conj(XTemp.data()[i]);
+
+      char                       transA = 'N';
+      char                       transB = 'T';
+      const std::complex<double> alpha = 1.0, beta = 0.0;
+      zgemm_(&transA,
+             &transB,
+             &numberWaveFunctions,
+             &numberWaveFunctions,
+             &numberDofs,
+             &alpha,
+             XTemp.begin(),
+             &numberWaveFunctions,
+             &X[0],
+             &numberWaveFunctions,
+             &beta,
+             &ProjSinv[0],
+             &numberWaveFunctions);
+#else
+      char transA = 'N';
+      char transB = 'T';
+      const double alpha = 1.0, beta = 0.0;
+
+      dgemm_(&transA,
+             &transB,
+             &numberWaveFunctions,
+             &numberWaveFunctions,
+             &numberDofs,
+             &alpha,
+             &X[0],
+             &numberWaveFunctions,
+             XTemp.begin(),
+             &numberWaveFunctions,
+             &beta,
+             &ProjSinv[0],
+             &numberWaveFunctions);
+#endif
+      dealii::Utilities::MPI::sum(ProjSinv, mpiCommDomain, ProjSinv);
+    }
+
+
+    void
     XtHX(operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
          const dataTypes::number *                          X,
          const unsigned int                                 numberWaveFunctions,

@@ -446,6 +446,8 @@ namespace dftfe
                                         SphericalFunction->getRadialCutOff())
                           {
                             sparseFlag = 1;
+                            if (r > maxR)
+                              maxR = r;
                             break;
                           }
                       } // quadrature loop
@@ -468,6 +470,8 @@ namespace dftfe
                 d_elementIndexesInAtomCompactSupport[iAtom].push_back(iCell);
                 matCount += 1;
                 isAtomIdInProcessor = true;
+                // if(iAtom == 0)
+                //   std::cout<<"MaxR in cell: "<<maxR<<" "<<iCell<<std::endl;
               }
 
           } // iCell
