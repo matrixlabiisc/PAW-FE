@@ -2750,7 +2750,8 @@ namespace dftfe
                   {
                     if (d_dftParamsPtr->useGradPhiMixing)
                       d_mixingScheme.computeAndersonMixingCoeff(
-                        std::vector<mixingVariable>{mixingVariable::gradPhi,mixingVariable::rho,mixingVariable::DijMatrix});
+                        std::vector<mixingVariable>{mixingVariable::gradPhi,
+                                                    mixingVariable::rho});
                     else
                       d_mixingScheme.computeAndersonMixingCoeff(
                         d_dftParamsPtr->spinPolarized == 1 ?
@@ -3174,7 +3175,7 @@ namespace dftfe
                             pcout << "Beginning Chebyshev filter pass " << j + 1
                                   << " for spin " << s + 1 << std::endl;
                           }
-                        if (d_dftParamsPtr->verbosity >= 4)
+                        if (d_dftParamsPtr->verbosity >= 5)
                           computeTraceXtHX(d_numEigenValues);
 
 #ifdef DFTFE_WITH_DEVICE
@@ -3356,7 +3357,7 @@ namespace dftfe
                                 computing_timer.leave_subsection(
                                   "Hamiltonian Matrix Computation");
                               }
-                            if (d_dftParamsPtr->verbosity >= 4)
+                            if (d_dftParamsPtr->verbosity >= 5)
                               computeTraceXtHX(d_numEigenValues);
 
 #ifdef DFTFE_WITH_DEVICE
@@ -3512,7 +3513,7 @@ namespace dftfe
                         pcout << "Beginning Chebyshev filter pass " << j + 1
                               << std::endl;
                       }
-                    if (d_dftParamsPtr->verbosity >= 4)
+                    if (d_dftParamsPtr->verbosity >= 5)
                       computeTraceXtHX(d_numEigenValues);
 
 #ifdef DFTFE_WITH_DEVICE
@@ -3627,7 +3628,7 @@ namespace dftfe
                             computing_timer.leave_subsection(
                               "Hamiltonian Matrix Computation");
                           }
-                        if (d_dftParamsPtr->verbosity >= 4)
+                        if (d_dftParamsPtr->verbosity >= 5)
                           computeTraceXtHX(d_numEigenValues);
 #ifdef DFTFE_WITH_DEVICE
                         if constexpr (dftfe::utils::MemorySpace::DEVICE ==

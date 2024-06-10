@@ -133,7 +133,7 @@ namespace dftfe
       d_BasisOperatorElectroHostPtr->matrixFreeData(),
       dofHandlerId,
       d_compensationChargeQuadratureIdElectro);
-    std::vector<double> phiValuesQuadPoints(numberQuadraturePoints, 0.0);
+
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
     int                                         iElem = 0;
     for (std::set<unsigned int>::iterator it =
@@ -141,7 +141,8 @@ namespace dftfe
          it != d_atomicShapeFnsContainer->d_feEvaluationMap.end();
          ++it)
       {
-        unsigned int cell = *it;
+        std::vector<double> phiValuesQuadPoints(numberQuadraturePoints, 0.0);
+        unsigned int        cell = *it;
         feEvalObj.reinit(cell);
         feEvalObj.read_dof_values_plain(phiTotNodalValues);
         feEvalObj.evaluate(true, false);
@@ -156,50 +157,50 @@ namespace dftfe
             dealii::CellId subCellId = subCellPtr->id();
             unsigned int   cellIndex =
               d_BasisOperatorElectroHostPtr->cellIndex(subCellId);
-            // if (d_atomicShapeFnsContainer->atomSupportInElement(cellIndex))
-            //   {
-            double *tempVec = phiValuesQuadPoints.data();
-
-
-            for (unsigned int q_point = 0; q_point < numberQuadraturePoints;
-                 ++q_point)
+            if (d_atomicShapeFnsContainer->atomSupportInElement(cellIndex))
               {
-                tempVec[q_point] = feEvalObj.get_value(q_point)[iSubCell];
-              }
-
-            std::vector<int> atomIdsInElem =
-              d_atomicShapeFnsContainer->getAtomIdsInElement(cellIndex);
-            for (int iAtom = 0; iAtom < atomIdsInElem.size(); iAtom++)
-              {
-                const unsigned int atomId = atomIdsInElem[iAtom];
-                const unsigned int Znum   = atomicNumber[atomId];
-                const unsigned int NumTotalSphericalFunctions =
-                  d_atomicShapeFnsContainer
-                    ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
-                std::vector<double> gLValues =
-                  d_gLValuesQuadPoints[std::make_pair(atomId, cellIndex)];
-                iElem++;
-                d_BLASWrapperHostPtr->xgemm(
-                  'N',
-                  'N',
-                  1,
-                  NumTotalSphericalFunctions,
-                  numberQuadraturePoints,
-                  &alpha,
-                  phiValuesQuadPoints.data(),
-                  1,
-                  &gLValues[0],
-                  numberQuadraturePoints,
-                  &beta,
-                  d_nonLocalHamiltonianElectrostaticValue[atomId].data(),
-                  1);
+                double *tempVec = phiValuesQuadPoints.data();
 
 
+                for (unsigned int q_point = 0; q_point < numberQuadraturePoints;
+                     ++q_point)
+                  {
+                    tempVec[q_point] = feEvalObj.get_value(q_point)[iSubCell];
+                  }
 
-              } // iAtom
-                //}     // if
-          }     // subcell
-      }         // FEEval iterator
+                std::vector<int> atomIdsInElem =
+                  d_atomicShapeFnsContainer->getAtomIdsInElement(cellIndex);
+                for (int iAtom = 0; iAtom < atomIdsInElem.size(); iAtom++)
+                  {
+                    const unsigned int atomId = atomIdsInElem[iAtom];
+                    const unsigned int Znum   = atomicNumber[atomId];
+                    const unsigned int NumTotalSphericalFunctions =
+                      d_atomicShapeFnsContainer
+                        ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+                    std::vector<double> gLValues =
+                      d_gLValuesQuadPoints[std::make_pair(atomId, cellIndex)];
+                    iElem++;
+                    d_BLASWrapperHostPtr->xgemm(
+                      'N',
+                      'N',
+                      1,
+                      NumTotalSphericalFunctions,
+                      numberQuadraturePoints,
+                      &alpha,
+                      phiValuesQuadPoints.data(),
+                      1,
+                      &gLValues[0],
+                      numberQuadraturePoints,
+                      &beta,
+                      d_nonLocalHamiltonianElectrostaticValue[atomId].data(),
+                      1);
+
+
+
+                  } // iAtom
+              }     // if
+          }         // subcell
+      }             // FEEval iterator
     // for (std::map<unsigned int, std::vector<double>>::iterator it =
     //        d_nonLocalHamiltonianElectrostaticValue.begin();
     //      it != d_nonLocalHamiltonianElectrostaticValue.end();
