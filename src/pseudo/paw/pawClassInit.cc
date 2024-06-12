@@ -181,29 +181,11 @@ namespace dftfe
         std::vector<double> shapeFnGridData(lmaxAug * numValues, 0.0);
         for (unsigned int lQuantumNo = 0; lQuantumNo < lmaxAug; lQuantumNo++)
           {
-            double normalizationalizationConstant = 0.0;
-            std::function<double(const unsigned int &)> f =
-              [&](const unsigned int &i) {
-                double Value =
-                  jacobianData[i] *
-                  d_atomicShapeFnsMap[std::make_pair(Znum, lQuantumNo)]
-                    ->getRadialValue(radialMesh[i]) *
-                  pow(radialMesh[i], lQuantumNo + 2);
-                // pcout<<i<<" "<<Value<<std::endl;
-                return (Value);
-              };
-            pcout << "Computing Normalization Constant for ShapeFn:  "
-                  << lQuantumNo << " of Znum: " << Znum << " ";
-            normalizationalizationConstant = // normalizationConstant2;
-              simpsonIntegral(0, rmaxAugIndex + 1, f);
-            pcout << "Normalization Constant Value: "
-                  << normalizationalizationConstant << std::endl;
             for (int iRow = 0; iRow < numValues; iRow++)
               {
                 shapeFnGridData[lQuantumNo * numValues + iRow] =
                   d_atomicShapeFnsMap[std::make_pair(Znum, lQuantumNo)]
-                    ->getRadialValue(radialMesh[iRow]) /
-                  normalizationalizationConstant;
+                    ->getRadialValue(radialMesh[iRow]);
               }
           }
         d_atomicShapeFn[*it] = shapeFnGridData;
@@ -980,17 +962,17 @@ namespace dftfe
 
             d_atomicNonLocalPseudoPotentialConstants
               [CouplingType::pawOverlapEntries][Znum] = fullMultipoleTable;
-            pcout << "NonLocal Overlap Matrrix for Znum: " << Znum << std::endl;
-            for (int i = 0; i < numTotalProjectors; i++)
-              {
-                for (int j = 0; j < numTotalProjectors; j++)
-                  pcout << d_atomicNonLocalPseudoPotentialConstants
-                             [CouplingType::pawOverlapEntries][Znum]
-                             [i * numTotalProjectors + j]
-                        << " ";
-                pcout << std::endl;
-              }
-            pcout << "----------------------------" << std::endl;
+            // pcout << "NonLocal Overlap Matrrix for Znum: " << Znum <<
+            // std::endl; for (int i = 0; i < numTotalProjectors; i++)
+            //   {
+            //     for (int j = 0; j < numTotalProjectors; j++)
+            //       pcout << d_atomicNonLocalPseudoPotentialConstants
+            //                  [CouplingType::pawOverlapEntries][Znum]
+            //                  [i * numTotalProjectors + j]
+            //             << " ";
+            //     pcout << std::endl;
+            //   }
+            // pcout << "----------------------------" << std::endl;
 
           } //*it
         d_overlapCouplingMatrixEntriesUpdated = false;

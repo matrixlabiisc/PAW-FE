@@ -2783,8 +2783,7 @@ namespace dftfe
                     if (d_dftParamsPtr->useGradPhiMixing)
                       d_mixingScheme.computeAndersonMixingCoeff(
                         std::vector<mixingVariable>{mixingVariable::gradPhi,
-                                                    mixingVariable::rho,
-                                                    mixingVariable::DijMatrix});
+                                                    mixingVariable::rho});
                     else
                       d_mixingScheme.computeAndersonMixingCoeff(
                         d_dftParamsPtr->spinPolarized == 1 ?
@@ -2916,7 +2915,7 @@ namespace dftfe
             d_dftParamsPtr->pawPseudoPotential)
           {
             d_pawClassPtr->computeCompensationCharge(TypeOfField::In);
-            if (d_dftParamsPtr->verbosity >= 5 || scfIter == 1)
+            if (d_dftParamsPtr->verbosity >= 5 || scfIter == 0)
               d_pawClassPtr->chargeNeutrality(
                 totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]),
                 TypeOfField::In,
@@ -3800,7 +3799,7 @@ namespace dftfe
             if (d_dftParamsPtr->pawPseudoPotential)
               {
                 d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
-                if (d_dftParamsPtr->verbosity >= 5)
+                if (d_dftParamsPtr->verbosity >= 4)
                   d_pawClassPtr->chargeNeutrality(integralRhoValue,
                                                   TypeOfField::Out,
                                                   false);
@@ -3829,7 +3828,7 @@ namespace dftfe
             if (d_dftParamsPtr->isPseudopotential &&
                 d_dftParamsPtr->pawPseudoPotential)
               {
-                if (d_dftParamsPtr->verbosity >= 5)
+                if (d_dftParamsPtr->verbosity >= 4)
                   d_pawClassPtr->chargeNeutrality(
                     totalCharge(d_dofHandlerRhoNodal,
                                 d_densityOutQuadValues[0]),
@@ -4140,7 +4139,7 @@ namespace dftfe
             d_dftParamsPtr->pawPseudoPotential)
           {
             d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
-            if (d_dftParamsPtr->verbosity >= 5)
+            if (d_dftParamsPtr->verbosity >= 4)
               d_pawClassPtr->chargeNeutrality(
                 totalCharge(d_dofHandlerRhoNodal, d_densityOutQuadValues[0]),
                 TypeOfField::Out,
