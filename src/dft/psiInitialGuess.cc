@@ -522,6 +522,10 @@ namespace dftfe
                             {
                               // radial part
                               R = alglib::spline1dcalc((it->psi), r);
+                              if(std::fabs(R)< 1E-8)
+                                R = 0.0;
+                              else if( std::fabs(R)> std::numeric_limits<float>::max())
+                                R = 1000.0*std::fabs(R)/R;  
                               // spherical part
                               if (it->m > 0)
                                 {
