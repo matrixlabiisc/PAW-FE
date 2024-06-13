@@ -994,6 +994,14 @@ namespace dftfe
     BLASWrapper<dftfe::utils::MemorySpace::HOST>::stridedBlockScale(
       const dftfe::size_type contiguousBlockSize,
       const dftfe::size_type numContiguousBlocks,
+      const float            a,
+      const float *          s,
+      std::complex<float> *  x);
+
+    template void
+    BLASWrapper<dftfe::utils::MemorySpace::HOST>::stridedBlockScale(
+      const dftfe::size_type contiguousBlockSize,
+      const dftfe::size_type numContiguousBlocks,
       const double           a,
       const double *         s,
       float *                x);
@@ -1006,22 +1014,6 @@ namespace dftfe
       const float *          s,
       double *               x);
 
-    // template void
-    // BLASWrapper<dftfe::utils::MemorySpace::HOST>::stridedBlockScale(
-    //   const dftfe::size_type      contiguousBlockSize,
-    //   const dftfe::size_type      numContiguousBlocks,
-    //   const std::complex<double>  a,
-    //   const std::complex<double> *s,
-    //   std::complex<float> *       x);
-
-    // template void
-    // BLASWrapper<dftfe::utils::MemorySpace::HOST>::stridedBlockScale(
-    //   const dftfe::size_type     contiguousBlockSize,
-    //   const dftfe::size_type     numContiguousBlocks,
-    //   const std::complex<float>  a,
-    //   const std::complex<float> *s,
-    //   std::complex<double> *     x);
-
     template void
     BLASWrapper<dftfe::utils::MemorySpace::HOST>::stridedBlockScale(
       const dftfe::size_type contiguousBlockSize,
@@ -1030,13 +1022,6 @@ namespace dftfe
       const double *         s,
       std::complex<double> * x);
 
-    // template void
-    // BLASWrapper<dftfe::utils::MemorySpace::HOST>::stridedBlockScale(
-    //   const dftfe::size_type contiguousBlockSize,
-    //   const dftfe::size_type numContiguousBlocks,
-    //   const double           a,
-    //   const double *         s,
-    //   std::complex<float> *  x);
     template void
     BLASWrapper<dftfe::utils::MemorySpace::HOST>::stridedCopyToBlock(
       const dftfe::size_type         contiguousBlockSize,

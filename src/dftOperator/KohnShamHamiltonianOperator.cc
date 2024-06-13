@@ -1662,6 +1662,7 @@ namespace dftfe
       !onlyHPrimePartForFirstOrderDensityMatResponse;
     const dataTypes::numberFP32 scalarCoeffAlpha = dataTypes::numberFP32(1.0),
                                 scalarCoeffBeta  = dataTypes::numberFP32(0.0);
+    const float scalarCoeffAlphaReal             = 1.0;
     if ((!d_dftParamsPtr->pawPseudoPotential &&
          d_dftParamsPtr->isPseudopotential) ||
         !d_dftParamsPtr->isPseudopotential)
@@ -1808,7 +1809,7 @@ namespace dftfe
         d_BLASWrapperPtr->stridedBlockScale(
           numberWavefunctions,
           d_tempBlockVectorPawSinvHXSinglePrec.locallyOwnedSize(),
-          scalarCoeffAlpha,
+          scalarCoeffAlphaReal,
           d_basisOperationsPtr->inverseMassVectorBasisDataSinglePrec().data(),
           d_tempBlockVectorPawSinvHXSinglePrec.data());
 
@@ -1874,7 +1875,7 @@ namespace dftfe
                 d_BLASWrapperPtr->axpyStridedBlockAtomicAdd(
                   numberWavefunctions,
                   numDoFsPerCell * (cellRange.second - cellRange.first),
-                  -scalarCoeffAlpha,
+                  -scalarCoeffAlphaReal,
                   d_basisOperationsPtr
                       ->cellInverseMassVectorBasisDataSinglePrec()
                       .data() +
