@@ -947,7 +947,12 @@ namespace dftfe
                                                      bool computeCompCharge)
   {
     if (computeCompCharge)
-      computeCompensationCharge(typeOfField);
+      {
+        if (d_dftParamsPtr->memoryOptCompCharge)
+          computeCompensationChargeMemoryOpt(TypeOfField::In);
+        else
+          computeCompensationCharge(typeOfField);
+      }
     double integralCompCharge = TotalCompensationCharge();
     pcout << "----------------------------------------------------"
           << std::endl;
@@ -1386,6 +1391,103 @@ namespace dftfe
           }
       }
   }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::computeproductOfCGMultipole()
+  {
+    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+         it != d_atomTypes.end();
+         ++it)
+      {
+        unsigned int       Znum = *it;
+        const unsigned int numberOfRadialProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
+        const unsigned int numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        std::vector<double> multipole = d_multipole[*it];
+        const unsigned int  NumRadialSphericalFunctions =
+          d_atomicShapeFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
+        const unsigned int NumTotalSphericalFunctions =
+          d_atomicShapeFnsContainer->getTotalNumberOfSphericalFunctionsPerAtom(
+            Znum);
+        const std::map<std::pair<unsigned int, unsigned int>,
+                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+          sphericalFunction =
+            d_atomicShapeFnsContainer->getSphericalFunctions();
+        const std::map<std::pair<unsigned int, unsigned int>,
+                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+          projectorFunction =
+            d_atomicProjectorFnsContainer->getSphericalFunctions();
+        std::vector<double> productValues(
+          NumTotalSphericalFunctions * numberOfProjectors * numberOfProjectors);
+        unsigned int Lindex = 0;
+        for (unsigned int alpha = 0; alpha < NumRadialSphericalFunctions;
+             ++alpha)
+          {
+            std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
+              sphericalFunction.find(std::make_pair(Znum, alpha))->second;
+            int lQuantumNumber = sphFn->getQuantumNumberl();
+
+            for (int mQuantumNumber = -lQuantumNumber;
+                 mQuantumNumber <= lQuantumNumber;
+                 mQuantumNumber++)
+              {
+                unsigned int alpha_i = 0;
+                for (int i = 0; i < numberOfRadialProjectors; i++)
+                  {
+                    std::shared_ptr<AtomCenteredSphericalFunctionBase> projFnI =
+                      projectorFunction.find(std::make_pair(Znum, i))->second;
+                    int l_i = projFnI->getQuantumNumberl();
+                    for (int m_i = -l_i; m_i <= l_i; m_i++)
+                      {
+                        unsigned int alpha_j = 0;
+                        for (int j = 0; j < numberOfRadialProjectors; j++)
+                          {
+                            std::shared_ptr<AtomCenteredSphericalFunctionBase>
+                              projFnJ =
+                                projectorFunction.find(std::make_pair(Znum, j))
+                                  ->second;
+                            int l_j = projFnJ->getQuantumNumberl();
+                            for (int m_j = -l_j; m_j <= l_j; m_j++)
+                              {
+                                double multipolevalue =
+                                  multipole[lQuantumNumber *
+                                              numberOfRadialProjectors *
+                                              numberOfRadialProjectors +
+                                            i * numberOfRadialProjectors + j];
+                                double       Cijl = gaunt(l_i,
+                                                    l_j,
+                                                    lQuantumNumber,
+                                                    m_i,
+                                                    m_j,
+                                                    mQuantumNumber);
+                                unsigned int loc =
+                                  Lindex * numberOfProjectors *
+                                    numberOfProjectors +
+                                  alpha_i * numberOfProjectors + alpha_j;
+                                productValues[loc] = Cijl * multipolevalue;
+
+                              } // m_j
+
+                            alpha_j++;
+                          } // j
+                      }     // m_i
+                    alpha_i++;
+                  } // i
+
+
+              } // mQuantumNumber
+            Lindex++;
+          } // lQuantumNumber
+
+        d_productOfMultipoleClebshGordon[Znum] = productValues;
+      }
+  }
+
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>;

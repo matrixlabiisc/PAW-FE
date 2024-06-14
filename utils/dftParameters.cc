@@ -276,6 +276,10 @@ namespace dftfe
                           "false",
                           dealii::Patterns::Bool(),
                           "[Standard] ");
+        prm.declare_entry("USE MEMORY OPT METHOD FOR COMP CHARGE",
+                          "false",
+                          dealii::Patterns::Bool(),
+                          "[Standard] ");
         prm.declare_entry("USE GRAD PHI MIXING",
                           "true",
                           dealii::Patterns::Bool(),
@@ -1496,6 +1500,8 @@ namespace dftfe
         prm.get_integer("ZERO POTENTIAL QUADRATURE COPY");
       ApproxDelta      = prm.get_bool("USE APPROX DELTA MATRIX");
       memoryOptPmatrix = prm.get_bool("USE MEMORY OPT METHOD FOR P MATRIX");
+      memoryOptCompCharge =
+        prm.get_bool("USE MEMORY OPT METHOD FOR COMP CHARGE");
       useGradPhiMixing = prm.get_bool("USE GRAD PHI MIXING");
       noShapeFnsInPAW =
         prm.get_integer("NUMBER OF ATOM CENTERED SHAPE FUNCTIONS");

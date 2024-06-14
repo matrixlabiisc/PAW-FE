@@ -234,6 +234,352 @@ namespace dftfe
       }     // iAtom loop
     MPI_Barrier(d_mpiCommParent);
   }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::computeCompensationChargeMemoryOpt(
+    TypeOfField typeOfField)
+  {
+    const unsigned int numberAtomsOfInterest =
+      d_atomicShapeFnsContainer->getNumAtomCentersSize();
+    pcout << "Quadrature rule" << std::endl;
+    dealii::QIterated<3> quadratureHigh(dealii::QGauss<1>(
+                                          d_dftParamsPtr->QuadratureOrderComp),
+                                        d_dftParamsPtr->QuadratureCopyComp);
+    const unsigned int   numberQuadraturePoints = quadratureHigh.size();
+
+
+
+    const std::vector<unsigned int> &atomicNumber =
+      d_atomicShapeFnsContainer->getAtomicNumbers();
+    const unsigned int one = 1;
+    (*d_bQuadValuesAllAtoms).clear();
+
+    MPI_Barrier(d_mpiCommParent);
+    if (d_bl0QuadValuesAllAtoms.size() > 0)
+      {
+        for (std::map<dealii::CellId, std::vector<double>>::iterator it =
+               d_bl0QuadValuesAllAtoms.begin();
+             it != d_bl0QuadValuesAllAtoms.end();
+             ++it)
+          {
+            std::vector<double> &ValueL0 = it->second;
+            std::vector<double>  Temp;
+            (*d_bQuadValuesAllAtoms).find(it->first)->second.clear();
+            // for (unsigned int q_point = 0; q_point < numberQuadraturePoints;
+            //      q_point++)
+            //   {
+            //     Temp.push_back(ValueL0[q_point]);
+            //   }
+            (*d_bQuadValuesAllAtoms)[it->first] = ValueL0;
+          }
+      }
+    MPI_Barrier(d_mpiCommParent);
+    const std::vector<unsigned int> atomIdsInCurrentProcess =
+      d_atomicShapeFnsContainer->getAtomIdsInCurrentProcess();
+    MPI_Barrier(d_mpiCommParent);
+    for (unsigned int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
+         iAtom++)
+      {
+        unsigned int atomId = atomIdsInCurrentProcess[iAtom];
+        unsigned int Znum   = atomicNumber[atomId];
+        unsigned int numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        unsigned int        npjsq = numberOfProjectors * numberOfProjectors;
+        std::vector<double> gLValuesAtQuadPoints =
+          d_shapeFnAtQuadPoints[atomId];
+        std::vector<double> Dij = D_ij[typeOfField][atomId];
+        std::vector<double> Tij = d_productOfMultipoleClebshGordon[Znum];
+        unsigned int        numShapeFunctions =
+          d_atomicShapeFnsContainer->getTotalNumberOfSphericalFunctionsPerAtom(
+            Znum);
+        std::vector<double> deltaL(numShapeFunctions, 0.0);
+        const char          transA = 'N', transB = 'N';
+        const double        Alpha = 1, Beta = 0.0;
+        const unsigned int  inc   = 1;
+        const double        Beta2 = 1.0;
+
+        dgemm_(&transA,
+               &transB,
+               &inc,
+               &numShapeFunctions,
+               &npjsq,
+               &Alpha,
+               &Dij[0],
+               &inc,
+               &Tij[0],
+               &npjsq,
+               &Beta2,
+               &deltaL[0],
+               &inc);
+
+
+
+        std::vector<unsigned int> elementIndexesInAtomCompactSupport =
+          d_atomicShapeFnsContainer
+            ->d_elementIndexesInAtomCompactSupport[atomId];
+        int numberElementsInAtomCompactSupport =
+          elementIndexesInAtomCompactSupport.size();
+        for (unsigned int iElem = 0; iElem < numberElementsInAtomCompactSupport;
+             iElem++)
+          {
+            const unsigned int elementIndex =
+              elementIndexesInAtomCompactSupport[iElem];
+            std::vector<double> &quadvalues =
+              (*d_bQuadValuesAllAtoms)
+                .find(d_BasisOperatorElectroHostPtr->cellID(elementIndex))
+                ->second;
+            for (unsigned int q_point = 0; q_point < numberQuadraturePoints;
+                 ++q_point)
+              {
+                long unsigned int loc =
+                  iElem * numShapeFunctions * numberQuadraturePoints +
+                  q_point * numShapeFunctions;
+                quadvalues[q_point] += ddot_(&numShapeFunctions,
+                                             &gLValuesAtQuadPoints[loc],
+                                             &one,
+                                             &deltaL[0],
+                                             &one);
+              } // q_point
+
+          } // iElem
+      }     // iAtom loop
+    MPI_Barrier(d_mpiCommParent);
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::computeCompensationChargeCoeffMemoryOpt()
+  {
+    std::vector<double> IntegralValue(8, 0.0);
+    const unsigned int  numberNodesPerElement =
+      d_BasisOperatorElectroHostPtr->nDofsPerCell();
+    std::vector<dealii::types::global_dof_index> cellGlobalDofIndices(
+      numberNodesPerElement);
+    const unsigned int numberAtomsOfInterest =
+      d_atomicShapeFnsContainer->getNumAtomCentersSize();
+    pcout << "Quadrature rule" << std::endl;
+    dealii::QIterated<3> quadratureHigh(dealii::QGauss<1>(
+                                          d_dftParamsPtr->QuadratureOrderComp),
+                                        d_dftParamsPtr->QuadratureCopyComp);
+
+    pcout << "FE rule" << std::endl;
+    dealii::FEValues<3> fe_values(
+      d_BasisOperatorElectroHostPtr->matrixFreeData()
+        .get_dof_handler(d_BasisOperatorElectroHostPtr->d_dofHandlerID)
+        .get_fe(),
+      quadratureHigh,
+      dealii::update_JxW_values | dealii::update_quadrature_points);
+    d_jxwcompensationCharge.clear();
+    const unsigned int numberQuadraturePoints = quadratureHigh.size();
+    if (d_bl0QuadValuesAllAtoms.size() > 0)
+      {
+        for (std::map<dealii::CellId, std::vector<double>>::iterator it =
+               d_bl0QuadValuesAllAtoms.begin();
+             it != d_bl0QuadValuesAllAtoms.end();
+             ++it)
+          {
+            const unsigned int cellIndex =
+              d_BasisOperatorElectroHostPtr->d_cellIdToCellIndexMap[it->first];
+            dealii::DoFHandler<3>::active_cell_iterator cell =
+              d_BasisOperatorElectroHostPtr->getCellIterator(cellIndex);
+            if (cell->is_locally_owned())
+              {
+                fe_values.reinit(cell);
+                std::vector<double> jxw(numberQuadraturePoints, 0.0);
+                for (unsigned int iQuad = 0; iQuad < numberQuadraturePoints;
+                     iQuad++)
+                  {
+                    jxw[iQuad] = fe_values.JxW(iQuad);
+                  }
+                d_jxwcompensationCharge[it->first] = jxw;
+
+
+              } // cell
+          }     // it
+      }         // if
+
+
+
+    const std::vector<unsigned int> &atomicNumber =
+      d_atomicShapeFnsContainer->getAtomicNumbers();
+    const std::vector<double> &atomCoordinates =
+      d_atomicShapeFnsContainer->getAtomCoordinates();
+    const std::map<unsigned int, std::vector<double>> &periodicImageCoord =
+      d_atomicShapeFnsContainer->getPeriodicImageCoordinatesList();
+    const std::map<std::pair<unsigned int, unsigned int>,
+                   std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+      sphericalFunction = d_atomicShapeFnsContainer->getSphericalFunctions();
+    const std::map<std::pair<unsigned int, unsigned int>,
+                   std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+      projectorFunction =
+        d_atomicProjectorFnsContainer->getSphericalFunctions();
+    const std::vector<unsigned int> atomIdsInCurrentProcess =
+      d_atomicShapeFnsContainer->getAtomIdsInCurrentProcess();
+
+    MPI_Barrier(d_mpiCommParent);
+
+    for (unsigned int iAtom = 0; iAtom < atomIdsInCurrentProcess.size();
+         iAtom++)
+      {
+        const unsigned int  atomId = atomIdsInCurrentProcess[iAtom];
+        const unsigned int  Znum   = atomicNumber[atomId];
+        std::vector<double> imageCoordinates =
+          periodicImageCoord.find(atomId)->second;
+        const unsigned int imageIdsSize = imageCoordinates.size() / 3;
+        std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
+          sphericalFunction.find(std::make_pair(Znum, 0))->second;
+        std::vector<unsigned int> elementIndexesInAtomCompactSupport =
+          d_atomicShapeFnsContainer
+            ->d_elementIndexesInAtomCompactSupport[atomId];
+        int numberElementsInAtomCompactSupport =
+          elementIndexesInAtomCompactSupport.size();
+        dealii::Point<3>    nuclearCoordinates(atomCoordinates[3 * atomId + 0],
+                                            atomCoordinates[3 * atomId + 1],
+                                            atomCoordinates[3 * atomId + 2]);
+        double              RmaxAug   = d_RmaxAug[Znum];
+        std::vector<double> multipole = d_multipole[Znum];
+        const unsigned int  NumRadialSphericalFunctions =
+          d_atomicShapeFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
+        const unsigned int NumTotalSphericalFunctions =
+          d_atomicShapeFnsContainer->getTotalNumberOfSphericalFunctionsPerAtom(
+            Znum);
+        const unsigned int NumProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        const unsigned int NumRadialProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
+        const unsigned int numShapeFunctions =
+          d_atomicShapeFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
+        std::vector<double> tempCoeff(numberElementsInAtomCompactSupport *
+                                        numberQuadraturePoints *
+                                        numShapeFunctions,
+                                      0.0);
+
+        for (int iElemComp = 0; iElemComp < numberElementsInAtomCompactSupport;
+             iElemComp++)
+          {
+            const unsigned int elementIndex =
+              elementIndexesInAtomCompactSupport[iElemComp];
+            typename dealii::DoFHandler<3>::active_cell_iterator cell =
+              d_BasisOperatorElectroHostPtr->getCellIterator(elementIndex);
+            if (cell->is_locally_owned())
+              {
+                fe_values.reinit(cell);
+                unsigned int        Lindex = 0;
+                std::vector<double> gLValuesQuadPoints(
+                  numberQuadraturePoints * NumTotalSphericalFunctions, 0.0);
+
+
+                for (unsigned int alpha = 0;
+                     alpha < NumRadialSphericalFunctions;
+                     ++alpha)
+                  {
+                    std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
+                      sphericalFunction.find(std::make_pair(Znum, alpha))
+                        ->second;
+                    int lQuantumNumber = sphFn->getQuantumNumberl();
+
+                    for (int mQuantumNumber = -lQuantumNumber;
+                         mQuantumNumber <= lQuantumNumber;
+                         mQuantumNumber++)
+                      {
+                        for (int iImageAtomCount = 0;
+                             iImageAtomCount < imageIdsSize;
+                             ++iImageAtomCount)
+                          {
+                            dealii::Point<3> chargePoint(0.0, 0.0, 0.0);
+                            if (iImageAtomCount == 0)
+                              {
+                                chargePoint = nuclearCoordinates;
+                              }
+                            else
+                              {
+                                chargePoint[0] =
+                                  imageCoordinates[3 * iImageAtomCount + 0];
+                                chargePoint[1] =
+                                  imageCoordinates[3 * iImageAtomCount + 1];
+                                chargePoint[2] =
+                                  imageCoordinates[3 * iImageAtomCount + 2];
+                              }
+                            double x[3];
+                            double sphericalHarmonicVal, radialVal,
+                              sphericalFunctionValue;
+                            double r, theta, phi, angle;
+
+                            for (int iQuadPoint = 0;
+                                 iQuadPoint < numberQuadraturePoints;
+                                 ++iQuadPoint)
+                              {
+                                x[0] =
+                                  fe_values.quadrature_point(iQuadPoint)[0] -
+                                  chargePoint[0];
+                                x[1] =
+                                  fe_values.quadrature_point(iQuadPoint)[1] -
+                                  chargePoint[1];
+                                x[2] =
+                                  fe_values.quadrature_point(iQuadPoint)[2] -
+                                  chargePoint[2];
+                                sphericalHarmonicUtils::
+                                  convertCartesianToSpherical(x, r, theta, phi);
+                                sphericalHarmonicUtils::getSphericalHarmonicVal(
+                                  theta,
+                                  phi,
+                                  lQuantumNumber,
+                                  mQuantumNumber,
+                                  sphericalHarmonicVal);
+                                if (r <= sphFn->getRadialCutOff())
+                                  {
+                                    radialVal = sphFn->getRadialValue(r);
+                                    sphericalFunctionValue =
+                                      radialVal * sphericalHarmonicVal;
+                                    long unsigned int loc =
+                                      iElemComp * (numberQuadraturePoints *
+                                                   numShapeFunctions) +
+                                      iQuadPoint * numShapeFunctions + Lindex;
+                                    tempCoeff[loc] += sphericalFunctionValue;
+                                    gLValuesQuadPoints
+                                      [Lindex * numberQuadraturePoints +
+                                       iQuadPoint] +=
+                                      fe_values.JxW(iQuadPoint) *
+                                      sphericalFunctionValue;
+                                    IntegralValue[Lindex] +=
+                                      sphericalFunctionValue *
+                                      fe_values.JxW(iQuadPoint) *
+                                      pow(r, lQuantumNumber) *
+                                      sphericalHarmonicVal;
+                                  } // inside r <= Rmax
+
+
+                              } // quad loop
+
+                          } // image atom loop
+
+                        Lindex++;
+                      } // mQuantumNumber
+                  }     // alpha
+                d_gLValuesQuadPoints[std::make_pair(atomId, elementIndex)] =
+                  gLValuesQuadPoints;
+              }
+          } // iElemComp
+
+        d_shapeFnAtQuadPoints[atomId] = tempCoeff;
+
+
+      } // iAtom
+    for (int L = 0; L < IntegralValue.size(); L++)
+      {
+        double value =
+          dealii::Utilities::MPI::sum(IntegralValue[L], d_mpiCommParent);
+        pcout << "PAW: Integral of the shapefn " << L << " is: " << value << " "
+              << " with error: " << (value - atomicNumber.size()) << std::endl;
+      }
+  }
+
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
   pawClass<ValueType, memorySpace>::computeCompensationChargeCoeff()
@@ -557,6 +903,8 @@ namespace dftfe
               << " with error: " << (value - atomicNumber.size()) << std::endl;
       }
   }
+
+
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<ValueType, memorySpace> &

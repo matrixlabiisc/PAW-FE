@@ -769,7 +769,13 @@ namespace dftfe
                   d_mpiCommParent);
     pcout << "Min memory and total system memory: " << minAvailableMemory1
           << " " << totalSystemMemory1 << std::endl;
-    computeCompensationChargeCoeff();
+    if (d_dftParamsPtr->memoryOptCompCharge)
+      {
+        computeproductOfCGMultipole();
+        computeCompensationChargeCoeffMemoryOpt();
+      }
+    else
+      computeCompensationChargeCoeff();
     double totalSystemMemory2  = double(getTotalSystemMemory()) / 1E9 / 48.0;
     double minAvailableMemory2 = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
     MPI_Allreduce(MPI_IN_PLACE,

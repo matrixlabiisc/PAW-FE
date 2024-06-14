@@ -187,6 +187,9 @@ namespace dftfe
     void
     computeCompensationCharge(TypeOfField typeOfField);
 
+    void
+    computeCompensationChargeMemoryOpt(TypeOfField typeOfField);
+
     /**
      * @brief pawclass omputecompensationchargel0:
      *
@@ -370,6 +373,12 @@ namespace dftfe
 
     void
     computeCompensationChargeCoeff();
+
+    void
+    computeCompensationChargeCoeffMemoryOpt();
+
+    void
+    computeproductOfCGMultipole();
 
     std::map<unsigned int, std::vector<double>> d_KineticEnergyCorrectionTerm;
     std::map<unsigned int, std::vector<double>> d_zeroPotentialij;
@@ -611,9 +620,13 @@ namespace dftfe
       d_BasisOperatorElectroDevicePtr;
 #endif
     std::map<unsigned int, std::vector<double>>
-                                                                       d_ProductOfQijShapeFnAtQuadPoints;
+                                                d_ProductOfQijShapeFnAtQuadPoints;
+    std::map<unsigned int, std::vector<double>> d_shapeFnAtQuadPoints;
+
     std::map<TypeOfField, std::map<unsigned int, std::vector<double>>> D_ij;
     std::map<unsigned int, std::vector<double>> d_multipole, d_multipoleInverse;
+    std::map<unsigned int, std::vector<double>>
+                        d_productOfMultipoleClebshGordon;
     std::vector<double> d_deltaInverseMatrix, d_deltaMatrix;
     std::map<std::pair<unsigned int, unsigned int>, std::vector<double>>
                                          d_gLValuesQuadPoints;
