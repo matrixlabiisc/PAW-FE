@@ -522,6 +522,141 @@ namespace dftfe
       massVec[iDoF] = distributedMassVec.local_element(iDoF);
   }
 
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeRhoNodalInverseMassVector()
+  {
+    const unsigned int nLocalDoFs =
+      d_matrixFreeDataPRefined
+        .get_vector_partitioner(d_densityDofHandlerIndexElectro)
+        ->locally_owned_size();
+    d_inverseRhoNodalMassVector.clear();
+    d_inverseRhoNodalMassVector.resize(nLocalDoFs, 0.0);
+    distributedCPUVec<double> distributedMassVec;
+    d_matrixFreeDataPRefined.initialize_dof_vector(
+      distributedMassVec, d_densityDofHandlerIndexElectro);
+
+    dealii::QGaussLobatto<3> quadrature(
+      C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>() + 1);
+    dealii::FEValues<3> fe_values(d_dofHandlerRhoNodal.get_fe(),
+                                  quadrature,
+                                  dealii::update_values |
+                                    dealii::update_JxW_values);
+    const unsigned int  dofs_per_cell =
+      (d_dofHandlerRhoNodal.get_fe()).dofs_per_cell;
+    const unsigned int     num_quad_points = quadrature.size();
+    dealii::Vector<double> massVectorLocal(dofs_per_cell);
+    std::vector<dealii::types::global_dof_index> local_dof_indices(
+      dofs_per_cell);
+
+
+    //
+    // parallel loop over all elements
+    //
+    typename dealii::DoFHandler<3>::active_cell_iterator
+      cell = d_dofHandlerRhoNodal.begin_active(),
+      endc = d_dofHandlerRhoNodal.end();
+    for (; cell != endc; ++cell)
+      if (cell->is_locally_owned())
+        {
+          // compute values for the current element
+          fe_values.reinit(cell);
+          massVectorLocal = 0.0;
+          for (unsigned int i = 0; i < dofs_per_cell; ++i)
+            for (unsigned int q_point = 0; q_point < num_quad_points; ++q_point)
+              massVectorLocal(i) += fe_values.shape_value(i, q_point) *
+                                    fe_values.shape_value(i, q_point) *
+                                    fe_values.JxW(q_point);
+
+          cell->get_dof_indices(local_dof_indices);
+          d_constraintsRhoNodal.distribute_local_to_global(massVectorLocal,
+                                                           local_dof_indices,
+                                                           distributedMassVec);
+        }
+
+    distributedMassVec.compress(dealii::VectorOperation::add);
+    d_constraintsRhoNodal.set_zero(distributedMassVec);
+    for (unsigned int iDoF = 0; iDoF < nLocalDoFs; ++iDoF)
+      {
+        if (!d_constraintsRhoNodal.is_constrained(iDoF))
+          {
+            if (std::fabs(distributedMassVec.local_element(iDoF)) > 1E-15)
+              d_inverseRhoNodalMassVector[iDoF] =
+                1.0 / distributedMassVec.local_element(iDoF);
+          }
+      }
+  }
+
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeTotalDensityNodalVector(
+      const std::map<dealii::CellId, std::vector<double>> &bQuadValues,
+      const distributedCPUVec<double> &                    electronDensity,
+      distributedCPUVec<double> &                          totalChargeDensity)
+  {
+    distributedCPUVec<double> smearedCharge;
+    smearedCharge.reinit(electronDensity);
+    smearedCharge = 0;
+    dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
+    dealii::FEEvaluation<3, -1> fe_eval_sc(d_matrixFreeDataPRefined,
+                                           d_densityDofHandlerIndexElectro,
+                                           d_smearedChargeQuadratureIdElectro);
+    const unsigned int          numQuadPointsSmearedb = fe_eval_sc.n_q_points;
+    dealii::AlignedVector<dealii::VectorizedArray<double>> smearedbQuads(
+      numQuadPointsSmearedb, dealii::make_vectorized_array(0.0));
+    for (unsigned int macrocell = 0;
+         macrocell < d_matrixFreeDataPRefined.n_cell_batches();
+         ++macrocell)
+      {
+        std::fill(smearedbQuads.begin(),
+                  smearedbQuads.end(),
+                  dealii::make_vectorized_array(0.0));
+        bool               isMacroCellTrivial = true;
+        const unsigned int numSubCells =
+          d_matrixFreeDataPRefined.n_active_entries_per_cell_batch(macrocell);
+        for (unsigned int iSubCell = 0; iSubCell < numSubCells; ++iSubCell)
+          {
+            subCellPtr = d_matrixFreeDataPRefined.get_cell_iterator(
+              macrocell, iSubCell, d_densityDofHandlerIndexElectro);
+            dealii::CellId            subCellId = subCellPtr->id();
+            const std::vector<double> tempVec =
+              bQuadValues.find(subCellId)->second;
+            if (bQuadValues.find(subCellId) == bQuadValues.end())
+              continue;
+            if (tempVec.size() != numQuadPointsSmearedb)
+              std::cout << "Issue mismatch: " << tempVec.size() << " "
+                        << this_mpi_process << std::endl;
+            for (unsigned int q = 0; q < numQuadPointsSmearedb; ++q)
+              smearedbQuads[q][iSubCell] = tempVec[q];
+
+            isMacroCellTrivial = false;
+          }
+
+        if (!isMacroCellTrivial)
+          {
+            fe_eval_sc.reinit(macrocell);
+            for (unsigned int q = 0; q < fe_eval_sc.n_q_points; ++q)
+              {
+                fe_eval_sc.submit_value(smearedbQuads[q], q);
+              }
+            fe_eval_sc.integrate(true, false);
+            fe_eval_sc.distribute_local_to_global(smearedCharge);
+          }
+      }
+
+    for (int iDoF = 0; iDoF < d_inverseRhoNodalMassVector.size(); iDoF++)
+      {
+        totalChargeDensity.local_element(iDoF) =
+          smearedCharge.local_element(iDoF) * d_inverseRhoNodalMassVector[iDoF];
+      }
+    totalChargeDensity += electronDensity;
+  }
 
 #include "dft.inst.cc"
 

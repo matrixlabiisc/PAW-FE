@@ -241,6 +241,17 @@ namespace dftfe
       dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
         &massVec);
 
+
+
+    void
+    computeRhoNodalInverseMassVector();
+
+    void
+    computeTotalDensityNodalVector(
+      const std::map<dealii::CellId, std::vector<double>> &bQuadValues,
+      const distributedCPUVec<double> &                    electronDensity,
+      distributedCPUVec<double> &                          totalChargeDensity);
+
     void
     initializeKohnShamDFTOperator(const bool initializeCublas = true);
 
@@ -1442,6 +1453,13 @@ namespace dftfe
       d_densityResidualQuadValues;
     std::vector<distributedCPUVec<double>> d_densityInNodalValues,
       d_densityOutNodalValues, d_densityResidualNodalValues;
+
+    std::vector<distributedCPUVec<double>> d_totalChargeDensityInNodalValues,
+      d_totalChargeDensityOutNodalValues,
+      d_totalChargeDensityResidualNodalValues;
+
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_inverseRhoNodalMassVector;
 
     // std::map<dealii::CellId, std::vector<double>> d_phiInValues,
     // d_phiOutValues;

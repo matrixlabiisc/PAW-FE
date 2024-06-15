@@ -35,7 +35,8 @@ namespace dftfe
     magZ,
     gradMagZ,
     DijMatrix,
-    gradPhi
+    gradPhi,
+    totalChargeDensity
   };
 
   /**

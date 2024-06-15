@@ -1364,6 +1364,15 @@ namespace dftfe
         const double charge =
           totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
         scaleRhoInQuadValues(scaleFactor / charge);
+        d_pawClassPtr->computeCompensationCharge(TypeOfField::In);
+        computeRhoNodalInverseMassVector();
+        computeTotalDensityNodalVector(d_bQuadValuesAllAtoms,
+                                       d_densityInNodalValues[0],
+                                       d_totalChargeDensityInNodalValues[0]);
+        const double chargeNodalBefore2 =
+          totalCharge(d_matrixFreeDataPRefined,
+                      d_totalChargeDensityInNodalValues[0]);
+        pcout << "Integral total charge " << chargeNodalBefore2 << std::endl;
       }
 
     d_isFirstFilteringCall.clear();
@@ -2424,6 +2433,12 @@ namespace dftfe
               true, // call MPI REDUCE while computing dot products
               d_dftParamsPtr->mixingParameter,
               d_dftParamsPtr->adaptAndersonMixingParameter);
+            d_mixingScheme.addMixingVariable(
+              mixingVariable::totalChargeDensity,
+              rhoNodalMassVec,
+              true, // call MPI REDUCE while computing dot products
+              d_dftParamsPtr->mixingParameter,
+              d_dftParamsPtr->adaptAndersonMixingParameter);
           }
         if (d_dftParamsPtr->useGradPhiMixing)
           {
@@ -2441,29 +2456,6 @@ namespace dftfe
               d_dftParamsPtr->mixingParameter,
               d_dftParamsPtr->adaptAndersonMixingParameter);
           }
-        // if (d_excManagerPtr->getDensityBasedFamilyType() ==
-        //     densityFamilyType::GGA)
-        //   {
-        //     dftfe::utils::MemoryStorage<double,
-        //     dftfe::utils::MemorySpace::HOST>
-        //       gradRhoJxW;
-        //     gradRhoJxW.resize(0);
-        //     d_mixingScheme.addMixingVariable(
-        //       mixingVariable::gradRho,
-        //       gradRhoJxW, // this is just a dummy variable to make it
-        //                   // compatible with rho
-        //       false,      // call MPI REDUCE while computing dot products
-        //       d_dftParamsPtr->mixingParameter,
-        //       d_dftParamsPtr->adaptAndersonMixingParameter);
-        //     if (d_dftParamsPtr->spinPolarized == 1)
-        //       d_mixingScheme.addMixingVariable(
-        //         mixingVariable::gradMagZ,
-        //         gradRhoJxW,
-        //         false, // call MPI REDUCE while computing dot products
-        //         d_dftParamsPtr->mixingParameter *
-        //           d_dftParamsPtr->spinMixingEnhancementFactor,
-        //         d_dftParamsPtr->adaptAndersonMixingParameter);
-        //   }
       }
     //
     // Begin SCF iteration
@@ -2635,12 +2627,9 @@ namespace dftfe
               {
                 std::vector<double> norms(
                   d_dftParamsPtr->spinPolarized == 1 ? 2 : 1);
-                double normGradPhi = 0.0;
-                double normDij     = 0.0;
-                // Update the history of mixing variables
-                // if (scfIter == 1)
-                //   d_densityResidualQuadValues.resize(
-                //     d_densityOutQuadValues.size());
+                double              normGradPhi = 0.0;
+                double              normDij     = 0.0;
+                std::vector<double> normsTotalCharge(1);
                 if (scfIter == 1)
                   d_densityResidualNodalValues.resize(
                     d_densityOutNodalValues.size());
@@ -2661,65 +2650,34 @@ namespace dftfe
                   mixingVariable::rho,
                   d_densityResidualNodalValues[0].begin(),
                   d_densityResidualNodalValues[0].locally_owned_size());
-                // for (unsigned int iComp = 0;
-                //      iComp < d_densityOutQuadValues.size();
-                //      ++iComp)
-                //   {
-                //     if (scfIter == 1)
-                //       d_densityResidualQuadValues[iComp].resize(
-                //         d_densityOutQuadValues[iComp].size());
-                //     d_basisOperationsPtrElectroHost->reinit(
-                //       0, 0, d_densityQuadratureIdElectro, false);
-                //     norms[iComp] = computeResidualQuadData(
-                //       d_densityOutQuadValues[iComp],
-                //       d_densityInQuadValues[iComp],
-                //       d_densityResidualQuadValues[iComp],
-                //       d_basisOperationsPtrElectroHost->JxWBasisData(),
-                //       true);
-                //     d_mixingScheme.addVariableToInHist(
-                //       iComp == 0 ? mixingVariable::rho :
-                //       mixingVariable::magZ,
-                //       d_densityInQuadValues[iComp].data(),
-                //       d_densityInQuadValues[iComp].size());
-                //     d_mixingScheme.addVariableToResidualHist(
-                //       iComp == 0 ? mixingVariable::rho :
-                //       mixingVariable::magZ,
-                //       d_densityResidualQuadValues[iComp].data(),
-                //       d_densityResidualQuadValues[iComp].size());
-                //   }
-                // if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                //     densityFamilyType::GGA)
-                //   {
-                //     if (scfIter == 1)
-                //       d_gradDensityResidualQuadValues.resize(
-                //         d_gradDensityOutQuadValues.size());
-                //     for (unsigned int iComp = 0;
-                //          iComp < d_gradDensityResidualQuadValues.size();
-                //          ++iComp)
-                //       {
-                //         if (scfIter == 1)
-                //           d_gradDensityResidualQuadValues[iComp].resize(
-                //             d_gradDensityOutQuadValues[iComp].size());
-                //         computeResidualQuadData(
-                //           d_gradDensityOutQuadValues[iComp],
-                //           d_gradDensityInQuadValues[iComp],
-                //           d_gradDensityResidualQuadValues[iComp],
-                //           d_basisOperationsPtrElectroHost->JxWBasisData(),
-                //           false);
-                //         d_mixingScheme.addVariableToInHist(
-                //           iComp == 0 ? mixingVariable::gradRho :
-                //                        mixingVariable::gradMagZ,
-                //           d_gradDensityInQuadValues[iComp].data(),
-                //           d_gradDensityInQuadValues[iComp].size());
-                //         d_mixingScheme.addVariableToResidualHist(
-                //           iComp == 0 ? mixingVariable::gradRho :
-                //                        mixingVariable::gradMagZ,
-                //           d_gradDensityResidualQuadValues[iComp].data(),
-                //           d_gradDensityResidualQuadValues[iComp].size());
-                //       }
-                //   }
                 if (d_dftParamsPtr->pawPseudoPotential)
                   {
+                    if (scfIter == 1)
+                      d_totalChargeDensityResidualNodalValues.resize(
+                        d_totalChargeDensityInNodalValues.size());
+                    computeTotalDensityNodalVector(
+                      d_bQuadValuesAllAtoms,
+                      d_densityOutNodalValues[0],
+                      d_totalChargeDensityOutNodalValues[0]);
+                    for (unsigned int iComp = 0;
+                         iComp < d_totalChargeDensityInNodalValues.size();
+                         ++iComp)
+                      {
+                        normsTotalCharge[iComp] = computeResidualNodalData(
+                          d_totalChargeDensityOutNodalValues[iComp],
+                          d_totalChargeDensityInNodalValues[iComp],
+                          d_totalChargeDensityResidualNodalValues[iComp]);
+                      }
+                    d_mixingScheme.addVariableToInHist(
+                      mixingVariable::totalChargeDensity,
+                      d_totalChargeDensityInNodalValues[0].begin(),
+                      d_totalChargeDensityInNodalValues[0]
+                        .locally_owned_size());
+                    d_mixingScheme.addVariableToResidualHist(
+                      mixingVariable::totalChargeDensity,
+                      d_totalChargeDensityResidualNodalValues[0].begin(),
+                      d_totalChargeDensityResidualNodalValues[0]
+                        .locally_owned_size());
                     if (d_dftParamsPtr->useGradPhiMixing)
                       {
                         if (scfIter == 1)
@@ -2782,17 +2740,17 @@ namespace dftfe
                   {
                     if (d_dftParamsPtr->useGradPhiMixing)
                       d_mixingScheme.computeAndersonMixingCoeff(
-                        std::vector<mixingVariable>{mixingVariable::gradPhi,
-                                                    mixingVariable::rho});
+                        std::vector<mixingVariable>{
+                          mixingVariable::gradPhi,
+                          mixingVariable::totalChargeDensity});
                     else
                       d_mixingScheme.computeAndersonMixingCoeff(
                         d_dftParamsPtr->spinPolarized == 1 ?
                           std::vector<mixingVariable>{
-                            mixingVariable::rho,
-                            mixingVariable::magZ,
-                            mixingVariable::DijMatrix} :
+                            mixingVariable::totalChargeDensity,
+                            mixingVariable::magZ} :
                           std::vector<mixingVariable>{
-                            mixingVariable::rho, mixingVariable::DijMatrix});
+                            mixingVariable::totalChargeDensity});
                   }
 
                 // update the mixing variables

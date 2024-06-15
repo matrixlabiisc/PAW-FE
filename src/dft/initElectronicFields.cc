@@ -43,6 +43,9 @@ namespace dftfe
     d_densityInNodalValues.resize(d_dftParamsPtr->spinPolarized == 1 ? 2 : 1);
     d_densityOutNodalValues.resize(d_dftParamsPtr->spinPolarized == 1 ? 2 : 1);
 
+    d_totalChargeDensityInNodalValues.resize(1);
+    d_totalChargeDensityOutNodalValues.resize(1);
+
     d_matrixFreeDataPRefined.initialize_dof_vector(
       d_densityInNodalValues[0], d_densityDofHandlerIndexElectro);
     for (unsigned int iComp = 1; iComp < d_densityInNodalValues.size(); ++iComp)
@@ -56,6 +59,28 @@ namespace dftfe
     for (unsigned int iComp = 0; iComp < d_densityOutNodalValues.size();
          ++iComp)
       d_densityOutNodalValues[iComp] = 0;
+
+    d_matrixFreeDataPRefined.initialize_dof_vector(
+      d_totalChargeDensityInNodalValues[0], d_densityDofHandlerIndexElectro);
+    for (unsigned int iComp = 1;
+         iComp < d_totalChargeDensityInNodalValues.size();
+         ++iComp)
+      d_totalChargeDensityInNodalValues[iComp].reinit(
+        d_totalChargeDensityInNodalValues[0]);
+    for (unsigned int iComp = 0;
+         iComp < d_totalChargeDensityInNodalValues.size();
+         ++iComp)
+      d_totalChargeDensityInNodalValues[iComp].reinit(
+        d_totalChargeDensityInNodalValues[0]);
+
+    for (unsigned int iComp = 0;
+         iComp < d_totalChargeDensityInNodalValues.size();
+         ++iComp)
+      d_totalChargeDensityInNodalValues[iComp] = 0;
+    for (unsigned int iComp = 0;
+         iComp < d_totalChargeDensityInNodalValues.size();
+         ++iComp)
+      d_totalChargeDensityInNodalValues[iComp] = 0;
 
 
     if ((d_dftParamsPtr->reuseDensityGeoOpt == 2 &&
