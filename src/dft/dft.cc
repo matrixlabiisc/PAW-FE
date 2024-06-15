@@ -3804,7 +3804,7 @@ namespace dftfe
               {
                 if (d_dftParamsPtr->memoryOptCompCharge)
                   d_pawClassPtr->computeCompensationChargeMemoryOpt(
-                    TypeOfField::In);
+                    TypeOfField::Out);
                 else
                   d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
                 if (d_dftParamsPtr->verbosity >= 4)
@@ -4148,7 +4148,7 @@ namespace dftfe
           {
             if (d_dftParamsPtr->memoryOptCompCharge)
               d_pawClassPtr->computeCompensationChargeMemoryOpt(
-                TypeOfField::In);
+                TypeOfField::Out);
             else
               d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
             if (d_dftParamsPtr->verbosity >= 4)

@@ -735,6 +735,8 @@ namespace dftfe
           kPointCoordinates,
           d_BasisOperatorHostPtr,
           d_nlpspQuadratureId);
+    computeNonlocalPseudoPotentialConstants(
+      CouplingType::inversePawOverlapEntries);
     double totalSystemMemory  = double(getTotalSystemMemory()) / 1E9 / 48.0;
     double minAvailableMemory = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
     MPI_Allreduce(MPI_IN_PLACE,
@@ -792,8 +794,7 @@ namespace dftfe
                   d_mpiCommParent);
     pcout << "Min memory and total system memory: " << minAvailableMemory2
           << " " << totalSystemMemory2 << std::endl;
-    computeNonlocalPseudoPotentialConstants(
-      CouplingType::inversePawOverlapEntries);
+
     checkOverlapAugmentation();
     MPI_Barrier(d_mpiCommParent);
     double TotalTime = MPI_Wtime() - InitTimeTotal;
