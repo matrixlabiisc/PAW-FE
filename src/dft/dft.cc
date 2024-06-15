@@ -2919,7 +2919,7 @@ namespace dftfe
                 TypeOfField::In);
             else
               d_pawClassPtr->computeCompensationCharge(TypeOfField::In);
-            if (d_dftParamsPtr->verbosity >= 5 || scfIter == 0)
+            if (d_dftParamsPtr->verbosity >= 4 || scfIter == 0)
               d_pawClassPtr->chargeNeutrality(
                 totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]),
                 TypeOfField::In,

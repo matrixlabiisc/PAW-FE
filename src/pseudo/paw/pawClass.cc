@@ -296,9 +296,8 @@ namespace dftfe
             Znum);
         std::vector<double> deltaL(numShapeFunctions, 0.0);
         const char          transA = 'N', transB = 'N';
-        const double        Alpha = 1, Beta = 0.0;
-        const unsigned int  inc   = 1;
-        const double        Beta2 = 1.0;
+        const double        Alpha = 1.0, Beta = 0.0;
+        const unsigned int  inc = 1;
 
         dgemm_(&transA,
                &transB,
@@ -310,7 +309,7 @@ namespace dftfe
                &inc,
                &Tij[0],
                &npjsq,
-               &Beta2,
+               &Beta,
                &deltaL[0],
                &inc);
 
@@ -341,6 +340,7 @@ namespace dftfe
                                              &one,
                                              &deltaL[0],
                                              &one);
+
               } // q_point
 
           } // iElem
@@ -452,12 +452,9 @@ namespace dftfe
         const unsigned int NumRadialProjectors =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
-        const unsigned int numShapeFunctions =
-          d_atomicShapeFnsContainer
-            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
         std::vector<double> tempCoeff(numberElementsInAtomCompactSupport *
                                         numberQuadraturePoints *
-                                        numShapeFunctions,
+                                        NumTotalSphericalFunctions,
                                       0.0);
 
         for (int iElemComp = 0; iElemComp < numberElementsInAtomCompactSupport;
@@ -539,8 +536,9 @@ namespace dftfe
                                       radialVal * sphericalHarmonicVal;
                                     long unsigned int loc =
                                       iElemComp * (numberQuadraturePoints *
-                                                   numShapeFunctions) +
-                                      iQuadPoint * numShapeFunctions + Lindex;
+                                                   NumTotalSphericalFunctions) +
+                                      iQuadPoint * NumTotalSphericalFunctions +
+                                      Lindex;
                                     tempCoeff[loc] += sphericalFunctionValue;
                                     gLValuesQuadPoints
                                       [Lindex * numberQuadraturePoints +

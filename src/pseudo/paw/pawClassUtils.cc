@@ -1471,17 +1471,19 @@ namespace dftfe
                                   alpha_i * numberOfProjectors + alpha_j;
                                 productValues[loc] = Cijl * multipolevalue;
 
+                                alpha_j++;
                               } // m_j
 
-                            alpha_j++;
+
                           } // j
-                      }     // m_i
-                    alpha_i++;
+                        alpha_i++;
+                      } // m_i
+
                   } // i
 
-
+                Lindex++;
               } // mQuantumNumber
-            Lindex++;
+
           } // lQuantumNumber
 
         d_productOfMultipoleClebshGordon[Znum] = productValues;
