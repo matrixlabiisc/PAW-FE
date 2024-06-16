@@ -624,17 +624,16 @@ namespace dftfe
           {
             subCellPtr = d_matrixFreeDataPRefined.get_cell_iterator(
               macrocell, iSubCell, d_densityDofHandlerIndexElectro);
-            dealii::CellId            subCellId = subCellPtr->id();
-            const std::vector<double> tempVec =
-              bQuadValues.find(subCellId)->second;
+            dealii::CellId subCellId = subCellPtr->id();
             if (bQuadValues.find(subCellId) == bQuadValues.end())
               continue;
+            const std::vector<double> tempVec =
+              bQuadValues.find(subCellId)->second;
             if (tempVec.size() != numQuadPointsSmearedb)
               std::cout << "Issue mismatch: " << tempVec.size() << " "
                         << this_mpi_process << std::endl;
             for (unsigned int q = 0; q < numQuadPointsSmearedb; ++q)
               smearedbQuads[q][iSubCell] = tempVec[q];
-
             isMacroCellTrivial = false;
           }
 
@@ -649,13 +648,26 @@ namespace dftfe
             fe_eval_sc.distribute_local_to_global(smearedCharge);
           }
       }
-
+    MPI_Barrier(d_mpiCommParent);
+    smearedCharge.compress(dealii::VectorOperation::add);
+    // pcout<<"Smeared chage L2norm: "<<smearedCharge.l2_norm()<<std::endl;
     for (int iDoF = 0; iDoF < d_inverseRhoNodalMassVector.size(); iDoF++)
       {
         totalChargeDensity.local_element(iDoF) =
           smearedCharge.local_element(iDoF) * d_inverseRhoNodalMassVector[iDoF];
       }
+    const double chargeNodalCompensation =
+      totalCharge(d_matrixFreeDataPRefined, totalChargeDensity);
+    const double chargeNodalElectronDensity =
+      totalCharge(d_matrixFreeDataPRefined, electronDensity);
     totalChargeDensity += electronDensity;
+    const double chargeNodalTotal =
+      totalCharge(d_matrixFreeDataPRefined, totalChargeDensity);
+
+    pcout << "Integral total charge " << chargeNodalTotal << " "
+          << chargeNodalElectronDensity << " " << chargeNodalCompensation
+          << std::endl;
+    // std::exit(0);
   }
 
 #include "dft.inst.cc"

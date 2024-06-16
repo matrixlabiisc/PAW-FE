@@ -1364,15 +1364,18 @@ namespace dftfe
         const double charge =
           totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
         scaleRhoInQuadValues(scaleFactor / charge);
-        d_pawClassPtr->computeCompensationCharge(TypeOfField::In);
+        if (d_dftParamsPtr->memoryOptCompCharge)
+          d_pawClassPtr->computeCompensationChargeMemoryOpt(TypeOfField::In);
+        else
+          d_pawClassPtr->computeCompensationCharge(TypeOfField::In);
+        d_pawClassPtr->chargeNeutrality(totalCharge(d_dofHandlerRhoNodal,
+                                                    d_densityInQuadValues[0]),
+                                        TypeOfField::In,
+                                        false);
         computeRhoNodalInverseMassVector();
         computeTotalDensityNodalVector(d_bQuadValuesAllAtoms,
                                        d_densityInNodalValues[0],
                                        d_totalChargeDensityInNodalValues[0]);
-        const double chargeNodalBefore2 =
-          totalCharge(d_matrixFreeDataPRefined,
-                      d_totalChargeDensityInNodalValues[0]);
-        pcout << "Integral total charge " << chargeNodalBefore2 << std::endl;
       }
 
     d_isFirstFilteringCall.clear();
@@ -2655,10 +2658,6 @@ namespace dftfe
                     if (scfIter == 1)
                       d_totalChargeDensityResidualNodalValues.resize(
                         d_totalChargeDensityInNodalValues.size());
-                    computeTotalDensityNodalVector(
-                      d_bQuadValuesAllAtoms,
-                      d_densityOutNodalValues[0],
-                      d_totalChargeDensityOutNodalValues[0]);
                     for (unsigned int iComp = 0;
                          iComp < d_totalChargeDensityInNodalValues.size();
                          ++iComp)
@@ -2792,6 +2791,11 @@ namespace dftfe
                                                  Dij_in,
                                                  interpoolcomm,
                                                  interBandGroupComm);
+                    d_mixingScheme.mixVariable(
+                      mixingVariable::totalChargeDensity,
+                      d_totalChargeDensityInNodalValues[0].begin(),
+                      d_totalChargeDensityInNodalValues[0]
+                        .locally_owned_size());
                   }
                 if (d_dftParamsPtr->verbosity >= 1)
                   {
@@ -2802,10 +2806,17 @@ namespace dftfe
                             << "-density difference: " << norms[iComp]
                             << std::endl;
                     if (d_dftParamsPtr->pawPseudoPotential)
-                      pcout << d_dftParamsPtr->mixingMethod
-                            << " mixing, L2 norm of "
-                            << "Dij matrix"
-                            << "difference: " << normDij << std::endl;
+                      {
+                        pcout << d_dftParamsPtr->mixingMethod
+                              << " mixing, L2 norm of "
+                              << "Dij matrix"
+                              << "difference: " << normDij << std::endl;
+                        pcout << d_dftParamsPtr->mixingMethod
+                              << " mixing, L2 norm of "
+                              << "total Charge Density"
+                              << "difference: " << normsTotalCharge[0]
+                              << std::endl;
+                      }
                     if (d_dftParamsPtr->useGradPhiMixing)
                       pcout << d_dftParamsPtr->mixingMethod
                             << " mixing, L2 norm of "
@@ -3769,6 +3780,10 @@ namespace dftfe
                   d_pawClassPtr->chargeNeutrality(integralRhoValue,
                                                   TypeOfField::Out,
                                                   false);
+                computeTotalDensityNodalVector(
+                  d_bQuadValuesAllAtoms,
+                  d_densityOutNodalValues[0],
+                  d_totalChargeDensityOutNodalValues[0]);
               }
           }
 
@@ -4114,6 +4129,10 @@ namespace dftfe
                 totalCharge(d_dofHandlerRhoNodal, d_densityOutQuadValues[0]),
                 TypeOfField::Out,
                 false);
+            computeTotalDensityNodalVector(
+              d_bQuadValuesAllAtoms,
+              d_densityOutNodalValues[0],
+              d_totalChargeDensityOutNodalValues[0]);
           }
 
         if (d_dftParamsPtr->multipoleBoundaryConditions)

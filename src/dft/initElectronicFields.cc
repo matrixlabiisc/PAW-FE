@@ -70,7 +70,7 @@ namespace dftfe
     for (unsigned int iComp = 0;
          iComp < d_totalChargeDensityInNodalValues.size();
          ++iComp)
-      d_totalChargeDensityInNodalValues[iComp].reinit(
+      d_totalChargeDensityOutNodalValues[iComp].reinit(
         d_totalChargeDensityInNodalValues[0]);
 
     for (unsigned int iComp = 0;
@@ -80,7 +80,7 @@ namespace dftfe
     for (unsigned int iComp = 0;
          iComp < d_totalChargeDensityInNodalValues.size();
          ++iComp)
-      d_totalChargeDensityInNodalValues[iComp] = 0;
+      d_totalChargeDensityOutNodalValues[iComp] = 0;
 
 
     if ((d_dftParamsPtr->reuseDensityGeoOpt == 2 &&
