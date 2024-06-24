@@ -1359,8 +1359,9 @@ namespace dftfe
                     totalEntries += numProj * numProj;
                   }
                 MPI_Barrier(d_mpiCommParent);
-                const unsigned int     numKpoint = d_kpointWeights.size();
-                std::vector<ValueType> PijMatrix(totalEntries * numKpoint, 0.0);
+                const unsigned int     numKpoints = d_kpointWeights.size();
+                std::vector<ValueType> PijMatrix(totalEntries * numKpoints,
+                                                 0.0);
                 const unsigned int     natoms = atomicNumber.size();
                 const unsigned int ndofs = d_BasisOperatorHostPtr->nOwnedDofs();
                 std::vector<unsigned int> relAtomdIdsInCurrentProcs =
@@ -1564,7 +1565,7 @@ namespace dftfe
 
                 MPI_Allreduce(MPI_IN_PLACE,
                               &PijMatrix[0],
-                              totalEntries * numKpoint,
+                              totalEntries * numKpoints,
                               dataTypes::mpi_type_id(&PijMatrix[0]),
                               MPI_SUM,
                               d_mpiCommParent);
@@ -1575,9 +1576,9 @@ namespace dftfe
                       d_atomicProjectorFnsContainer
                         ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                     std::vector<ValueType> deltaMatrixFull(
-                      numKPoints * numberOfProjectors * numberOfProjectors,
+                      numKpoints * numberOfProjectors * numberOfProjectors,
                       0.0);
-                    for (int kPoint = 0; kPoint < numKpoint; kPoint++)
+                    for (int kPoint = 0; kPoint < numKpoints; kPoint++)
                       {
                         std::vector<ValueType> deltaMatrix2(
                           numberOfProjectors * numberOfProjectors, 0.0);
@@ -1595,14 +1596,21 @@ namespace dftfe
                                              jProj] =
                                   multipoleInverse[iProj * numberOfProjectors +
                                                    jProj] +
-                                  PijMatrix[start + iProj * numberOfProjectors +
-                                            jProj];
+                                  PijMatrix[kPoint * totalEntries + start +
+                                            iProj * numberOfProjectors + jProj];
                               }
                           }
 
                         dftfe::linearAlgebraOperations::inverse(
                           &deltaMatrix2[0], numberOfProjectors);
                         // Copy into each kPoint location
+                        d_BLASWrapperHostPtr->xcopy(
+                          numberOfProjectors * numberOfProjectors,
+                          &deltaMatrix2[0],
+                          1,
+                          &deltaMatrixFull[kPoint * numberOfProjectors *
+                                           numberOfProjectors],
+                          1);
                       }
                     d_atomicNonLocalPseudoPotentialConstants
                       [CouplingType::inversePawOverlapEntries][iAtom] =

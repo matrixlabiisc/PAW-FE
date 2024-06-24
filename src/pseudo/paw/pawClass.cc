@@ -1010,31 +1010,37 @@ namespace dftfe
                   d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
                 std::vector<unsigned int> atomicNumber =
                   d_atomicProjectorFnsContainer->getAtomicNumbers();
-                for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
+                for (int kPoint = 0; kPoint < d_kpointWeights.size(); kPoint++)
                   {
-                    unsigned int atomId = atomIdsInProcessor[iAtom];
-                    unsigned int Zno    = atomicNumber[atomId];
-                    unsigned int numberSphericalFunctions =
-                      d_atomicProjectorFnsContainer
-                        ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
-                    for (unsigned int alpha_i = 0;
-                         alpha_i < numberSphericalFunctions;
-                         alpha_i++)
+                    for (int iAtom = 0; iAtom < atomIdsInProcessor.size();
+                         iAtom++)
                       {
-                        for (unsigned int alpha_j = 0;
-                             alpha_j < numberSphericalFunctions;
-                             alpha_j++)
+                        unsigned int atomId = atomIdsInProcessor[iAtom];
+                        unsigned int Zno    = atomicNumber[atomId];
+                        unsigned int numberSphericalFunctions =
+                          d_atomicProjectorFnsContainer
+                            ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+                        for (unsigned int alpha_i = 0;
+                             alpha_i < numberSphericalFunctions;
+                             alpha_i++)
                           {
-                            unsigned int index =
-                              alpha_i * numberSphericalFunctions + alpha_j;
-                            ValueType V =
-                              d_atomicNonLocalPseudoPotentialConstants
-                                [CouplingType::inversePawOverlapEntries][atomId]
-                                [index];
-                            Entries.push_back(V);
-                          }
-                      }
-                  }
+                            for (unsigned int alpha_j = 0;
+                                 alpha_j < numberSphericalFunctions;
+                                 alpha_j++)
+                              {
+                                unsigned int index =
+                                  alpha_i * numberSphericalFunctions + alpha_j;
+                                ValueType V =
+                                  d_atomicNonLocalPseudoPotentialConstants
+                                    [CouplingType::inversePawOverlapEntries]
+                                    [atomId][kPoint * numberSphericalFunctions *
+                                               numberSphericalFunctions +
+                                             index];
+                                Entries.push_back(V);
+                              } // alpha_j
+                          }     // alpha_i
+                      }         // iAtom
+                  }             // kPoint
                 couplingEntriesHost.resize(Entries.size());
                 couplingEntriesHost.copyFrom(Entries);
                 d_couplingMatrixEntries

@@ -232,8 +232,9 @@ namespace dftfe
       const CouplingStructure                                    couplingtype,
       const dftfe::utils::MemoryStorage<ValueType, memorySpace> &couplingMatrix,
       dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
-        &        sphericalFunctionKetTimesVectorParFlattened,
-      const bool flagCopyResultsToMatrix = true);
+        &                sphericalFunctionKetTimesVectorParFlattened,
+      const bool         flagCopyResultsToMatrix = true,
+      const unsigned int kPointIndex             = 0);
 
 
     /**

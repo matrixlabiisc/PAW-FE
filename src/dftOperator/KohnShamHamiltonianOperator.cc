@@ -1329,7 +1329,8 @@ namespace dftfe
       CouplingStructure::dense,
       d_pawClassPtr->getCouplingMatrix(CouplingType::inversePawOverlapEntries),
       d_pseudopotentialNonLocalProjectorTimesVectorBlock,
-      true);
+      true,
+      d_kPointIndex);
     d_tempBlockVectorPawSinvHX.zeroOutGhosts();
     inverseMassVectorScaledConstraintsNoneDataInfoPtr->set_zero(
       d_tempBlockVectorPawSinvHX);
@@ -1585,7 +1586,8 @@ namespace dftfe
           d_pawClassPtr->getCouplingMatrix(
             CouplingType::inversePawOverlapEntries),
           d_pseudopotentialNonLocalProjectorTimesVectorBlock,
-          true);
+          true,
+          d_kPointIndex);
         d_tempBlockVectorPawSinvHX.zeroOutGhosts();
         inverseMassVectorScaledConstraintsNoneDataInfoPtr->set_zero(
           d_tempBlockVectorPawSinvHX);
@@ -1854,7 +1856,8 @@ namespace dftfe
           d_pawClassPtr->getCouplingMatrixSinglePrec(
             CouplingType::inversePawOverlapEntries),
           d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec,
-          true);
+          true,
+          d_kPointIndex);
         d_tempBlockVectorPawSinvHXSinglePrec.zeroOutGhosts();
         inverseMassVectorScaledConstraintsNoneDataInfoPtr->set_zero(
           d_tempBlockVectorPawSinvHXSinglePrec);

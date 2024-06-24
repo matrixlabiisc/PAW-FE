@@ -1721,8 +1721,9 @@ namespace dftfe
     const CouplingStructure                                    couplingtype,
     const dftfe::utils::MemoryStorage<ValueType, memorySpace> &couplingMatrix,
     dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
-      &        sphericalFunctionKetTimesVectorParFlattened,
-    const bool flagCopyResultsToMatrix)
+      &                sphericalFunctionKetTimesVectorParFlattened,
+    const bool         flagCopyResultsToMatrix,
+    const unsigned int kPointIndex)
   {
     if (d_totalNonLocalEntries > 0)
       {
@@ -1807,12 +1808,13 @@ namespace dftfe
                       numberSphericalFunctions * d_numberWaveFunctions, 0.0);
                     std::vector<ValueType> nonlocalConstantVmatrix(
                       numberSphericalFunctions * numberSphericalFunctions, 0.0);
-                    d_BLASWrapperPtr->xcopy(numberSphericalFunctions *
-                                              numberSphericalFunctions,
-                                            &couplingMatrix[startIndex],
-                                            1,
-                                            &nonlocalConstantVmatrix[0],
-                                            1);
+                    d_BLASWrapperPtr->xcopy(
+                      numberSphericalFunctions * numberSphericalFunctions,
+                      &couplingMatrix[kPointIndex * d_totalNonLocalEntries +
+                                      startIndex],
+                      1,
+                      &nonlocalConstantVmatrix[0],
+                      1);
                     std::vector<ValueType> inputMatrix(
                       numberSphericalFunctions * d_numberWaveFunctions, 0.0);
 
