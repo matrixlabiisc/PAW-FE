@@ -50,6 +50,20 @@ namespace dftfe
       delete[] WORK;
     }
     void
+    inverse(std::complex<double> *A, int N)
+    {
+      int *                 IPIV  = new int[N];
+      int                   LWORK = N * N;
+      std::complex<double> *WORK  = new std::complex<double>[LWORK];
+      int                   INFO;
+
+      zgetrf_(&N, &N, A, &N, IPIV, &INFO);
+      zgetri_(&N, A, &N, IPIV, WORK, &LWORK, &INFO);
+
+      delete[] IPIV;
+      delete[] WORK;
+    }
+    void
     pointWiseScaleWithDiagonal(const double *     diagonal,
                                const unsigned int numberFields,
                                const unsigned int numberDofs,

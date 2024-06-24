@@ -465,6 +465,25 @@ namespace dftfe
             double *WORK,
             int *   lwork,
             int *   INFO);
+
+    // LU decomoposition of a general matrix
+    void
+    zgetrf_(int *                 M,
+            int *                 N,
+            std::complex<double> *A,
+            int *                 lda,
+            int *                 IPIV,
+            int *                 INFO);
+
+    // generate inverse of a matrix given its LU decomposition
+    void
+    zgetri_(int *                 N,
+            std::complex<double> *A,
+            int *                 lda,
+            int *                 IPIV,
+            std::complex<double> *WORK,
+            int *                 lwork,
+            int *                 INFO);
   }
 #endif
 
@@ -590,6 +609,11 @@ namespace dftfe
      */
     void
     inverse(double *A, int N);
+
+    /** @brief Compute inverse of serial matrix using LAPACK LU factorization
+     */
+    void
+    inverse(std::complex<double> *A, int N);
 
     /** @brief Calculates an estimate of lower and upper bounds of a matrix using
      *  k-step Lanczos method.

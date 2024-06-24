@@ -549,7 +549,7 @@ namespace dftfe
       d_BLASWrapperDevicePtr;
 #endif
     std::vector<std::vector<double>> d_nonLocalPseudoPotentialConstants;
-    std::map<CouplingType, std::map<unsigned int, std::vector<double>>>
+    std::map<CouplingType, std::map<unsigned int, std::vector<ValueType>>>
       d_atomicNonLocalPseudoPotentialConstants;
     std::map<CouplingType, dftfe::utils::MemoryStorage<ValueType, memorySpace>>
       d_couplingMatrixEntries;

@@ -1133,14 +1133,15 @@ namespace dftfe
         const unsigned int numberOfRadialProjectors =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
-        std::vector<double> Dij_in   = D_ij[TypeOfField::In][atomId];
-        std::vector<double> Dij_out  = D_ij[TypeOfField::Out][atomId];
-        std::vector<double> Zeroij   = d_zeroPotentialij[Znum];
-        std::vector<double> KEij     = d_KineticEnergyCorrectionTerm[Znum];
-        std::vector<double> Cij      = d_deltaCij[Znum];
-        std::vector<double> Cijkl    = d_deltaCijkl[Znum];
-        std::vector<double> deltaHij = d_atomicNonLocalPseudoPotentialConstants
-          [CouplingType::HamiltonianEntries][atomId];
+        std::vector<double>    Dij_in  = D_ij[TypeOfField::In][atomId];
+        std::vector<double>    Dij_out = D_ij[TypeOfField::Out][atomId];
+        std::vector<double>    Zeroij  = d_zeroPotentialij[Znum];
+        std::vector<double>    KEij    = d_KineticEnergyCorrectionTerm[Znum];
+        std::vector<double>    Cij     = d_deltaCij[Znum];
+        std::vector<double>    Cijkl   = d_deltaCijkl[Znum];
+        std::vector<ValueType> deltaHij =
+          d_atomicNonLocalPseudoPotentialConstants
+            [CouplingType::HamiltonianEntries][atomId];
         double C                               = d_deltaC[Znum];
         double Cvalence                        = d_deltaValenceC[Znum];
         double KEcontribution                  = 0.0;
@@ -1156,7 +1157,7 @@ namespace dftfe
               {
                 nonLocalHamiltonianContribution +=
                   Dij_out[iProj * numberOfProjectors + jProj] *
-                  deltaHij[iProj * numberOfProjectors + jProj];
+                  std::real(deltaHij[iProj * numberOfProjectors + jProj]);
                 // pcout << iProj * numberOfProjectors + jProj << " "
                 //       << Dij_out[iProj * numberOfProjectors + jProj] << " "
                 //       << deltaHij[iProj * numberOfProjectors + jProj] << " "

@@ -939,8 +939,10 @@ namespace dftfe
                           {
                             unsigned int index =
                               alpha_i * numberSphericalFunctions + alpha_j;
-                            double V = d_atomicNonLocalPseudoPotentialConstants
-                              [CouplingType::HamiltonianEntries][atomId][index];
+                            ValueType V =
+                              d_atomicNonLocalPseudoPotentialConstants
+                                [CouplingType::HamiltonianEntries][atomId]
+                                [index];
                             Entries.push_back(V);
                           }
                       }
@@ -981,8 +983,9 @@ namespace dftfe
                           {
                             unsigned int index =
                               alpha_i * numberSphericalFunctions + alpha_j;
-                            double V = d_atomicNonLocalPseudoPotentialConstants
-                              [CouplingType::pawOverlapEntries][Zno][index];
+                            ValueType V =
+                              d_atomicNonLocalPseudoPotentialConstants
+                                [CouplingType::pawOverlapEntries][Zno][index];
                             Entries.push_back(V);
                           }
                       }
@@ -1024,9 +1027,10 @@ namespace dftfe
                           {
                             unsigned int index =
                               alpha_i * numberSphericalFunctions + alpha_j;
-                            double V = d_atomicNonLocalPseudoPotentialConstants
-                              [CouplingType::inversePawOverlapEntries][atomId]
-                              [index];
+                            ValueType V =
+                              d_atomicNonLocalPseudoPotentialConstants
+                                [CouplingType::inversePawOverlapEntries][atomId]
+                                [index];
                             Entries.push_back(V);
                           }
                       }
