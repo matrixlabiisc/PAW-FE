@@ -163,8 +163,9 @@ namespace dftfe
       *flattenedArrayBlock;
 
     dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
-                 projectorKetTimesVector;
-    unsigned int previousSize = 0;
+                      projectorKetTimesVector;
+    unsigned int      previousSize = 0;
+    std::vector<bool> startFlag(numSpinComponents, true);
     for (unsigned int kPoint = 0; kPoint < kPointWeights.size(); ++kPoint)
       {
         for (unsigned int spinIndex = 0; spinIndex < numSpinComponents;
@@ -362,12 +363,16 @@ namespace dftfe
                         pawClassPtr->getNonLocalOperator()
                           ->copyBackFromDistributedVectorToLocalDataStructure(
                             projectorKetTimesVector, partialOccupVec);
-                        pawClassPtr->computeDij(
-                          true, jvec, currentBlockSize, spinIndex, kPoint);
+                        pawClassPtr->computeDij(true,
+                                                startFlag[spinIndex] ? 0 : 1,
+                                                currentBlockSize,
+                                                spinIndex,
+                                                kPoint);
                         // Call computeDij
                       }
                   }
-              }
+                startFlag[spinIndex] = false;
+              } // jvec
 
             if (spectrumSplit)
               for (unsigned int jvec = 0; jvec < Nfr; jvec += BVec)

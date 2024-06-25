@@ -1260,6 +1260,8 @@ namespace dftfe
         if (useApproximateMatrixEntries)
           {
             const unsigned int blockSize = src.numVectors();
+            // std::cout<<" Diagonal M size:
+            // "<<d_basisOperationsPtr->massVector().size()<<std::endl;
             d_BLASWrapperPtr->stridedBlockAxpy(
               blockSize,
               src.locallyOwnedSize(),

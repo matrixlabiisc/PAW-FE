@@ -335,8 +335,7 @@ namespace dftfe
               1,
               true,
               !d_dftParamsPtr->diagonalMassMatrix);
-            d_basisOperationsPtrHost->computeInverseSqrtMassVector(
-              true, !d_dftParamsPtr->diagonalMassMatrix);
+            d_basisOperationsPtrHost->computeInverseSqrtMassVector(true, true);
           }
       }
     if (!d_dftParamsPtr->useDevice && recomputeBasisData)
@@ -412,8 +411,8 @@ namespace dftfe
                 50,
                 true,
                 !d_dftParamsPtr->diagonalMassMatrix);
-            d_basisOperationsPtrDevice->computeInverseSqrtMassVector(
-              true, !d_dftParamsPtr->diagonalMassMatrix);
+            d_basisOperationsPtrDevice->computeInverseSqrtMassVector(true,
+                                                                     true);
             unsigned int BVec2 =
               std::min(d_dftParamsPtr->wfcBlockSize, d_numEigenValues);
             if (BVec != BVec2)

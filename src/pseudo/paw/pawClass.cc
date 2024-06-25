@@ -1187,10 +1187,12 @@ namespace dftfe
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
         if (startVectorIndex == 0)
-          D_ij[isDijOut ? TypeOfField::Out : TypeOfField::In][atomId] =
-            std::vector<double>(numberSphericalFunctions *
-                                  numberSphericalFunctions,
-                                0.0);
+          {
+            D_ij[isDijOut ? TypeOfField::Out : TypeOfField::In][atomId] =
+              std::vector<double>(numberSphericalFunctions *
+                                    numberSphericalFunctions,
+                                  0.0);
+          }
         std::vector<ValueType> tempDij(numberSphericalFunctions *
                                          numberSphericalFunctions,
                                        0.0);

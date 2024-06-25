@@ -1381,8 +1381,6 @@ namespace dftfe
                         ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                   }
                 totalProjectorsInProcessor = startIndex;
-                std::vector<ValueType> processorLocalPmatrix(
-                  ndofs * totalProjectorsInProcessor, 0.0);
                 std::vector<ValueType> processorLocalPTransPMatrix(
                   totalProjectorsInProcessor * totalProjectorsInProcessor, 0.0);
                 std::vector<unsigned int> numProjList;
@@ -1418,6 +1416,8 @@ namespace dftfe
 
                 for (int kPoint = 0; kPoint < d_kpointWeights.size(); kPoint++)
                   {
+                    std::vector<ValueType> processorLocalPmatrix(
+                      ndofs * totalProjectorsInProcessor, 0.0);
                     unsigned int projStartIndex = 0;
                     for (unsigned int atomId = 0; atomId < atomicNumber.size();
                          atomId++)
@@ -4683,9 +4683,9 @@ namespace dftfe
           *flattenedArrayBlock;
 
         dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
-                     projectorKetTimesVector;
-        unsigned int previousSize = 0;
-
+                          projectorKetTimesVector;
+        unsigned int      previousSize = 0;
+        std::vector<bool> startFlag(numSpinComponents, true);
         for (unsigned int kPoint = 0; kPoint < kPointWeights.size(); ++kPoint)
           {
             unsigned int numberOfRemainingElectrons = numberOfElectrons;
@@ -4793,19 +4793,24 @@ namespace dftfe
                         d_nonLocalOperator
                           ->copyBackFromDistributedVectorToLocalDataStructure(
                             projectorKetTimesVector, partialOccupVec);
-                        computeDij(
-                          false, jvec, currentBlockSize, spinIndex, kPoint);
+                        computeDij(false,
+                                   startFlag[spinIndex] ? 0 : 1,
+                                   currentBlockSize,
+                                   spinIndex,
+                                   kPoint);
                         // Call computeDij
                       } // if
-                  }
-              }
-          }
+                    startFlag[spinIndex] = false;
+                  } // jVec
+              }     // spinIndex
+          }         // kPoiintIndex
 
 
         MPI_Barrier(d_mpiCommParent);
         communicateDijAcrossAllProcessors(TypeOfField::In,
                                           interpoolcomm,
                                           interBandGroupComm);
+        // std::exit(0);
         // std::cout << "Size of D_ij in: " << D_ij[TypeOfField::In].size() << "
         // "
         //           << d_this_mpi_process << std::endl;

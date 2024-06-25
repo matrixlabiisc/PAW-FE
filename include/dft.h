@@ -526,7 +526,8 @@ namespace dftfe
     void
     aposterioriMeshGenerate();
     void
-    computeTraceXtHX(unsigned int numberWaveFunctionsEstimate);
+    computeTraceXtHX(unsigned int       numberWaveFunctionsEstimate,
+                     const unsigned int kpoint = 0);
     double
     computeTraceXtKX(unsigned int numberWaveFunctionsEstimate);
 

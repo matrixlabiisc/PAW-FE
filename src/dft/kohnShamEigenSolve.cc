@@ -58,7 +58,8 @@ namespace dftfe
             dftfe::utils::MemorySpace memorySpace>
   void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::computeTraceXtHX(
-    unsigned int numberWaveFunctions)
+    unsigned int       numberWaveFunctions,
+    const unsigned int kpoint)
   {
     if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
       {
@@ -68,7 +69,7 @@ namespace dftfe
         // linearAlgebraOperations::XtHX(, ProjHam);
         // linearAlgebraOperations::XtOX(, ProjS);
         // linearAlgebraOperations::XtpawHX(, ProjPawHam);
-        unsigned int kPointIndex = 0;
+        unsigned int kPointIndex = kpoint;
         unsigned int spinType    = 0;
         MPI_Barrier(d_mpiCommParent);
         pcout << "XtpawHX called: " << std::endl;

@@ -760,8 +760,10 @@ namespace dftfe
                 index++;
               }
           }
+
         if (d_verbosity >= 5)
           {
+            MPI_Barrier(d_mpiCommParent);
             pcout << "---------------MATRIX METHOD ------------------------"
                   << std::endl;
 

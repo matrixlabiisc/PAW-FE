@@ -1791,10 +1791,12 @@ namespace dftfe
 
             else if (couplingtype == CouplingStructure::dense)
               {
-                unsigned int       startIndex = 0;
-                const unsigned int inc        = 1;
-                const ValueType    alpha      = 1;
-                const ValueType    beta       = 0;
+                unsigned int startIndex = 0;
+                unsigned int totalShift =
+                  couplingMatrix.size() / d_kPointWeights.size();
+                const unsigned int inc   = 1;
+                const ValueType    alpha = 1;
+                const ValueType    beta  = 0;
                 for (int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
                   {
                     const unsigned int atomId = atomIdsInProc[iAtom];
@@ -1810,8 +1812,7 @@ namespace dftfe
                       numberSphericalFunctions * numberSphericalFunctions, 0.0);
                     d_BLASWrapperPtr->xcopy(
                       numberSphericalFunctions * numberSphericalFunctions,
-                      &couplingMatrix[kPointIndex * d_totalNonLocalEntries +
-                                      startIndex],
+                      &couplingMatrix[kPointIndex * totalShift + startIndex],
                       1,
                       &nonlocalConstantVmatrix[0],
                       1);

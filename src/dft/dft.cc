@@ -3202,7 +3202,7 @@ namespace dftfe
                                   << " for spin " << s + 1 << std::endl;
                           }
                         if (d_dftParamsPtr->verbosity >= 5)
-                          computeTraceXtHX(d_numEigenValues);
+                          computeTraceXtHX(d_numEigenValues, kPoint);
 
 #ifdef DFTFE_WITH_DEVICE
                         if constexpr (dftfe::utils::MemorySpace::DEVICE ==
@@ -3384,7 +3384,7 @@ namespace dftfe
                                   "Hamiltonian Matrix Computation");
                               }
                             if (d_dftParamsPtr->verbosity >= 5)
-                              computeTraceXtHX(d_numEigenValues);
+                              computeTraceXtHX(d_numEigenValues, kPoint);
 
 #ifdef DFTFE_WITH_DEVICE
                             if constexpr (dftfe::utils::MemorySpace::DEVICE ==
@@ -3540,7 +3540,7 @@ namespace dftfe
                               << std::endl;
                       }
                     if (d_dftParamsPtr->verbosity >= 5)
-                      computeTraceXtHX(d_numEigenValues);
+                      computeTraceXtHX(d_numEigenValues, kPoint);
 
 #ifdef DFTFE_WITH_DEVICE
                     if constexpr (dftfe::utils::MemorySpace::DEVICE ==
@@ -3655,7 +3655,7 @@ namespace dftfe
                               "Hamiltonian Matrix Computation");
                           }
                         if (d_dftParamsPtr->verbosity >= 5)
-                          computeTraceXtHX(d_numEigenValues);
+                          computeTraceXtHX(d_numEigenValues, kPoint);
 #ifdef DFTFE_WITH_DEVICE
                         if constexpr (dftfe::utils::MemorySpace::DEVICE ==
                                       memorySpace)
