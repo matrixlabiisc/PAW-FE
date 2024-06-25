@@ -64,6 +64,7 @@ namespace dftfe
     d_verbosity               = verbosity;
     d_atomTypeAtributes       = atomAttributes;
     d_useDevice               = useDevice;
+    d_integralCoreDensity     = 0.0;
     double totalSystemMemory  = double(getTotalSystemMemory()) / 1E9 / 48.0;
     double minAvailableMemory = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
     MPI_Allreduce(MPI_IN_PLACE,
