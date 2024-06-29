@@ -306,9 +306,11 @@ namespace dftfe
     densityScalingFactor(const std::vector<std::vector<double>> &atomLocations);
 
     void
-    communicateDijAcrossAllProcessors(TypeOfField     typeOfField,
-                                      const MPI_Comm &interpoolcomm,
-                                      const MPI_Comm &interBandGroupComm);
+    communicateDijAcrossAllProcessors(
+      TypeOfField     typeOfField,
+      const MPI_Comm &interpoolcomm,
+      const MPI_Comm &interBandGroupComm,
+      const bool      communicateDijAcrossAllProcessors = true);
 
     void
     computeDijFromPSIinitialGuess(

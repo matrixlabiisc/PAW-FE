@@ -702,7 +702,8 @@ namespace dftfe
   pawClass<ValueType, memorySpace>::communicateDijAcrossAllProcessors(
     TypeOfField     typeOfField,
     const MPI_Comm &interpoolcomm,
-    const MPI_Comm &interBandGroupComm)
+    const MPI_Comm &interBandGroupComm,
+    const bool      communicateAcrossPool)
   {
     const std::vector<unsigned int> ownedAtomIds =
       d_nonLocalOperator->getOwnedAtomIdsInCurrentProcessor();
@@ -739,6 +740,30 @@ namespace dftfe
                   MPI_DOUBLE,
                   MPI_SUM,
                   d_mpiCommParent);
+    int size;
+    MPI_Comm_size(interpoolcomm, &size);
+    if (size > 1 && communicateAcrossPool)
+      {
+        MPI_Allreduce(MPI_IN_PLACE,
+                      &DijTotalVector[0],
+                      d_nProjSqTotal,
+                      MPI_DOUBLE,
+                      MPI_SUM,
+                      interpoolcomm);
+        if (d_this_mpi_process != 0)
+          {
+            DijTotalVector.clear();
+            DijTotalVector.resize(d_nProjSqTotal, 0.0);
+          }
+        MPI_Allreduce(MPI_IN_PLACE,
+                      &DijTotalVector[0],
+                      d_nProjSqTotal,
+                      MPI_DOUBLE,
+                      MPI_SUM,
+                      d_mpiCommParent);
+      }
+    int rank = dealii::Utilities::MPI::this_mpi_process(interpoolcomm);
+
     MPI_Barrier(d_mpiCommParent);
     for (unsigned int atomId = 0; atomId < atomicNumber.size(); atomId++)
       {
@@ -761,7 +786,7 @@ namespace dftfe
               }
           }
 
-        if (d_verbosity >= 5)
+        if (d_verbosity >= 5 && (rank == 0))
           {
             MPI_Barrier(d_mpiCommParent);
             pcout << "---------------MATRIX METHOD ------------------------"
@@ -1018,7 +1043,8 @@ namespace dftfe
       }
     communicateDijAcrossAllProcessors(typeOfField,
                                       interpoolcomm,
-                                      interBandGroupComm);
+                                      interBandGroupComm,
+                                      false);
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
