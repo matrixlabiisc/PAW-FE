@@ -382,6 +382,18 @@ namespace dftfe
     void
     computeproductOfCGMultipole();
 
+    void
+    saveDeltaSinverseEntriesToFile();
+
+    int
+    loadDeltaSinverseEntriesFromFile();
+
+    void
+    saveDijEntriesToFile();
+
+    void
+    loadDijEntriesFromFile();
+
     std::map<unsigned int, std::vector<double>> d_KineticEnergyCorrectionTerm;
     std::map<unsigned int, std::vector<double>> d_zeroPotentialij;
     std::map<unsigned int, std::vector<double>>

@@ -98,6 +98,10 @@ namespace dftfe
     bool        keepScratchFolder;
     bool        saveRhoData;
     bool        loadRhoData;
+    bool        saveDijData;
+    bool        loadDijData;
+    bool        saveDeltaSinvData;
+    bool        loadDeltaSinvData;
     bool        restartSpinFromNoSpin;
 
     bool reproducible_output;

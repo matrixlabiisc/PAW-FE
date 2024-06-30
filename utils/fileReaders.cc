@@ -300,6 +300,33 @@ namespace dftfe
     }
 
     void
+    writeDataIntoFile(const std::vector<double> &data,
+                      const std::string &        fileName,
+                      const MPI_Comm &           mpi_comm_parent)
+    {
+      if (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0)
+        {
+          if (std::ifstream(fileName))
+            moveFile(fileName, fileName + ".old");
+
+          std::ofstream outFile(fileName);
+          if (outFile.is_open())
+            {
+              for (unsigned int irow = 0; irow < data.size(); ++irow)
+                {
+                  outFile << std::setprecision(
+                               std::numeric_limits<double>::max_digits10)
+                          << data[irow];
+                  outFile << "\n";
+                }
+
+              outFile.close();
+            }
+        }
+    }
+
+
+    void
     writeDataIntoFile(const std::vector<std::vector<double>> &data,
                       const std::string &                     fileName)
     {

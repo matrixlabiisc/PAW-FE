@@ -1517,6 +1517,96 @@ namespace dftfe
         d_productOfMultipoleClebshGordon[Znum] = productValues;
       }
   }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::saveDeltaSinverseEntriesToFile()
+  {
+#ifdef USE_COMPLEX
+    pcout << "Not available for complex" << std::endl;
+    std::exit(0);
+#else
+    if (d_this_mpi_process == 0)
+      {
+        pcout << "Saving DeltaSinverse Entries: " << std::endl;
+        const std::vector<unsigned int> &atomicNumber =
+          d_atomicProjectorFnsContainer->getAtomicNumbers();
+        for (unsigned int atomId = 0; atomId < atomicNumber.size(); atomId++)
+          {
+            unsigned int Znum = atomicNumber[atomId];
+            unsigned int numberOfProjectors =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+            // ReadFile from file
+            char SinverseFileName[256];
+            strcpy(SinverseFileName,
+                   ("sinverseAtomId" + std::to_string(atomId)).c_str());
+            std::vector<ValueType> SinverseEntries =
+              d_atomicNonLocalPseudoPotentialConstants
+                [CouplingType::inversePawOverlapEntries][atomId];
+            dftUtils::writeDataIntoFile(SinverseEntries,
+                                        SinverseFileName,
+                                        d_mpiCommParent);
+          }
+      }
+#endif
+  }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  int
+  pawClass<ValueType, memorySpace>::loadDeltaSinverseEntriesFromFile()
+  {
+#ifdef USE_COMPLEX
+    pcout << "Not available for complex" << std::endl;
+    std::exit(0);
+#else
+
+    pcout << "Loading DeltaSinverse Entries: " << std::endl;
+    const std::vector<unsigned int> &atomicNumber =
+      d_atomicProjectorFnsContainer->getAtomicNumbers();
+    for (unsigned int atomId = 0; atomId < atomicNumber.size(); atomId++)
+      {
+        unsigned int Znum = atomicNumber[atomId];
+        unsigned int numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        // ReadFile from file
+        char SinverseFileName[256];
+        strcpy(SinverseFileName,
+               ("sinverseAtomId" + std::to_string(atomId)).c_str());
+        std::vector<double> SinverseEntries;
+        dftUtils::readFile(SinverseEntries, SinverseFileName);
+        if (SinverseEntries.size() != numberOfProjectors * numberOfProjectors)
+          {
+            pcout << "AtomID " << atomId
+                  << " Sinverse coupling matrix not found" << std::endl;
+            return (0);
+          }
+        std::vector<ValueType> SinverseEntriesCopy(SinverseEntries.begin(),
+                                                   SinverseEntries.end());
+        d_atomicNonLocalPseudoPotentialConstants
+          [CouplingType::inversePawOverlapEntries][atomId] =
+            SinverseEntriesCopy;
+      }
+    return (1);
+#endif
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::saveDijEntriesToFile()
+  {
+    // pcout<<"Saving DeltaSinverse Entries: "<<std::endl;
+    // for (unsigned int atomId = 0; atomId < atomicNumber.size(); atomId++)
+    //   {
+    //     unsigned int Znum = atomicNumber[atomId];
+    //     unsigned int numberOfProjectors =
+    //       d_atomicProjectorFnsContainer
+    //         ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+    //   }
+  }
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  pawClass<ValueType, memorySpace>::loadDijEntriesFromFile()
+  {}
 
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)

@@ -736,8 +736,26 @@ namespace dftfe
           kPointCoordinates,
           d_BasisOperatorHostPtr,
           d_nlpspQuadratureId);
-    computeNonlocalPseudoPotentialConstants(
-      CouplingType::inversePawOverlapEntries);
+    if (d_dftParamsPtr->loadDeltaSinvData)
+      {
+        int flag = loadDeltaSinverseEntriesFromFile();
+        MPI_Barrier(d_mpiCommParent);
+        if (flag == 0)
+          {
+            pcout << "Some issue in reading Sinv: " << std::endl;
+            std::exit(0);
+          }
+      }
+    else
+      {
+        computeNonlocalPseudoPotentialConstants(
+          CouplingType::inversePawOverlapEntries);
+        if (d_dftParamsPtr->saveDeltaSinvData)
+          {
+            saveDeltaSinverseEntriesToFile();
+          }
+      }
+
     double totalSystemMemory  = double(getTotalSystemMemory()) / 1E9 / 48.0;
     double minAvailableMemory = double(getTotalAvaliableMemory()) / 1E9 / 48.0;
     MPI_Allreduce(MPI_IN_PLACE,
@@ -1196,7 +1214,6 @@ namespace dftfe
                       }
                     d_atomicNonLocalPseudoPotentialConstants
                       [CouplingType::inversePawOverlapEntries][atomId] = Pij;
-                    d_atomicNonLocalPseudoPotentialConstants;
                     if (d_verbosity >= 5)
                       {
                         pcout << "NonLocal Inverse-Overlap Matrrix for atomID: "

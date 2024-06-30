@@ -199,6 +199,33 @@ namespace dftfe
           dealii::Patterns::Bool(),
           "[Standard] Loads charge density and mesh triagulation data from file.");
 
+
+        prm.declare_entry(
+          "SAVE DIJ DATA",
+          "false",
+          dealii::Patterns::Bool(),
+          "[Standard] Saves charge density and mesh triagulation data for restart, if SOLVER MODE is GS then the save is done every 10 scf iterations, otherwise it is done after each converged scf solve. If the value is 'true', the SOLVER MODE is GS and if the SCF loop converges, an outputfile 'fermiEnergy.out' is written that contains the fermi energy in the units of Ha. This Fermi energy is used when 'WRITE BANDS' is true");
+
+        prm.declare_entry(
+          "LOAD DIJ DATA",
+          "false",
+          dealii::Patterns::Bool(),
+          "[Standard] Loads charge density and mesh triagulation data from file.");
+
+
+        prm.declare_entry(
+          "SAVE DELTA SINVERSE DATA",
+          "false",
+          dealii::Patterns::Bool(),
+          "[Standard] Saves charge density and mesh triagulation data for restart, if SOLVER MODE is GS then the save is done every 10 scf iterations, otherwise it is done after each converged scf solve. If the value is 'true', the SOLVER MODE is GS and if the SCF loop converges, an outputfile 'fermiEnergy.out' is written that contains the fermi energy in the units of Ha. This Fermi energy is used when 'WRITE BANDS' is true");
+
+        prm.declare_entry(
+          "LOAD DELTA SINVERSE DATA",
+          "false",
+          dealii::Patterns::Bool(),
+          "[Standard] Loads charge density and mesh triagulation data from file.");
+
+
         prm.declare_entry(
           "RESTART SP FROM NO SP",
           "false",
@@ -1291,6 +1318,10 @@ namespace dftfe
     restartFolder                                  = ".";
     saveRhoData                                    = false;
     loadRhoData                                    = false;
+    saveDijData                                    = false;
+    loadDijData                                    = false;
+    saveDeltaSinvData                              = false;
+    loadDeltaSinvData                              = false;
     restartSpinFromNoSpin                          = false;
     reproducible_output                            = false;
     meshAdaption                                   = false;
@@ -1470,6 +1501,10 @@ namespace dftfe
     {
       saveRhoData           = prm.get_bool("SAVE RHO DATA");
       loadRhoData           = prm.get_bool("LOAD RHO DATA");
+      saveDijData           = prm.get_bool("SAVE DIJ DATA");
+      loadDijData           = prm.get_bool("LOAD DIJ DATA");
+      saveDeltaSinvData     = prm.get_bool("SAVE DELTA SINVERSE DATA");
+      loadDeltaSinvData     = prm.get_bool("LOAD DELTA SINVERSE DATA");
       restartSpinFromNoSpin = prm.get_bool("RESTART SP FROM NO SP");
       if (solverMode == "NEB")
         saveRhoData = true;
