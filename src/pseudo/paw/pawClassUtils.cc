@@ -1594,19 +1594,52 @@ namespace dftfe
   void
   pawClass<ValueType, memorySpace>::saveDijEntriesToFile()
   {
-    // pcout<<"Saving DeltaSinverse Entries: "<<std::endl;
-    // for (unsigned int atomId = 0; atomId < atomicNumber.size(); atomId++)
-    //   {
-    //     unsigned int Znum = atomicNumber[atomId];
-    //     unsigned int numberOfProjectors =
-    //       d_atomicProjectorFnsContainer
-    //         ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
-    //   }
+    if (d_this_mpi_process == 0)
+      {
+        pcout << "Saving Dij Out Entries: " << std::endl;
+        const std::vector<unsigned int> &atomicNumber =
+          d_atomicProjectorFnsContainer->getAtomicNumbers();
+        for (unsigned int atomId = 0; atomId < atomicNumber.size(); atomId++)
+          {
+            unsigned int Znum = atomicNumber[atomId];
+            unsigned int numberOfProjectors =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+            // ReadFile from file
+            char DijFileName[256];
+            strcpy(DijFileName, ("DijAtomId" + std::to_string(atomId)).c_str());
+            std::vector<double> Dij = D_ij[TypeOfField::Out][atomId];
+            dftUtils::writeDataIntoFile(Dij, DijFileName, d_mpiCommParent);
+          }
+      }
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
   pawClass<ValueType, memorySpace>::loadDijEntriesFromFile()
-  {}
+  {
+    pcout << "Loading Dij Entries: " << std::endl;
+    const std::vector<unsigned int> &atomicNumber =
+      d_atomicProjectorFnsContainer->getAtomicNumbers();
+    for (unsigned int atomId = 0; atomId < atomicNumber.size(); atomId++)
+      {
+        unsigned int Znum = atomicNumber[atomId];
+        unsigned int numberOfProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        // ReadFile from file
+        char DijFileName[256];
+        strcpy(DijFileName, ("DijAtomId" + std::to_string(atomId)).c_str());
+        std::vector<double> DijEntries;
+        dftUtils::readFile(DijEntries, DijFileName);
+        if (DijEntries.size() != numberOfProjectors * numberOfProjectors)
+          {
+            pcout << "AtomID " << atomId << " Dij matrix not found"
+                  << std::endl;
+          }
+
+        D_ij[TypeOfField::In][atomId] = DijEntries;
+      }
+  }
 
   template class pawClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)

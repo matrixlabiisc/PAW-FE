@@ -1352,14 +1352,19 @@ namespace dftfe
       }
     if (d_dftParamsPtr->pawPseudoPotential)
       {
-        d_pawClassPtr->computeDijFromPSIinitialGuess(
-          &d_eigenVectorsFlattenedHost,
-          numElectrons,
-          d_numEigenValues,
-          d_densityQuadratureId,
-          d_kPointWeights,
-          interpoolcomm,
-          interBandGroupComm);
+        if (d_dftParamsPtr->loadDijData)
+          {
+            d_pawClassPtr->loadDijEntriesFromFile();
+          }
+        else
+          d_pawClassPtr->computeDijFromPSIinitialGuess(
+            &d_eigenVectorsFlattenedHost,
+            numElectrons,
+            d_numEigenValues,
+            d_densityQuadratureId,
+            d_kPointWeights,
+            interpoolcomm,
+            interBandGroupComm);
         double scaleFactor = d_pawClassPtr->densityScalingFactor(atomLocations);
         const double charge =
           totalCharge(d_dofHandlerRhoNodal, d_densityInQuadValues[0]);
@@ -1452,14 +1457,19 @@ namespace dftfe
         initRho();
         if (d_dftParamsPtr->pawPseudoPotential)
           {
-            d_pawClassPtr->computeDijFromPSIinitialGuess(
-              &d_eigenVectorsFlattenedHost,
-              numElectrons,
-              d_numEigenValues,
-              d_densityQuadratureId,
-              d_kPointWeights,
-              interpoolcomm,
-              interBandGroupComm);
+            if (d_dftParamsPtr->loadDijData)
+              {
+                d_pawClassPtr->loadDijEntriesFromFile();
+              }
+            else
+              d_pawClassPtr->computeDijFromPSIinitialGuess(
+                &d_eigenVectorsFlattenedHost,
+                numElectrons,
+                d_numEigenValues,
+                d_densityQuadratureId,
+                d_kPointWeights,
+                interpoolcomm,
+                interBandGroupComm);
             double scaleFactor =
               d_pawClassPtr->densityScalingFactor(atomLocations);
             const double charge =
@@ -1575,14 +1585,19 @@ namespace dftfe
             initRho();
             if (d_dftParamsPtr->pawPseudoPotential)
               {
-                d_pawClassPtr->computeDijFromPSIinitialGuess(
-                  &d_eigenVectorsFlattenedHost,
-                  numElectrons,
-                  d_numEigenValues,
-                  d_densityQuadratureId,
-                  d_kPointWeights,
-                  interpoolcomm,
-                  interBandGroupComm);
+                if (d_dftParamsPtr->loadDijData)
+                  {
+                    d_pawClassPtr->loadDijEntriesFromFile();
+                  }
+                else
+                  d_pawClassPtr->computeDijFromPSIinitialGuess(
+                    &d_eigenVectorsFlattenedHost,
+                    numElectrons,
+                    d_numEigenValues,
+                    d_densityQuadratureId,
+                    d_kPointWeights,
+                    interpoolcomm,
+                    interBandGroupComm);
                 double scaleFactor =
                   d_pawClassPtr->densityScalingFactor(atomLocations);
                 const double charge =
@@ -3764,27 +3779,26 @@ namespace dftfe
         //
         const double integralRhoValue =
           totalCharge(d_dofHandlerPRefined, d_densityOutQuadValues[0]);
-
+        if (d_dftParamsPtr->pawPseudoPotential)
+          {
+            if (d_dftParamsPtr->memoryOptCompCharge)
+              d_pawClassPtr->computeCompensationChargeMemoryOpt(
+                TypeOfField::Out);
+            else
+              d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
+            if (d_dftParamsPtr->verbosity >= 4)
+              d_pawClassPtr->chargeNeutrality(integralRhoValue,
+                                              TypeOfField::Out,
+                                              false);
+            computeTotalDensityNodalVector(
+              d_bQuadValuesAllAtoms,
+              d_densityOutNodalValues[0],
+              d_totalChargeDensityOutNodalValues[0]);
+          }
         if (d_dftParamsPtr->verbosity >= 2)
           {
             pcout << std::endl
                   << "number of electrons: " << integralRhoValue << std::endl;
-            if (d_dftParamsPtr->pawPseudoPotential)
-              {
-                if (d_dftParamsPtr->memoryOptCompCharge)
-                  d_pawClassPtr->computeCompensationChargeMemoryOpt(
-                    TypeOfField::Out);
-                else
-                  d_pawClassPtr->computeCompensationCharge(TypeOfField::Out);
-                if (d_dftParamsPtr->verbosity >= 4)
-                  d_pawClassPtr->chargeNeutrality(integralRhoValue,
-                                                  TypeOfField::Out,
-                                                  false);
-                computeTotalDensityNodalVector(
-                  d_bQuadValuesAllAtoms,
-                  d_densityOutNodalValues[0],
-                  d_totalChargeDensityOutNodalValues[0]);
-              }
           }
 
         if (d_dftParamsPtr->verbosity >= 1 &&

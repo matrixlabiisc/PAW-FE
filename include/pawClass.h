@@ -343,6 +343,13 @@ namespace dftfe
     double
     computeNormDij(std::vector<double> &DijResidual);
 
+    void
+    saveDijEntriesToFile();
+
+    void
+    loadDijEntriesFromFile();
+
+
   private:
     void
     createAtomTypesList(const std::vector<std::vector<double>> &atomLocations);
@@ -387,12 +394,6 @@ namespace dftfe
 
     int
     loadDeltaSinverseEntriesFromFile();
-
-    void
-    saveDijEntriesToFile();
-
-    void
-    loadDijEntriesFromFile();
 
     std::map<unsigned int, std::vector<double>> d_KineticEnergyCorrectionTerm;
     std::map<unsigned int, std::vector<double>> d_zeroPotentialij;
