@@ -4044,12 +4044,20 @@ namespace dftfe
         if (d_dftParamsPtr->saveRhoData && scfIter % 10 == 0 &&
             d_dftParamsPtr->solverMode == "GS")
           saveTriaInfoAndRhoNodalData();
+
+        if (d_dftParamsPtr->saveDijData && scfIter % 10 == 0 &&
+            d_dftParamsPtr->solverMode == "GS" &&
+            d_dftParamsPtr->pawPseudoPotential)
+          d_pawClassPtr->saveDijEntriesToFile();
       }
 
     if (d_dftParamsPtr->saveRhoData &&
         !(d_dftParamsPtr->solverMode == "GS" && scfIter % 10 == 0))
       saveTriaInfoAndRhoNodalData();
-
+    if (d_dftParamsPtr->saveDijData &&
+        !(d_dftParamsPtr->solverMode == "GS" && scfIter % 10 == 0) &&
+        d_dftParamsPtr->pawPseudoPotential)
+      d_pawClassPtr->saveDijEntriesToFile();
 
     if (scfIter == d_dftParamsPtr->numSCFIterations)
       {
