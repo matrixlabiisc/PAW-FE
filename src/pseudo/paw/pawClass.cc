@@ -576,7 +576,6 @@ namespace dftfe
         pcout << "PAW: Integral of the shapefn " << L << " is: " << value << " "
               << " with error: " << (value - atomicNumber.size()) << std::endl;
       }
-    std::exit(0);
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
