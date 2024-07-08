@@ -352,7 +352,7 @@ namespace dftfe
   void
   pawClass<ValueType, memorySpace>::computeCompensationChargeCoeffMemoryOpt()
   {
-    std::vector<double> IntegralValue(8, 0.0);
+    std::vector<double> IntegralValue(9, 0.0);
     const unsigned int  numberNodesPerElement =
       d_BasisOperatorElectroHostPtr->nDofsPerCell();
     std::vector<dealii::types::global_dof_index> cellGlobalDofIndices(
@@ -576,6 +576,7 @@ namespace dftfe
         pcout << "PAW: Integral of the shapefn " << L << " is: " << value << " "
               << " with error: " << (value - atomicNumber.size()) << std::endl;
       }
+    std::exit(0);
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>

@@ -1542,26 +1542,22 @@ namespace dftfe
 
       if (shape_function_type == "bessel")
         {
-          std::vector<double> q1 = {3.141592653589793 / rc,
-                                    4.493409457909095 / rc,
-                                    5.76345919689455 / rc};
-
-          std::vector<double> q2 = {6.283185307179586 / rc,
-                                    7.7252518369375 / rc,
-                                    9.095011330476355 / rc};
+          std::vector<double> q1 = {3.83171 / rc, 1.84118 / rc, 3.05424 / rc};
+          std::vector<double> q2 = {7.01559 / rc, 5.33144 / rc, 6.70613 / rc};
           for (int l = 0; l <= LmaxAug; l++)
             {
               shape_function_values.push_back(std::vector<double>());
-              double alpha = -q1[l] / q2[l] * (std::sph_bessel(l, q1[l] * rc)) /
-                             (std::sph_bessel(l, q2[l] * rc));
+              double alpha = -(std::cyl_bessel_j(l, q1[l] * rc)) /
+                             (std::cyl_bessel_j(l, q2[l] * rc));
               for (int r = 0; r < radial_coord.size(); r++)
                 {
                   double Value = 0;
-                  if (radial_coord[r] < std::min(rc, RmaxComp))
+                  if (radial_coord[r] <= std::min(rc, RmaxComp))
                     {
                       Value =
-                        (std::sph_bessel(l, q1[l] * radial_coord[r]) +
-                         alpha * (std::sph_bessel(l, q2[l] * radial_coord[r])));
+                        (std::cyl_bessel_j(l, q1[l] * radial_coord[r]) +
+                         alpha *
+                           (std::cyl_bessel_j(l, q2[l] * radial_coord[r])));
                     }
 
                   shape_function_values[l].push_back(Value);

@@ -32,38 +32,33 @@ namespace dftfe
     AssertThrow(
       d_lQuantumNumber <= 2,
       dealii::ExcMessage(
-        "DFT-FE Error:  Bessel functions only ti;; LQuantumNo 2 is defined"));
-    std::vector<double> q1 = {3.141592653589793 / d_Rc,
-                              4.493409457909095 / d_Rc,
-                              5.76345919689455 / d_Rc};
-    std::vector<double> q2 = {6.283185307179586 / d_Rc,
-                              7.7252518369375 / d_Rc,
-                              9.095011330476355 / d_Rc};
+        "DFT-FE Error:  Bessel functions only till LQuantumNo 2 is defined"));
+    std::vector<double> q1 = {3.83171 / d_Rc, 1.84118 / d_Rc, 3.05424 / d_Rc};
+    std::vector<double> q2 = {7.01559 / d_Rc, 5.33144 / d_Rc, 6.70613 / d_Rc};
+    double              alpha =
+      -(std::cyl_bessel_j(d_lQuantumNumber, q1[d_lQuantumNumber] * d_Rc)) /
+      (std::cyl_bessel_j(d_lQuantumNumber, q2[d_lQuantumNumber] * d_Rc));
 
-    // auto f1 = [&](const double &x) {
-    //   if (std::fabs(x) <= 1E-12)
-    //     return (d_lQuantumNumber == 0 ? 1.0 : 0.0);
-    //   else if (x > std::min(d_Rc, d_cutOff))
-    //     return 0.0;
-    //   else
-    //     {
-    //       double alpha =
-    //         -q1[d_lQuantumNumber] / q2[d_lQuantumNumber] *
-    //         (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * d_Rc))
-    //         / (std::sph_bessel(d_lQuantumNumber, q2[d_lQuantumNumber] *
-    //         d_Rc));
-    //       double Value =
-    //         x > d_Rc ?
-    //           0.0 :
-    //           (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * x) +
-    //            alpha *
-    //              (std::sph_bessel(d_lQuantumNumber, q2[d_lQuantumNumber] *
-    //              x)));
-    //       return Value;
-    //     }
-    // };
-    // d_NormalizationConstant =
-    //   gauss_kronrod<double, 61>::integrate(f1, 0.0, d_cutOff, 15, 1e-12);
+    auto f1 = [&](const double &x) {
+      if (std::fabs(x) <= 1E-12)
+        return (d_lQuantumNumber == 0 ? 1.0 : 0.0);
+      else if (x > std::min(d_Rc, d_cutOff))
+        return 0.0;
+      else
+        {
+          double Value =
+            x > d_Rc ?
+              0.0 :
+              (std::cyl_bessel_j(d_lQuantumNumber, q1[d_lQuantumNumber] * x) +
+               alpha * (std::cyl_bessel_j(d_lQuantumNumber,
+                                          q2[d_lQuantumNumber] * x)));
+          return Value * pow(x, d_lQuantumNumber + 2);
+        }
+    };
+    double NormalizationConstant =
+      gauss_kronrod<double, 61>::integrate(f1, 0.0, d_cutOff, 15, 1e-12);
+    std::cout << "Normalization constatnt: " << NormalizationConstant << " "
+              << normalizationConstant << std::endl;
     d_NormalizationConstant = normalizationConstant;
     d_rMinVal               = getRadialValue(0.0);
   }
@@ -72,21 +67,16 @@ namespace dftfe
   AtomCenteredSphericalFunctionBessel::getRadialValue(double r) const
   {
     double              Value = 0.0;
-    std::vector<double> q1    = {3.141592653589793 / d_Rc,
-                              4.493409457909095 / d_Rc,
-                              5.76345919689455 / d_Rc};
-    std::vector<double> q2    = {6.283185307179586 / d_Rc,
-                              7.7252518369375 / d_Rc,
-                              9.095011330476355 / d_Rc};
+    std::vector<double> q1 = {3.83171 / d_Rc, 1.84118 / d_Rc, 3.05424 / d_Rc};
+    std::vector<double> q2 = {7.01559 / d_Rc, 5.33144 / d_Rc, 6.70613 / d_Rc};
     double              alpha =
-      -q1[d_lQuantumNumber] / q2[d_lQuantumNumber] *
-      (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * d_Rc)) /
-      (std::sph_bessel(d_lQuantumNumber, q2[d_lQuantumNumber] * d_Rc));
-    Value =
-      r > d_Rc ?
-        0.0 :
-        (std::sph_bessel(d_lQuantumNumber, q1[d_lQuantumNumber] * r) +
-         alpha * (std::sph_bessel(d_lQuantumNumber, q2[d_lQuantumNumber] * r)));
+      -(std::cyl_bessel_j(d_lQuantumNumber, q1[d_lQuantumNumber] * d_Rc)) /
+      (std::cyl_bessel_j(d_lQuantumNumber, q2[d_lQuantumNumber] * d_Rc));
+    Value = r > d_Rc ?
+              0.0 :
+              (std::cyl_bessel_j(d_lQuantumNumber, q1[d_lQuantumNumber] * r) +
+               alpha * (std::cyl_bessel_j(d_lQuantumNumber,
+                                          q2[d_lQuantumNumber] * r)));
     return Value / d_NormalizationConstant;
   }
   std::vector<double>
