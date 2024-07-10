@@ -344,7 +344,7 @@ namespace dftfe
     computeNormDij(std::vector<double> &DijResidual);
 
     void
-    saveDijEntriesToFile();
+    saveDijEntriesToFile(const MPI_Comm & mpiCommParent);
 
     void
     loadDijEntriesFromFile();

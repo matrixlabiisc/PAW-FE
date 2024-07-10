@@ -1592,9 +1592,10 @@ namespace dftfe
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  pawClass<ValueType, memorySpace>::saveDijEntriesToFile()
+  pawClass<ValueType, memorySpace>::saveDijEntriesToFile(const MPI_Comm & mpiCommParent)
   {
-    if (d_this_mpi_process == 0)
+    unsigned int thisMpiRankParent= dealii::Utilities::MPI::this_mpi_process(mpiCommParent);
+    if (thisMpiRankParent == 0)
       {
         pcout << "Saving Dij Out Entries: " << std::endl;
         const std::vector<unsigned int> &atomicNumber =
@@ -1609,7 +1610,7 @@ namespace dftfe
             char DijFileName[256];
             strcpy(DijFileName, ("DijAtomId" + std::to_string(atomId)).c_str());
             std::vector<double> Dij = D_ij[TypeOfField::Out][atomId];
-            dftUtils::writeDataIntoFile(Dij, DijFileName, d_mpiCommParent);
+            dftUtils::writeDataIntoFile(Dij, DijFileName, mpiCommParent);
           }
       }
   }

@@ -4048,7 +4048,7 @@ namespace dftfe
         if (d_dftParamsPtr->saveDijData && scfIter % 10 == 0 &&
             d_dftParamsPtr->solverMode == "GS" &&
             d_dftParamsPtr->pawPseudoPotential)
-          d_pawClassPtr->saveDijEntriesToFile();
+          d_pawClassPtr->saveDijEntriesToFile(d_mpiCommParent);
       }
 
     if (d_dftParamsPtr->saveRhoData &&
@@ -4057,7 +4057,7 @@ namespace dftfe
     if (d_dftParamsPtr->saveDijData &&
         !(d_dftParamsPtr->solverMode == "GS" && scfIter % 10 == 0) &&
         d_dftParamsPtr->pawPseudoPotential)
-      d_pawClassPtr->saveDijEntriesToFile();
+      d_pawClassPtr->saveDijEntriesToFile(d_mpiCommParent);
 
     if (scfIter == d_dftParamsPtr->numSCFIterations)
       {
